@@ -97,8 +97,8 @@ Updates in the app (dev-installed 2026-10-31):
   row sits dim under Homebrew reading "dismissed · 23 h left", the head says
   "… · 1 dismissed". "upgrade everything" now runs the other formulae by name and skips
   it. `↵` on the dim row brings it back at once; relaunching keeps the dismissal.
-- `~/.local/bin/pnpm` is a dangling symlink after the mise node bump (JOURNAL
-  2026-10-31): repoint it at the `24` alias dir.
+- `~/.local/bin/pnpm` was a dangling symlink after the mise node bump (JOURNAL
+  2026-10-31); repointed at the `24` alias dir on 2026-11-01 so it follows the next bump.
 
 Back from travel:
 
