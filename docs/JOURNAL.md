@@ -22,8 +22,9 @@ The first deploy after the fix failed in two seconds for a second reason: the ig
 build step (`vercel.json` `ignoreCommand`) diffs against `$VERCEL_GIT_PREVIOUS_SHA`, the
 last _successful_ deploy, and after four days of failures that commit was outside
 Vercel's shallow clone (`fatal: bad object`, exit 128, which Vercel reports as an error
-rather than "build"). The command now checks `git cat-file -e` first and falls through
-to building when the SHA is unknown.
+rather than "build"). The check now lives in `apps/www/scripts/ignore-build.sh` (the `ignoreCommand`
+field is capped at 256 characters; the inline fix tripped that and Vercel rejected the
+`vercel.json` outright) and falls through to building when the SHA is unknown.
 
 ### 2026-10-31 · A batch of three said "3 of 3" in green while brew had failed
 
