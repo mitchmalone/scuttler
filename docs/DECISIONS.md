@@ -1789,6 +1789,47 @@ DiagnosticReports` and waits the full backoff instead of thrashing. One new comm
   card (designed, parked). Spending colour on done · unread again (rejected: shape now
   carries the distinction colour was failing at).
 
+### 2026-11-01 · Release smoke tests are scripted, not two `[y/N]` prompts
+
+- **Decision.** `scripts/release.sh` step 6 no longer stops for a human. The fresh-profile
+  test unpacks the release zip and launches it with an empty `HOME` (every path the app
+  uses hangs off `$HOME`), reading its own stderr: cold start under the 1 s budget, hotkey
+  registered, a config written that owes the first-launch setup, no panic. The
+  upgrade-path test installs the build over the running one through `dev-install.sh` and
+  checks the new version came up and reported its plugins, that nothing under
+  `~/.config/scuttlarr` changed (a tree checksum) and that the frecency db did not
+  shrink. A release is one command end to end and can run unattended.
+- **Why.** The 2026-08-10/11 split kept these manual as "the two things a script can't
+  feel". The gate had become a person typing `y`, which proved less than the checks
+  above and made every release a terminal errand (the first 0.8.0 run on 2026-11-01 died
+  at the prompt because it was started without a tty). The app reports enough about
+  itself now that the script can feel both.
+- **Kept local.** Signing, notarization and the smoke tests still need this Mac; the
+  split with the CI fan-out is unchanged.
+
+### 2026-11-01 · Updates: a package can be dismissed for a day, keyed to its version
+
+- **Decision.** `d` in `updates ⏎` (or "dismiss 24h" on a failed row) puts one outdated
+  package aside for 24 hours: out of the count, the cell, the card and every bulk
+  upgrade, listed dim under its manager with its time left, `↵` to bring it back. The
+  dismissal is keyed to the version it was made against (`brew:beeper/tap/cli` →
+  `0.6.3`, until): a newer version returns the row early, since the fix may have landed.
+  State is `~/.local/state/scuttlarr/updates-dismissed.json`, applied to the cached
+  report on read, so it takes effect at once and lapses on its own. No new Tauri
+  command: `{"dismiss":…,"item":…,"hours":24}` / `{"restore":…}` ride `plugin_send`.
+- **Bulk respects it.** `brew upgrade` upgrades everything brew knows, so a dismissed
+  formula would fail again on every "upgrade all" and poison the batch. A source with
+  any dismissed package therefore gets its pending packages' own commands as its
+  command (`brew upgrade gcc && brew upgrade vips`), the in-app runner expands its bulk
+  job into one job per pending package, and "upgrade everything" recurses per source.
+  A source with everything dismissed contributes nothing.
+- **Why not `brew pin`.** It is the native, permanent version for brew alone; the
+  checker already honours it. The dismissal covers all four managers and expires, which
+  is the shape of "this one is broken today".
+- **Not done.** No automatic dismissal after a failure (see the error once, decide), no
+  second duration yet (the store holds an until-timestamp; adding one is a field).
+  Plan: `plans/done/2026-11-01-updates-dismiss.md`.
+
 ### 2026-10-31 · Updates upgrade in the app, per package or in bulk, through a queue
 
 - **Decision.** `updates ⏎` upgrades without leaving scuttlarr. Every `UpdateItem` carries

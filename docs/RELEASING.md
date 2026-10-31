@@ -3,7 +3,7 @@
 **The release is `scripts/release.sh` + `.github/workflows/release.yml`. If a step isn't in
 one of those two, it isn't part of the release** — add it there first (decisions 2026-08-10,
 2026-08-11). The split follows the jig standard: local steps survive only where physics
-demands it (signing, notarization, hands-on smoke tests); everything after the GitHub
+demands it (signing, notarization, smoke tests on a real Mac); everything after the GitHub
 Release is CI fan-out.
 
 ## The flow
@@ -36,9 +36,14 @@ scripts/release.sh 0.4.0          # or --unsigned while the cert is pending
 5. **Verify + package** — `spctl` must accept; `dist/vX.Y.Z/` gets `scuttlarr-X.Y.Z.zip` (cask feed),
    `scuttlarr-X.Y.Z.dmg` (human download), `SHA256SUMS`; writes `apps/www/src/lib/release.json` (generated, never
    hand-edited — it ships in the release commit).
-6. **Manual smoke tests** — interactive gates for the two things a script can't feel:
-   fresh-profile first run (hint appears, budgets in range) and upgrade-path (existing
-   config/themes/frecency/scripts intact).
+6. **Smoke tests, scripted** (interactive `[y/N]` gates until 2026-11-01, DECISIONS) — the
+   zip is unpacked and launched with an empty `HOME`: it must report its cold start under
+   1 s, register the hotkey, write a config that owes the first-launch setup, and not
+   panic. Then this build is installed over the running one (`dev-install.sh`): the new
+   version must come up and report its plugins, nothing under `~/.config/scuttlarr` may
+   change, the frecency db may not shrink. The running app is stopped for the first test
+   (a second instance would fight it for the hotkey); a bar and tray icon show for a few
+   seconds.
 7. **Commit + push** — `chore: release vX.Y.Z`. **No local tag.**
 8. **GitHub Release** — `gh release create` uploads artifacts + checksums + notes and mints
    the tag remotely, so the fan-out workflow fires with the release already published (no

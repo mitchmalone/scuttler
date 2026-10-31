@@ -4,6 +4,8 @@
 #
 #   scripts/dev-install.sh          swap in the last `tauri build` and relaunch
 #   scripts/dev-install.sh --build  build first
+#   scripts/dev-install.sh --quit   only stop the running app (release.sh's smoke
+#                                   tests want the hotkey and the bar free)
 #
 # Not a release: that is scripts/release.sh (signed, notarised, via the tap).
 # Brew cannot do this step — the cask installs the released version, not
@@ -14,6 +16,31 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILT="$ROOT/apps/desktop/src-tauri/target/release/bundle/macos/scuttlarr.app"
 DEST="/Applications/scuttlarr.app"
 
+JOB="gui/$(id -u)/scuttlarr"
+PLIST="$HOME/Library/LaunchAgents/scuttlarr.plist"
+
+# Stop the running app. The login item relaunches a crashed or killed app
+# (KeepAlive, DECISIONS 2026-10-01), so a launchd-run instance is stopped
+# through launchd — a pkill would have it relaunch the old binary mid-copy.
+# Then quit politely (SIGTERM lets the tray icon and panel go away cleanly)
+# and make sure. `open` on a running instance would only re-activate it
+# (LEARNINGS).
+quit_app() {
+  launchctl bootout "$JOB" 2>/dev/null || true
+  for proc in scuttlarr launcharr; do
+    if pgrep -x "$proc" >/dev/null; then
+      pkill -TERM -x "$proc" || true
+      for _ in $(seq 1 20); do pgrep -x "$proc" >/dev/null || break; sleep 0.1; done
+      pkill -KILL -x "$proc" 2>/dev/null || true
+    fi
+  done
+}
+
+if [[ "${1:-}" == "--quit" ]]; then
+  quit_app
+  exit 0
+fi
+
 if [[ "${1:-}" == "--build" ]]; then
   # The .app only: the dmg step drives Finder (a window pops; without the
   # Automation grant it hangs 120 s, then fails), and only release.sh wants a
@@ -22,22 +49,7 @@ if [[ "${1:-}" == "--build" ]]; then
 fi
 [[ -d "$BUILT" ]] || { echo "no build at $BUILT — run with --build" >&2; exit 1; }
 
-# The login item relaunches a crashed or killed app (KeepAlive, DECISIONS
-# 2026-10-01), so a launchd-run instance is stopped through launchd — a pkill
-# would have it relaunch the old binary mid-copy.
-JOB="gui/$(id -u)/scuttlarr"
-PLIST="$HOME/Library/LaunchAgents/scuttlarr.plist"
-launchctl bootout "$JOB" 2>/dev/null || true
-
-# Quit politely (SIGTERM lets the tray icon and panel go away cleanly), then
-# make sure. `open` on a running instance would only re-activate it (LEARNINGS).
-for proc in scuttlarr launcharr; do
-  if pgrep -x "$proc" >/dev/null; then
-    pkill -TERM -x "$proc" || true
-    for _ in $(seq 1 20); do pgrep -x "$proc" >/dev/null || break; sleep 0.1; done
-    pkill -KILL -x "$proc" 2>/dev/null || true
-  fi
-done
+quit_app
 
 # The pre-rename bundle (DECISIONS 2026-09-11): two launchers would fight over
 # the hotkey. Moved to the Trash, not deleted — the tap reinstalls it if wanted.

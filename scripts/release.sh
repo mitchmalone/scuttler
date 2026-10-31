@@ -4,7 +4,7 @@
 # or in .github/workflows/release.yml, it isn't part of the release — add it first.
 # See docs/RELEASING.md.
 #
-# Split (jig standard): signing, notarization, and the manual smoke gates stay local —
+# Split (jig standard): signing, notarization, and the smoke tests stay local —
 # the Developer ID identity and notary profile live in the keychain, no secrets in env.
 # This script ends at the GitHub Release; `gh release create` mints the tag remotely,
 # which triggers the tag workflow's fan-out (tap Cask, Notion, deploy hook).
@@ -24,11 +24,6 @@ NOTARY_PROFILE="launcharr-notary"  # local keychain profile name; not renamed
 
 die() { echo "✗ $*" >&2; exit 1; }
 step() { echo; echo "── $*"; }
-confirm() {
-  local reply
-  read -r -p "$1 [y/N] " reply
-  [[ "$reply" == "y" || "$reply" == "Y" ]] || die "aborted: $1"
-}
 
 command -v cargo >/dev/null 2>&1 || PATH="$(dirname "$(rustup which cargo)"):$PATH"
 
@@ -99,7 +94,8 @@ if [[ "$DRY" == 1 ]]; then
   4. pnpm --filter @scuttlarr/desktop tauri build  (signed: $SIGNED; targets: app + dmg)
   5. verify (spctl), package $ZIP + $DMG + SHA256SUMS into dist/$TAG/;
      write apps/www/src/lib/release.json (ships in the release commit)
-  6. manual smoke tests (fresh-profile + upgrade-path) — interactive gates
+  6. smoke tests, scripted: fresh profile (cold start, hotkey, setup owed) and the
+     upgrade over the running version (user dirs untouched, frecency intact)
   7. commit bump + notes + release.json, push main (no local tag)
   8. gh release create $TAG with artifacts — the remote tag triggers the fan-out
      workflow (tap Cask bump, Notion version, mitchmalone.com deploy hook)
@@ -179,11 +175,79 @@ jq -n --arg v "$VERSION" --arg d "$(date +%Y-%m-%d)" \
   > "$WWW/src/lib/release.json"
 pnpm prettier --write "$WWW/src/lib/release.json" >/dev/null
 
-step "6/8 manual smoke tests (the two things a script can't feel)"
-echo "  fresh-profile: mv ~/.config/scuttlarr{,.bak}; open $DIST-extracted app; first-run hint, budgets in range; restore."
-confirm "fresh-profile smoke test passed?"
-echo "  upgrade-path: install this build over the running version; config/themes/frecency/scripts all intact."
-confirm "upgrade-path smoke test passed?"
+step "6/8 smoke tests: a fresh profile, then the upgrade over the running version"
+# Until 2026-11-01 these were two [y/N] prompts for a human to run by hand; both
+# are now checked by the script against what the app itself reports, so a
+# release is one command end to end (DECISIONS 2026-11-01). Both stop the
+# running app first: a second instance would fight it for the hotkey.
+IDENTIFIER=$(jq -r .identifier "$DESKTOP/src-tauri/tauri.conf.json")
+
+# Fresh profile: the zip brew installs, unpacked and launched with an empty
+# HOME (the app resolves every path from $HOME), stderr captured — the perf
+# lines and breadcrumbs go there. Proves the archive is sound, the app comes
+# up inside the cold-start budget, registers its hotkey, and writes a config
+# that owes the first-launch setup. A bar and a tray icon show for a few
+# seconds while it runs.
+echo "  fresh profile…"
+"$ROOT/scripts/dev-install.sh" --quit
+EXTRACTED="$DIST-extracted"
+rm -rf "$EXTRACTED" && mkdir -p "$EXTRACTED"
+ditto -x -k "$DIST/$ZIP" "$EXTRACTED"
+FRESH_HOME=$(mktemp -d "${TMPDIR:-/tmp}/scuttlarr-fresh.XXXXXX")
+mkdir -p "$FRESH_HOME/Library/Logs"
+FRESH_LOG="$FRESH_HOME/stderr.log"
+HOME="$FRESH_HOME" "$EXTRACTED/scuttlarr.app/Contents/MacOS/scuttlarr" >"$FRESH_LOG" 2>&1 &
+FRESH_PID=$!
+for _ in $(seq 1 200); do
+  grep -q "cold start" "$FRESH_LOG" 2>/dev/null && break
+  kill -0 "$FRESH_PID" 2>/dev/null || break
+  sleep 0.1
+done
+sleep 2   # let the config land and the first bar snapshot run
+kill -TERM "$FRESH_PID" 2>/dev/null || true
+wait "$FRESH_PID" 2>/dev/null || true
+cold=$(grep -o 'cold start [0-9]*ms' "$FRESH_LOG" | head -1 | grep -o '[0-9]*' || true)
+[[ -n "$cold" ]] || { tail -20 "$FRESH_LOG"; die "fresh profile: the app never reported its cold start"; }
+(( cold < 1000 )) || die "fresh profile: cold start ${cold}ms is over the 1 s budget"
+if grep -q "hotkey registration failed" "$FRESH_LOG"; then
+  grep "hotkey" "$FRESH_LOG"; die "fresh profile: the hotkey did not register"
+fi
+FRESH_CONFIG="$FRESH_HOME/.config/scuttlarr/config.json"
+[[ -f "$FRESH_CONFIG" ]] || die "fresh profile: no config.json was written"
+jq -e '.setupPending == true' "$FRESH_CONFIG" >/dev/null \
+  || die "fresh profile: a new config does not owe the first-launch setup"
+if grep -qi "panicked" "$FRESH_LOG"; then
+  grep -i -A3 "panicked" "$FRESH_LOG"; die "fresh profile: the app panicked"
+fi
+echo "  fresh profile ok: cold start ${cold}ms, hotkey registered, setup owed"
+rm -rf "$FRESH_HOME"
+
+# Upgrade path: this build over the installed one, the way dev-install does
+# it (through launchd when the login item is on). Everything the user owns
+# must be exactly as it was — config, themes, scripts, hooks, widgets — the
+# frecency db still there, and the new version up and reporting its plugins.
+echo "  upgrade over the running version…"
+USER_DIR="$HOME/.config/scuttlarr"
+FRECENCY_DB="$HOME/Library/Application Support/$IDENTIFIER/scuttlarr.db"
+tree_sum() { (cd "$1" && find . -type f ! -name '*.tmp' -print0 | sort -z | xargs -0 shasum -a 256 | shasum -a 256 | cut -c1-64); }
+before_tree=$(tree_sum "$USER_DIR")
+before_db=$(stat -f %z "$FRECENCY_DB" 2>/dev/null || echo 0)
+LOGBOOK="$HOME/Library/Logs/scuttlarr.log"
+before_lines=$(grep -c "" "$LOGBOOK" 2>/dev/null || echo 0)
+"$ROOT/scripts/dev-install.sh"
+for _ in $(seq 1 300); do
+  tail -n "+$((before_lines + 1))" "$LOGBOOK" 2>/dev/null | grep -q "plugin(s):" && break
+  sleep 0.1
+done
+tail -n "+$((before_lines + 1))" "$LOGBOOK" | grep -q "plugin(s):" \
+  || die "upgrade path: the new version did not come up (no plugins line in $LOGBOOK)"
+installed=$(plutil -extract CFBundleShortVersionString raw /Applications/scuttlarr.app/Contents/Info.plist)
+[[ "$installed" == "$VERSION" ]] || die "upgrade path: /Applications runs $installed, not $VERSION"
+after_tree=$(tree_sum "$USER_DIR")
+[[ "$after_tree" == "$before_tree" ]] || die "upgrade path: something under $USER_DIR changed on upgrade"
+after_db=$(stat -f %z "$FRECENCY_DB" 2>/dev/null || echo 0)
+(( after_db >= before_db )) || die "upgrade path: the frecency db shrank ($before_db → $after_db bytes)"
+echo "  upgrade ok: $VERSION running, $USER_DIR untouched, frecency intact"
 
 step "7/8 commit + push (no local tag — gh release create mints it)"
 git add apps/desktop/package.json apps/desktop/src-tauri/tauri.conf.json \
