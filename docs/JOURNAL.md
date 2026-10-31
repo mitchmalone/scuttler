@@ -6,6 +6,18 @@
 
 ---
 
+### 2026-11-01 · The site had not deployed for four days, and nothing said so
+
+Every production deploy of scuttlarr.com since 2026-10-28 failed: `page.tsx`, a Server
+Component, imported `AgentStateIcon` and `agentStateLabel` from `@scuttlarr/tui`'s root,
+and the root re-exports `useListNav`/`useGridNav`, which Next refuses to load on the
+server ("You're importing a module that depends on `useState` into a React Server
+Component"). `pnpm verify` typechecks the site but never built it, so the gate stayed
+green while Vercel went red, and the v0.8.0 release commit landed on a site that could
+not ship `release.json`. Fix: leaf imports (`@scuttlarr/tui/bar`, a new
+`@scuttlarr/tui/bar/agent-icons` export) and `pnpm verify:www` (`next build`) in the
+gate. Rule of thumb: a Server Component imports kit leaves, never the root.
+
 ### 2026-10-31 · A batch of three said "3 of 3" in green while brew had failed
 
 First real "upgrade everything" (brew, mas, mise): brew exited 1 inside three seconds

@@ -1,4 +1,8 @@
-import { AgentStateIcon, agentStateLabel } from '@scuttlarr/tui'
+// Leaf imports, not the kit's root: this page is a Server Component and the
+// root re-exports hooks, which Next refuses to load on the server (the site
+// build broke this way 2026-10-28 to 2026-11-01).
+import { agentStateLabel } from '@scuttlarr/tui/bar'
+import { AgentStateIcon } from '@scuttlarr/tui/bar/agent-icons'
 import { GithubIcon, XIcon } from '@scuttlarr/tui/icons'
 import {
   AppWindow,

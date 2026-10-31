@@ -206,7 +206,7 @@ Same spirit as the TypeScript rules: strict, minimal, boring.
 | `pnpm dev`                                   | All apps in parallel (desktop panel needs `pnpm --filter @scuttlarr/desktop tauri dev`) |
 | `pnpm --filter @scuttlarr/desktop tauri dev` | The app, for real (Tauri shell + panel)                                                 |
 | `pnpm --filter @scuttlarr/www dev`           | The site                                                                                |
-| `pnpm verify`                                | The gate: typecheck + lint + format + test + cargo test + clippy                        |
+| `pnpm verify`                                | The gate: typecheck + lint + format + test + site build + cargo test + clippy           |
 | `scripts/dev-install.sh [--build]`           | Run a working-tree build: swap into `/Applications` and relaunch, quietly (no Finder)   |
 | `scripts/release.sh X.Y.Z`                   | The only way to release (see `docs/RELEASING.md`)                                       |
 | `scripts/mem.sh [--watch]`                   | Resident memory of the app and its helpers — the number the definition of done wants    |
