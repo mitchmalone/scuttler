@@ -1,0 +1,1310 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Updates panel options</title>
+    <style>
+      /* scuttlarr house theme (packages/theme/themes/scuttlarr/colors.toml).
+     Layout: a short brief, then three options as columns; each column is the
+     panel mockup over its hover card over the trade-offs. Single theme, dark,
+     because the subject is a dark app surface. */
+      :root {
+        --bg: #1c1d2a;
+        --bg-deep: #151620;
+        --surface: #262838;
+        --border: #393b54;
+        --frame: #a7b0d0;
+        --fg: #b5b9d9;
+        --fg-bright: #e0e3f5;
+        --dim: #73747c;
+        --accent: #ff6b8c;
+        --good: #3fb950;
+        --warn: #d29922;
+        --danger: #f85149;
+        --selected: rgba(181, 185, 217, 0.12);
+        --mono:
+          ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Monaco, monospace;
+        --sans: -apple-system, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        background: var(--bg-deep);
+        color: var(--fg);
+      }
+      body {
+        font: 14px/1.5 var(--sans);
+        padding: 40px 24px 64px;
+      }
+      a {
+        color: var(--accent);
+      }
+
+      .brief {
+        max-width: 72ch;
+        margin: 0 auto 36px;
+      }
+      .brief h1 {
+        font: 700 22px/1.2 var(--sans);
+        color: var(--fg-bright);
+        margin: 0 0 10px;
+        text-wrap: balance;
+      }
+      .brief p {
+        margin: 0 0 8px;
+      }
+      .brief .problem {
+        border-left: 2px solid var(--accent);
+        padding: 6px 12px;
+        margin: 14px 0;
+        color: var(--fg-bright);
+      }
+      .brief kbd {
+        font: 12px var(--mono);
+        color: var(--fg-bright);
+        background: var(--surface);
+        padding: 1px 5px;
+        border: 1px solid var(--border);
+      }
+
+      .options {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 24px;
+        max-width: 1480px;
+        margin: 0 auto;
+      }
+      @media (max-width: 1240px) {
+        .options {
+          grid-template-columns: 1fr;
+          max-width: 520px;
+        }
+      }
+
+      .option {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        min-width: 0;
+      }
+      .option-head {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+      }
+      .option-head .letter {
+        font: 700 13px var(--mono);
+        color: var(--accent);
+        border: 1px solid var(--accent);
+        padding: 2px 7px;
+      }
+      .option-head h2 {
+        font: 700 17px/1.2 var(--sans);
+        color: var(--fg-bright);
+        margin: 0;
+      }
+      .option-head .tag {
+        margin-left: auto;
+        font: 11px var(--mono);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--dim);
+      }
+      .option-head .tag.rec {
+        color: var(--good);
+      }
+      .lede {
+        margin: 0;
+        color: var(--fg);
+      }
+
+      .notes {
+        border-top: 1px solid var(--border);
+        padding-top: 12px;
+        display: grid;
+        gap: 6px;
+        font-size: 13px;
+      }
+      .notes div {
+        display: grid;
+        grid-template-columns: 7ch 1fr;
+        gap: 10px;
+      }
+      .notes b {
+        font: 11px var(--mono);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--dim);
+        padding-top: 2px;
+      }
+      .notes span {
+        color: var(--fg);
+      }
+
+      /* ---- the kit idiom, as mockup ---- */
+      .label {
+        font: 11px var(--mono);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--dim);
+      }
+      .tui {
+        font: 13px/1.4 var(--mono);
+        color: var(--fg);
+        background: var(--bg);
+        border: 1px solid var(--frame);
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .tui-head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 2px 6px 10px;
+        border-bottom: 1px solid var(--border);
+      }
+      .tui-head svg {
+        flex-shrink: 0;
+      }
+      .tui-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--fg-bright);
+      }
+      .tui-sub {
+        font-size: 11px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--dim);
+      }
+      .tui-body {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .tui-foot {
+        border-top: 1px solid var(--border);
+        padding: 8px 6px 0;
+        color: var(--dim);
+        font-size: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 14px;
+      }
+      .tui-foot b {
+        color: var(--fg-bright);
+        font-weight: 400;
+      }
+
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 7px 12px;
+        border: 1px solid transparent;
+      }
+      .row.sel {
+        background: var(--selected);
+      }
+      .row .ic {
+        width: 1.4em;
+        text-align: center;
+        color: var(--dim);
+        flex-shrink: 0;
+        display: inline-flex;
+        justify-content: center;
+      }
+      .row.sel .ic {
+        color: var(--accent);
+      }
+      .row .lbl {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .row .subl {
+        display: block;
+        color: var(--dim);
+        font-size: 11px;
+      }
+      .row .right {
+        color: var(--dim);
+        flex-shrink: 0;
+        white-space: nowrap;
+      }
+      .row .right .to {
+        color: var(--fg);
+      }
+      .row.dim {
+        color: var(--dim);
+      }
+      .st {
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .st.run,
+      .st.q {
+        color: var(--accent);
+      }
+      .st.done {
+        color: var(--good);
+      }
+      .st.fail,
+      .err {
+        color: var(--danger);
+      }
+      .chip {
+        display: inline-block;
+        font: 700 11px var(--mono);
+        padding: 1px 7px;
+        border: 1px solid var(--border);
+        color: var(--fg-bright);
+        min-width: 2.4em;
+        text-align: center;
+      }
+      .chip.zero {
+        color: var(--dim);
+        font-weight: 400;
+      }
+      .chip.err {
+        border-color: var(--danger);
+        color: var(--danger);
+      }
+      .btn {
+        font: 12px var(--mono);
+        color: var(--fg-bright);
+        border: 1px solid var(--border);
+        padding: 4px 10px;
+        white-space: nowrap;
+      }
+      .btn.primary {
+        border-color: var(--accent);
+      }
+      .btn .k {
+        color: var(--dim);
+      }
+      .meter {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 4px 12px;
+        color: var(--dim);
+        font-size: 12px;
+      }
+      .meter .track {
+        flex: 1;
+        height: 4px;
+        background: var(--border);
+        position: relative;
+      }
+      .meter .fill {
+        position: absolute;
+        inset: 0 auto 0 0;
+        background: var(--accent);
+      }
+      .tail {
+        color: var(--dim);
+        font-size: 11px;
+        padding: 0 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* ---- option A: ledger ---- */
+      .band {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px 8px;
+        border-top: 1px solid var(--border);
+        margin-top: 6px;
+      }
+      .band:first-child {
+        border-top: none;
+        margin-top: 0;
+      }
+      .band .name {
+        font-weight: 700;
+        color: var(--fg-bright);
+        font-size: 14px;
+      }
+      .band .cmd {
+        color: var(--dim);
+        font-size: 11px;
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .group {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+      .group .row {
+        margin-left: 14px;
+        border-left: 2px solid var(--border);
+        padding-left: 14px;
+      }
+      .group .row.sel {
+        border-left-color: var(--accent);
+      }
+
+      /* ---- option B: sidebar ---- */
+      .twopane {
+        display: grid;
+        grid-template-columns: 11.5em 1px 1fr;
+        gap: 0 12px;
+        min-height: 300px;
+      }
+      .rule {
+        background: var(--border);
+      }
+      .nav .row {
+        padding: 8px 10px;
+        gap: 8px;
+      }
+      .nav .row .lbl {
+        font-weight: 700;
+        color: var(--fg-bright);
+      }
+      .nav .row.dim .lbl {
+        font-weight: 400;
+        color: var(--dim);
+      }
+      .detail {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 0;
+      }
+      .detail-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 4px 6px 8px;
+        border-bottom: 1px solid var(--border);
+      }
+      .detail-head .name {
+        font-weight: 700;
+        color: var(--fg-bright);
+        font-size: 14px;
+      }
+      .detail-head .cmd {
+        color: var(--dim);
+        font-size: 11px;
+        flex: 1;
+      }
+
+      /* ---- option C: cards ---- */
+      .summary {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 8px 6px 4px;
+      }
+      .summary .big {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--fg-bright);
+        line-height: 1;
+      }
+      .summary .what {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        flex: 1;
+      }
+      .card {
+        border: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+      }
+      .card.sel {
+        border-color: var(--frame);
+      }
+      .card-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        background: var(--surface);
+      }
+      .card-head .name {
+        font-weight: 700;
+        color: var(--fg-bright);
+      }
+      .card-head .cmd {
+        color: var(--dim);
+        font-size: 11px;
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .card .row {
+        padding: 6px 10px;
+      }
+      .card.clean .card-head {
+        background: transparent;
+      }
+
+      /* ---- hover card ---- */
+      .hc {
+        background: rgba(28, 29, 42, 0.98);
+        border: 1px solid var(--dim);
+        padding: 16px 18px 12px;
+        font: 12px/1.5 var(--mono);
+        color: var(--fg);
+        width: 100%;
+        max-width: 384px;
+        align-self: flex-end;
+      }
+      .hc-top {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding-bottom: 12px;
+      }
+      .hc-top > div {
+        flex: 1;
+      }
+      .hc-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--fg-bright);
+      }
+      .hc .badge {
+        padding: 6px 8px;
+        font: 700 10px var(--mono);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        background: rgba(224, 227, 245, 0.12);
+        color: var(--fg-bright);
+      }
+      .hc-src {
+        border-top: 1px solid var(--border);
+        padding: 9px 0;
+      }
+      .hc-src-head {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        margin-bottom: 3px;
+      }
+      .hc-src-head .name {
+        font-weight: 700;
+        color: var(--fg-bright);
+      }
+      .hc-src-head .n {
+        margin-left: auto;
+      }
+      .hc-row {
+        display: flex;
+        gap: 10px;
+        line-height: 19px;
+        padding-left: 12px;
+      }
+      .hc-row .nm {
+        flex: 1;
+        color: var(--fg);
+      }
+      .hc-row .v {
+        color: var(--dim);
+      }
+      .hc-row .v b {
+        color: var(--fg);
+        font-weight: 400;
+      }
+      .hc-foot {
+        border-top: 1px solid var(--border);
+        padding-top: 10px;
+        color: var(--dim);
+        font-size: 11px;
+      }
+      .hc-grid {
+        display: grid;
+        grid-template-columns: 9ch 1fr;
+        gap: 2px 12px;
+        border-top: 1px solid var(--border);
+        padding: 10px 0;
+      }
+      .hc-grid .k {
+        font-weight: 700;
+        color: var(--fg-bright);
+        padding-top: 1px;
+      }
+      .hc-grid .k.dim {
+        color: var(--dim);
+        font-weight: 400;
+      }
+      .hc-grid .vrows {
+        display: flex;
+        flex-direction: column;
+      }
+      .hc-grid .hc-row {
+        padding-left: 0;
+      }
+      .hc-grid .sep {
+        grid-column: 1 / -1;
+        height: 6px;
+      }
+      .hc-mini {
+        border: 1px solid var(--border);
+        margin-top: 8px;
+      }
+      .hc-mini .hc-src-head {
+        background: var(--surface);
+        padding: 5px 8px;
+        margin: 0;
+      }
+      .hc-mini .hc-row {
+        padding: 0 8px;
+      }
+      .hc-mini .hc-row:last-child {
+        padding-bottom: 4px;
+      }
+      .hc-mini .hc-row:first-of-type {
+        padding-top: 4px;
+      }
+
+      .picker {
+        max-width: 72ch;
+        margin: 44px auto 0;
+        border-top: 1px solid var(--border);
+        padding-top: 18px;
+      }
+      .picker h3 {
+        font: 700 15px var(--sans);
+        color: var(--fg-bright);
+        margin: 0 0 8px;
+      }
+      .picker ol {
+        margin: 0;
+        padding-left: 20px;
+      }
+      .picker li {
+        margin: 4px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="brief">
+      <h1>Updates panel: three directions for the next iteration</h1>
+      <p>
+        The current build puts the whole report behind a segmented control and
+        tiles borrowed from <code>usage</code>. That shape suits accounts with
+        meters; it blurs the one thing updates needs to show first: which
+        package manager owns which package, and where to click to upgrade all of
+        one.
+      </p>
+      <div class="problem">
+        Design goal: a package manager reads as a unit at a glance, its bulk
+        action sits on it, and a single package is one click. Nothing leaves
+        scuttlarr.
+      </div>
+      <p>
+        All three keep the same keys and runner: <kbd>↵</kbd> or click runs the
+        row, <kbd>a</kbd> everything, <kbd>x</kbd> cancel,
+        <kbd>t</kbd> terminal, <kbd>r</kbd> refresh. Mockups show the real
+        report shape from this Mac: Homebrew 3, App Store 1, pnpm clean, mise 1
+        with gcc upgrading and vips queued.
+      </p>
+    </section>
+
+    <div class="options">
+      <!-- ================= A ================= -->
+      <article class="option">
+        <div class="option-head">
+          <span class="letter">A</span>
+          <h2>Ledger</h2>
+          <span class="tag rec">recommended</span>
+        </div>
+        <p class="lede">
+          One scrolling list, no view switching. Each manager is a band with its
+          name, count chip, command and its own <em>upgrade all</em>; its
+          packages hang under a gutter rule. A clean manager folds to one line.
+        </p>
+
+        <div class="tui">
+          <div class="tui-head">
+            <svg
+              width="17"
+              height="17"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m7.5 4.27 9 5.15" />
+              <path
+                d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"
+              />
+              <path d="m3.3 7 8.7 5 8.7-5" />
+              <path d="M12 22V12" />
+            </svg>
+            <div>
+              <div class="tui-title">Updates</div>
+              <div class="tui-sub">
+                5 updates · 3 managers · checked 4 min ago
+              </div>
+            </div>
+            <span class="btn primary" style="margin-left: auto"
+              >upgrade everything <span class="k">a</span></span
+            >
+          </div>
+          <div class="tui-body">
+            <div class="meter">
+              <span>upgrading gcc · 12s</span
+              ><span class="track"
+                ><span class="fill" style="width: 25%"></span></span
+              ><span>1 of 2 · 1 queued</span>
+            </div>
+            <div class="tail">
+              ==> Downloading
+              https://ghcr.io/v2/homebrew/core/gcc/manifests/16.2.0
+            </div>
+
+            <div class="group">
+              <div class="band">
+                <span class="name">Homebrew</span><span class="chip">3</span
+                ><span class="cmd">brew upgrade</span
+                ><span class="btn">upgrade all <span class="k">u</span></span>
+              </div>
+              <div class="row sel">
+                <span class="ic">◌</span
+                ><span class="lbl"
+                  >gcc<span class="subl">brew upgrade gcc</span></span
+                ><span class="right st run">upgrading…</span>
+              </div>
+              <div class="row">
+                <span class="ic">○</span
+                ><span class="lbl"
+                  >vips<span class="subl">brew upgrade vips</span></span
+                ><span class="right st q">queued</span>
+              </div>
+              <div class="row">
+                <span class="ic">↓</span
+                ><span class="lbl"
+                  >repobar<span class="subl"
+                    >brew upgrade --cask repobar</span
+                  ></span
+                ><span class="right"
+                  >0.6.1 → <span class="to">0.8.7</span></span
+                >
+              </div>
+            </div>
+
+            <div class="group">
+              <div class="band">
+                <span class="name">App Store</span><span class="chip">1</span
+                ><span class="cmd">mas upgrade</span
+                ><span class="btn">upgrade all <span class="k">u</span></span>
+              </div>
+              <div class="row">
+                <span class="ic">↓</span
+                ><span class="lbl"
+                  >Xcode<span class="subl">mas upgrade 497799835</span></span
+                ><span class="right">26.0 → <span class="to">26.1</span></span>
+              </div>
+            </div>
+
+            <div class="group">
+              <div class="band">
+                <span class="name">mise</span><span class="chip">1</span
+                ><span class="cmd">mise upgrade</span
+                ><span class="btn">upgrade all <span class="k">u</span></span>
+              </div>
+              <div class="row">
+                <span class="ic">↓</span
+                ><span class="lbl"
+                  >node<span class="subl">mise upgrade node</span></span
+                ><span class="right"
+                  >24.22.0 → <span class="to">24.22.2</span></span
+                >
+              </div>
+            </div>
+
+            <div class="group">
+              <div class="band">
+                <span class="name" style="color: var(--dim); font-weight: 400"
+                  >pnpm</span
+                ><span class="chip zero">0</span
+                ><span class="cmd">up to date</span>
+              </div>
+            </div>
+          </div>
+          <div class="tui-foot">
+            <span><b>↵</b> upgrade</span
+            ><span><b>u</b> upgrade all in group</span
+            ><span><b>a</b> everything</span><span><b>t</b> terminal</span
+            ><span><b>c</b> copy</span><span><b>r</b> refresh</span
+            ><span><b>esc</b> back</span>
+          </div>
+        </div>
+
+        <span class="label">hover card</span>
+        <div class="hc">
+          <div class="hc-top">
+            <svg
+              width="26"
+              height="26"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m7.5 4.27 9 5.15" />
+              <path
+                d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"
+              />
+              <path d="m3.3 7 8.7 5 8.7-5" />
+              <path d="M12 22V12" />
+            </svg>
+            <div>
+              <div class="hc-title">Updates</div>
+              <div class="tui-sub">5 updates · checked 4 min ago</div>
+            </div>
+            <span class="badge" style="color: var(--accent)">1 of 2</span>
+          </div>
+          <div class="hc-src">
+            <div class="hc-src-head">
+              <span class="name">Homebrew</span><span class="chip">3</span>
+            </div>
+            <div class="hc-row">
+              <span class="nm">gcc</span><span class="st run">upgrading…</span>
+            </div>
+            <div class="hc-row">
+              <span class="nm">vips</span><span class="st q">queued</span>
+            </div>
+            <div class="hc-row">
+              <span class="nm">repobar</span
+              ><span class="v">0.6.1 → <b>0.8.7</b></span>
+            </div>
+          </div>
+          <div class="hc-src">
+            <div class="hc-src-head">
+              <span class="name">App Store</span><span class="chip">1</span>
+            </div>
+            <div class="hc-row">
+              <span class="nm">Xcode</span
+              ><span class="v">26.0 → <b>26.1</b></span>
+            </div>
+          </div>
+          <div class="hc-src">
+            <div class="hc-src-head">
+              <span class="name">mise</span><span class="chip">1</span>
+            </div>
+            <div class="hc-row">
+              <span class="nm">node</span
+              ><span class="v">24.22.0 → <b>24.22.2</b></span>
+            </div>
+          </div>
+          <div class="hc-src">
+            <div class="hc-src-head">
+              <span class="name" style="color: var(--dim); font-weight: 400"
+                >pnpm</span
+              ><span class="n" style="color: var(--dim)">up to date</span>
+            </div>
+          </div>
+          <div class="hc-foot">click for updates ⏎</div>
+        </div>
+
+        <div class="notes">
+          <div>
+            <b>Wins</b
+            ><span
+              >Everything visible at once, no mode to switch. Manager bands plus
+              the gutter rule make ownership unambiguous. Bulk-per-manager is
+              one click on the band; the keyboard path is <kbd>u</kbd> anywhere
+              inside the group.</span
+            >
+          </div>
+          <div>
+            <b>Costs</b
+            ><span
+              >With 40 Homebrew formulae the list is long; bands stay scannable
+              but the panel scrolls. Could cap a group at 8 rows with a
+              <em>+32 more</em> row that expands.</span
+            >
+          </div>
+          <div>
+            <b>Card</b
+            ><span
+              >Same bands, compact: name, chip, packages. Clean managers
+              collapse to a dim line.</span
+            >
+          </div>
+        </div>
+      </article>
+
+      <!-- ================= B ================= -->
+      <article class="option">
+        <div class="option-head">
+          <span class="letter">B</span>
+          <h2>Sidebar</h2>
+          <span class="tag">two pane</span>
+        </div>
+        <p class="lede">
+          The clipboard-manager split. Managers down the left with counts and
+          state; the chosen manager fills the right with its header, its
+          <em>upgrade all</em> and its packages. <kbd>←→</kbd> moves between
+          panes, <kbd>↑↓</kbd> within.
+        </p>
+
+        <div class="tui">
+          <div class="tui-head">
+            <svg
+              width="17"
+              height="17"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m7.5 4.27 9 5.15" />
+              <path
+                d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"
+              />
+              <path d="m3.3 7 8.7 5 8.7-5" />
+              <path d="M12 22V12" />
+            </svg>
+            <div>
+              <div class="tui-title">Updates</div>
+              <div class="tui-sub">
+                5 updates · 3 managers · checked 4 min ago
+              </div>
+            </div>
+          </div>
+          <div class="tui-body">
+            <div class="twopane">
+              <div class="nav">
+                <div class="row">
+                  <span class="lbl">Everything</span><span class="chip">5</span>
+                </div>
+                <div class="row sel">
+                  <span class="lbl">Homebrew</span
+                  ><span class="st run">1 of 2</span>
+                </div>
+                <div class="row">
+                  <span class="lbl">App Store</span><span class="chip">1</span>
+                </div>
+                <div class="row">
+                  <span class="lbl">mise</span><span class="chip">1</span>
+                </div>
+                <div class="row dim">
+                  <span class="lbl">pnpm</span><span class="chip zero">0</span>
+                </div>
+              </div>
+              <div class="rule"></div>
+              <div class="detail">
+                <div class="detail-head">
+                  <span class="name">Homebrew</span
+                  ><span class="cmd">brew upgrade</span
+                  ><span class="btn"
+                    >upgrade all 3 <span class="k">↵</span></span
+                  >
+                </div>
+                <div class="meter">
+                  <span>gcc · 12s</span
+                  ><span class="track"
+                    ><span class="fill" style="width: 25%"></span></span
+                  ><span>1 of 2</span>
+                </div>
+                <div class="tail">==> Downloading gcc 16.2.0 manifest</div>
+                <div class="row">
+                  <span class="ic">◌</span><span class="lbl">gcc</span
+                  ><span class="right st run">upgrading…</span>
+                </div>
+                <div class="row">
+                  <span class="ic">○</span><span class="lbl">vips</span
+                  ><span class="right st q">queued</span>
+                </div>
+                <div class="row">
+                  <span class="ic">↓</span
+                  ><span class="lbl">repobar<span class="subl">cask</span></span
+                  ><span class="right"
+                    >0.6.1 → <span class="to">0.8.7</span></span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="tui-foot">
+            <span><b>←→</b> pane</span><span><b>↵</b> upgrade</span
+            ><span><b>a</b> everything</span><span><b>t</b> terminal</span
+            ><span><b>c</b> copy</span><span><b>r</b> refresh</span
+            ><span><b>esc</b> back</span>
+          </div>
+        </div>
+
+        <span class="label">hover card</span>
+        <div class="hc">
+          <div class="hc-top">
+            <svg
+              width="26"
+              height="26"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m7.5 4.27 9 5.15" />
+              <path
+                d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"
+              />
+              <path d="m3.3 7 8.7 5 8.7-5" />
+              <path d="M12 22V12" />
+            </svg>
+            <div>
+              <div class="hc-title">Updates</div>
+              <div class="tui-sub">5 updates · checked 4 min ago</div>
+            </div>
+            <span class="badge" style="color: var(--accent)">1 of 2</span>
+          </div>
+          <div class="hc-grid">
+            <span class="k">Homebrew</span>
+            <div class="vrows">
+              <div class="hc-row">
+                <span class="nm">gcc</span
+                ><span class="st run">upgrading…</span>
+              </div>
+              <div class="hc-row">
+                <span class="nm">vips</span><span class="st q">queued</span>
+              </div>
+              <div class="hc-row">
+                <span class="nm">repobar</span
+                ><span class="v">0.6.1 → <b>0.8.7</b></span>
+              </div>
+            </div>
+            <span class="sep"></span>
+            <span class="k">App Store</span>
+            <div class="vrows">
+              <div class="hc-row">
+                <span class="nm">Xcode</span
+                ><span class="v">26.0 → <b>26.1</b></span>
+              </div>
+            </div>
+            <span class="sep"></span>
+            <span class="k">mise</span>
+            <div class="vrows">
+              <div class="hc-row">
+                <span class="nm">node</span
+                ><span class="v">24.22.0 → <b>24.22.2</b></span>
+              </div>
+            </div>
+            <span class="sep"></span>
+            <span class="k dim">pnpm</span>
+            <div class="vrows">
+              <div class="hc-row">
+                <span class="nm" style="color: var(--dim)">up to date</span>
+              </div>
+            </div>
+          </div>
+          <div class="hc-foot">click for updates ⏎</div>
+        </div>
+
+        <div class="notes">
+          <div>
+            <b>Wins</b
+            ><span
+              >Separation is structural: a manager is a line on the left,
+              nothing else is. Long Homebrew lists do not push the other
+              managers off screen. Matches the clipboard panel, so the split
+              already exists in the kit (<code>TwoPane</code>).</span
+            >
+          </div>
+          <div>
+            <b>Costs</b
+            ><span
+              >Two panes in a 600px panel is tight; package names and version
+              pairs compete for width. One more keystroke to reach a package
+              than A. The run block has to live inside the selected manager's
+              pane or above both.</span
+            >
+          </div>
+          <div>
+            <b>Card</b
+            ><span
+              >A two-column grid: manager label left, packages right. Reads as a
+              table, dense and tidy.</span
+            >
+          </div>
+        </div>
+      </article>
+
+      <!-- ================= C ================= -->
+      <article class="option">
+        <div class="option-head">
+          <span class="letter">C</span>
+          <h2>Cards</h2>
+          <span class="tag">framed</span>
+        </div>
+        <p class="lede">
+          A summary strip up top with the total and the everything action, then
+          one framed card per manager. The card's title bar carries the name,
+          command, count and its <em>upgrade all</em>; rows sit inside the
+          frame. A clean manager is a one-line frame.
+        </p>
+
+        <div class="tui">
+          <div class="tui-head">
+            <svg
+              width="17"
+              height="17"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m7.5 4.27 9 5.15" />
+              <path
+                d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"
+              />
+              <path d="m3.3 7 8.7 5 8.7-5" />
+              <path d="M12 22V12" />
+            </svg>
+            <div>
+              <div class="tui-title">Updates</div>
+              <div class="tui-sub">checked 4 min ago</div>
+            </div>
+          </div>
+          <div class="tui-body">
+            <div class="summary">
+              <span class="big">5</span>
+              <div class="what">
+                <span style="color: var(--fg-bright)"
+                  >updates across 3 managers</span
+                ><span class="tui-sub" style="color: var(--accent)"
+                  >upgrading gcc · 1 of 2 · 1 queued</span
+                >
+              </div>
+              <span class="btn primary"
+                >upgrade everything <span class="k">a</span></span
+              >
+            </div>
+            <div class="meter" style="padding-top: 0">
+              <span class="track"
+                ><span class="fill" style="width: 25%"></span
+              ></span>
+            </div>
+
+            <div class="card sel">
+              <div class="card-head">
+                <span class="name">Homebrew</span><span class="chip">3</span
+                ><span class="cmd">brew upgrade</span
+                ><span class="btn">upgrade all <span class="k">u</span></span>
+              </div>
+              <div class="row sel">
+                <span class="ic">◌</span><span class="lbl">gcc</span
+                ><span class="right st run">upgrading…</span>
+              </div>
+              <div class="row">
+                <span class="ic">○</span><span class="lbl">vips</span
+                ><span class="right st q">queued</span>
+              </div>
+              <div class="row">
+                <span class="ic">↓</span
+                ><span class="lbl"
+                  >repobar <span style="color: var(--dim)">cask</span></span
+                ><span class="right"
+                  >0.6.1 → <span class="to">0.8.7</span></span
+                >
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-head">
+                <span class="name">App Store</span><span class="chip">1</span
+                ><span class="cmd">mas upgrade</span
+                ><span class="btn">upgrade all <span class="k">u</span></span>
+              </div>
+              <div class="row">
+                <span class="ic">↓</span><span class="lbl">Xcode</span
+                ><span class="right">26.0 → <span class="to">26.1</span></span>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-head">
+                <span class="name">mise</span><span class="chip">1</span
+                ><span class="cmd">mise upgrade</span
+                ><span class="btn">upgrade all <span class="k">u</span></span>
+              </div>
+              <div class="row">
+                <span class="ic">↓</span><span class="lbl">node</span
+                ><span class="right"
+                  >24.22.0 → <span class="to">24.22.2</span></span
+                >
+              </div>
+            </div>
+            <div class="card clean">
+              <div class="card-head">
+                <span class="name" style="color: var(--dim); font-weight: 400"
+                  >pnpm</span
+                ><span class="chip zero">0</span
+                ><span class="cmd">up to date</span>
+              </div>
+            </div>
+          </div>
+          <div class="tui-foot">
+            <span><b>↵</b> upgrade</span
+            ><span><b>u</b> upgrade all in card</span
+            ><span><b>a</b> everything</span><span><b>t</b> terminal</span
+            ><span><b>c</b> copy</span><span><b>r</b> refresh</span
+            ><span><b>esc</b> back</span>
+          </div>
+        </div>
+
+        <span class="label">hover card</span>
+        <div class="hc">
+          <div class="hc-top">
+            <svg
+              width="26"
+              height="26"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m7.5 4.27 9 5.15" />
+              <path
+                d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"
+              />
+              <path d="m3.3 7 8.7 5 8.7-5" />
+              <path d="M12 22V12" />
+            </svg>
+            <div>
+              <div class="hc-title">Updates</div>
+              <div class="tui-sub">5 updates · checked 4 min ago</div>
+            </div>
+            <span class="badge" style="color: var(--accent)">1 of 2</span>
+          </div>
+          <div class="hc-mini">
+            <div class="hc-src-head">
+              <span class="name">Homebrew</span><span class="chip">3</span>
+            </div>
+            <div class="hc-row">
+              <span class="nm">gcc</span><span class="st run">upgrading…</span>
+            </div>
+            <div class="hc-row">
+              <span class="nm">vips</span><span class="st q">queued</span>
+            </div>
+            <div class="hc-row">
+              <span class="nm">repobar</span
+              ><span class="v">0.6.1 → <b>0.8.7</b></span>
+            </div>
+          </div>
+          <div class="hc-mini">
+            <div class="hc-src-head">
+              <span class="name">App Store</span><span class="chip">1</span>
+            </div>
+            <div class="hc-row">
+              <span class="nm">Xcode</span
+              ><span class="v">26.0 → <b>26.1</b></span>
+            </div>
+          </div>
+          <div class="hc-mini">
+            <div class="hc-src-head">
+              <span class="name">mise</span><span class="chip">1</span>
+            </div>
+            <div class="hc-row">
+              <span class="nm">node</span
+              ><span class="v">24.22.0 → <b>24.22.2</b></span>
+            </div>
+          </div>
+          <div class="hc-mini">
+            <div class="hc-src-head">
+              <span class="name" style="color: var(--dim); font-weight: 400"
+                >pnpm</span
+              ><span class="n" style="color: var(--dim)">up to date</span>
+            </div>
+          </div>
+          <div class="hc-foot" style="margin-top: 10px">
+            click for updates ⏎
+          </div>
+        </div>
+
+        <div class="notes">
+          <div>
+            <b>Wins</b
+            ><span
+              >The strongest separation: a frame and a filled title bar per
+              manager. The summary strip puts the big number and the everything
+              action first, the tools-and-dashboards rule.</span
+            >
+          </div>
+          <div>
+            <b>Costs</b
+            ><span
+              >Heaviest chrome in the kit so far; the filled title bar is a new
+              idiom (the kit is hairlines, not fills), so it needs a token and a
+              DECISIONS line. Frames eat vertical space on long lists.</span
+            >
+          </div>
+          <div>
+            <b>Card</b
+            ><span
+              >Mini cards. Clear, but busier than the strip's other cards.</span
+            >
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <section class="picker">
+      <h3>What I would pick</h3>
+      <p>
+        A. It fixes the separation with structure the kit already has (section
+        bands, a gutter rule, chips), keeps the whole report on one screen, and
+        puts the per-manager bulk action where the eye lands. B is the right
+        answer if Homebrew lists routinely run past 20 formulae. C is the most
+        legible at a glance but introduces a filled-header idiom the rest of
+        scuttlarr does not use.
+      </p>
+      <p>
+        Shared across all three, and worth doing whichever wins: the count chip,
+        the manager's command in dim beside its name, the per-row command as the
+        row's sub line, a clean manager folding to one dim line, and the run
+        block as a one-line meter rather than a stack of tail lines.
+      </p>
+      <ol>
+        <li>
+          Pick A, B or C (or a mix: A's list with C's summary strip is a natural
+          hybrid).
+        </li>
+        <li>
+          Say whether long Homebrew lists should cap with a
+          <em>+N more</em> row.
+        </li>
+        <li>
+          Say whether the hover card should list packages at all, or stop at
+          manager · count.
+        </li>
+      </ol>
+    </section>
+  </body>
+</html>

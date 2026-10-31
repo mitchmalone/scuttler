@@ -15,14 +15,39 @@ export interface UpdatesReport {
   refreshing: boolean
   /** Only present sources, in the table order (docs/plans). */
   sources: UpdateSource[]
-  /** The panel-owned upgrade run, live or last finished; absent until the first. */
+  /** The run in flight, or the last one finished; absent until the first. */
   upgrade?: UpgradeRun | null
+  /** Jobs waiting behind `upgrade`, in the order they will run. */
+  queue?: UpgradeJob[]
+  /** Runs finished this session, oldest first (bounded in Rust). */
+  recent?: UpgradeRun[]
+  /** Jobs enqueued since the runner was last idle, and how many finished. */
+  batch?: UpgradeBatch
+}
+
+/** Mirrors `updates.rs`'s `UpgradeBatch`. */
+export interface UpgradeBatch {
+  done: number
+  total: number
+  /** Of `done`, how many exited non-zero (a cancel is not a failure). */
+  failed?: number
+  /** Unix seconds the batch began. */
+  startedAt?: number
+}
+
+/** Mirrors `updates.rs`'s `UpgradeJob`: a source, or one package of it. */
+export interface UpgradeJob {
+  source: SourceId
+  item: string | null
+  command: string
 }
 
 /** Mirrors `updates.rs`'s `UpgradeRun`. */
 export interface UpgradeRun {
-  /** Source id, or 'all'. */
-  source: UpdateSource['id'] | 'all'
+  /** Source id (`all` only in reports older than 2026-10-31). */
+  source: SourceId | 'all'
+  /** The package, when the job was one package rather than the source. */
+  item?: string | null
   command: string
   startedAt: number
   /** 0 while running. */
@@ -34,25 +59,66 @@ export interface UpgradeRun {
   tail: string[]
 }
 
+/** `scuttlarr` is the app itself (selfupdate.rs): its upgrade runs in-process, then relaunches. */
+export type SourceId = 'scuttlarr' | 'brew' | 'mas' | 'pnpm' | 'mise'
+
 export interface UpdateSource {
-  /** `scuttlarr` is the app itself (selfupdate.rs): its upgrade runs in-process, then relaunches. */
-  id: 'scuttlarr' | 'brew' | 'mas' | 'pnpm' | 'mise'
+  id: SourceId
   label: string
   upgradeCommand: string
   /** Epoch secs; 0 if the first check hasn't finished. */
   checkedAt: number
   /** Last line of stderr / "timed out after 60s"; null when healthy. */
   error: string | null
-  /** [] when up to date. */
+  /** Outdated and pending; [] when up to date. */
   items: UpdateItem[]
+  /** Outdated packages the user put aside (`d`): out of the count until
+   * `dismissedUntil` or a newer version. Absent in reports before 2026-11-01. */
+  dismissed?: UpdateItem[]
 }
 
 export interface UpdateItem {
   name: string
   installed: string
   available: string
-  kind?: 'formula' | 'cask'
+  kind?: 'formula' | 'cask' | 'app'
+  /** The command that upgrades this one package — what a click on its row runs. */
+  upgradeCommand: string
+  /** Epoch secs the dismissal lapses; 0 or absent on a pending package. */
+  dismissedUntil?: number
 }
+
+/** How long `d` puts a package aside. */
+export const DISMISS_HOURS = 24
+
+/** The `host.send` messages the panel speaks (`plugins.rs::native_send`). */
+export type UpdatesMessage =
+  | { upgrade: string; item?: string }
+  | { dismiss: SourceId; item: string; hours: number }
+  | { restore: SourceId; item: string }
+
+/** A source's dismissed packages, by name. */
+export function dismissedItems(source: UpdateSource): UpdateItem[] {
+  return [...(source.dismissed ?? [])].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  )
+}
+
+/** Dismissed packages across every source. */
+export function totalDismissed(report: UpdatesReport): number {
+  return report.sources.reduce((n, s) => n + (s.dismissed?.length ?? 0), 0)
+}
+
+/** "23 h left" / "40 min left" / "lapsing" — a dismissal's remaining time. */
+export function dismissedLeft(until: number, nowSecs: number): string {
+  const left = until - nowSecs
+  if (left < 60) return 'lapsing'
+  if (left < 3600) return `${Math.floor(left / 60)} min left`
+  return `${Math.round(left / 3600)} h left`
+}
+
+/** The `upgrade` message that means every present package manager. */
+export const UPDATES_ALL = 'all'
 
 /** The number of pending updates across every present source. */
 export function totalUpdates(report: UpdatesReport): number {
@@ -67,11 +133,13 @@ export function hasErrors(report: UpdatesReport): boolean {
 /**
  * The bar convention (Linux's `apt` indicator): a quiet strip. Hidden while
  * there's no report yet, no refresh has ever completed, or every present
- * source is clean and healthy.
+ * source is clean and healthy — unless an upgrade is running, which the cell
+ * should keep showing until the re-check lands.
  */
 export function cellVisible(report: UpdatesReport | null): boolean {
   if (!report) return false
   if (report.generatedAt === 0) return false
+  if (upgradeRunning(report)) return true
   return report.sources.some((s) => s.items.length > 0 || s.error != null)
 }
 
@@ -87,13 +155,26 @@ export function sourceLine(source: UpdateSource): string {
   return `${source.label} · ${source.items.length}`
 }
 
+/** "3 updates" / "1 update" / "up to date". */
+export function countLine(total: number): string {
+  if (total === 0) return 'up to date'
+  return `${total} update${total === 1 ? '' : 's'}`
+}
+
 /** Whether a panel-owned upgrade is in flight. */
 export function upgradeRunning(report: UpdatesReport | null): boolean {
   return report?.upgrade != null && report.upgrade.finishedAt === 0
 }
 
-/** The label of what a run is upgrading: a source's label, or "everything". */
+/** Whether anything is running or waiting to run. */
+export function upgradeBusy(report: UpdatesReport | null): boolean {
+  return upgradeRunning(report) || (report?.queue?.length ?? 0) > 0
+}
+
+/** The label of what a run is upgrading: the package, a source's label, or
+ * "everything". */
 export function upgradeTarget(report: UpdatesReport, run: UpgradeRun): string {
+  if (run.item) return run.item
   if (run.source === 'all') return 'everything'
   return report.sources.find((s) => s.id === run.source)?.label ?? run.source
 }
@@ -132,6 +213,33 @@ export function upgradeFailed(run: UpgradeRun): boolean {
   return run.finishedAt !== 0 && !run.cancelled && run.exitCode !== 0
 }
 
+/** The batch's progress, or null when nothing was ever queued. */
+export function batchProgress(report: UpdatesReport): UpgradeBatch | null {
+  const b = report.batch
+  if (!b || b.total === 0) return null
+  return b
+}
+
+/** "2 of 5", "3 of 3 · 1 failed" — the meter's right-hand count. */
+export function batchLine(batch: UpgradeBatch): string {
+  const base = `${Math.min(batch.done, batch.total)} of ${batch.total}`
+  return batch.failed ? `${base} · ${batch.failed} failed` : base
+}
+
+/** The run block's headline once a batch of several jobs has finished:
+ * "3 upgraded" / "2 upgraded · Homebrew failed" / "everything failed". */
+export function batchHeadline(
+  report: UpdatesReport,
+  batch: UpgradeBatch,
+): string {
+  const failures = batchFailures(report)
+  const ok = batch.done - failures.length
+  if (failures.length === 0) return `${ok} upgraded`
+  const who = failures.map((r) => upgradeTarget(report, r)).join(', ')
+  if (ok === 0) return `${who} failed`
+  return `${ok} upgraded · ${who} failed`
+}
+
 /** "checked just now" / "checked 12 min ago" / "checked 3 h ago" / "never checked". */
 export function checkedAgo(generatedAt: number, nowSecs: number): string {
   if (generatedAt === 0) return 'never checked'
@@ -141,89 +249,237 @@ export function checkedAgo(generatedAt: number, nowSecs: number): string {
   return `checked ${Math.floor(diff / 3600)} h ago`
 }
 
-/** A row in the flattened, keyboard-selectable panel list. */
+/**
+ * What the runner is doing to one package, or to a whole source (`item`
+ * null): `running` while its job (or its source's job) is the current run,
+ * `queued` while one waits, `failed` from the most recent finished run that
+ * covered it and exited non-zero (it stays: the package is still listed
+ * because the upgrade did not take), `done` from one that succeeded and that
+ * the source has not been re-checked since — once the check lands the row
+ * vanishes. `idle` otherwise.
+ */
+export type UpgradeStatus = 'idle' | 'queued' | 'running' | 'done' | 'failed'
+
+const covers = (
+  run: { source: string; item?: string | null },
+  sourceId: SourceId,
+  item: string | null,
+) =>
+  run.source === sourceId &&
+  (run.item == null || item == null || run.item === item)
+
+export function upgradeStatus(
+  report: UpdatesReport,
+  sourceId: SourceId,
+  item: string | null = null,
+): UpgradeStatus {
+  const run = report.upgrade
+  if (run && run.finishedAt === 0 && covers(run, sourceId, item)) {
+    return 'running'
+  }
+  if (report.queue?.some((j) => covers(j, sourceId, item))) return 'queued'
+  const checkedAt =
+    report.sources.find((s) => s.id === sourceId)?.checkedAt ?? 0
+  const finished = [...(report.recent ?? []), ...(run ? [run] : [])]
+    .filter((r) => r.finishedAt !== 0 && covers(r, sourceId, item))
+    .sort((a, b) => b.finishedAt - a.finishedAt)[0]
+  if (!finished || finished.cancelled) return 'idle'
+  if (finished.exitCode !== 0) return 'failed'
+  return finished.finishedAt < checkedAt ? 'idle' : 'done'
+}
+
+/** The failed run behind a `failed` status, for its error line. */
+export function failedRun(
+  report: UpdatesReport,
+  sourceId: SourceId,
+  item: string | null = null,
+): UpgradeRun | null {
+  const run = report.upgrade
+  const finished = [...(report.recent ?? []), ...(run ? [run] : [])]
+    .filter((r) => r.finishedAt !== 0 && covers(r, sourceId, item))
+    .sort((a, b) => b.finishedAt - a.finishedAt)[0]
+  if (!finished || finished.cancelled || finished.exitCode === 0) return null
+  return finished
+}
+
+/** A run's last output line — brew's `Error: …`, or nothing. */
+export const lastLine = (run: UpgradeRun): string => run.tail.at(-1) ?? ''
+
+/** The failed runs of the current batch, oldest first. */
+export function batchFailures(report: UpdatesReport): UpgradeRun[] {
+  const since = report.batch?.startedAt ?? 0
+  const run = report.upgrade
+  return [...(report.recent ?? []), ...(run ? [run] : [])]
+    .filter(
+      (r) =>
+        r.finishedAt !== 0 &&
+        r.startedAt >= since &&
+        !r.cancelled &&
+        r.exitCode !== 0,
+    )
+    .sort((a, b) => a.finishedAt - b.finishedAt)
+}
+
+/** The word a row wears for its status; '' when idle (the versions show). */
+export const STATUS_LABEL: Record<UpgradeStatus, string> = {
+  idle: '',
+  queued: 'queued',
+  running: 'upgrading…',
+  done: 'upgraded',
+  failed: 'failed',
+}
+
+/** A source's headline for a tile or a card block: its status while the
+ * runner touches it, else its count, "up to date" or "check failed". */
+export function sourceHeadline(
+  report: UpdatesReport,
+  source: UpdateSource,
+): { text: string; status: UpgradeStatus | 'error' | 'clean' | 'pending' } {
+  const status = upgradeStatus(report, source.id)
+  if (status !== 'idle') return { text: STATUS_LABEL[status], status }
+  if (source.error != null) return { text: 'check failed', status: 'error' }
+  if (source.items.length === 0) return { text: 'up to date', status: 'clean' }
+  return { text: String(source.items.length), status: 'pending' }
+}
+
+/** Items by name, the order every surface lists them in. */
+export function sortedItems(source: UpdateSource): UpdateItem[] {
+  return [...source.items].sort((a, b) => a.name.localeCompare(b.name))
+}
+
+/** The first `max` items of a source and how many were left off — the hover
+ * card's per-source block. */
+export function cappedItems(
+  source: UpdateSource,
+  max: number,
+): { shown: UpdateItem[]; more: number } {
+  const items = sortedItems(source)
+  return { shown: items.slice(0, max), more: Math.max(0, items.length - max) }
+}
+
+/** Packages shown per group before the "+N more" row, until expanded. */
+export const GROUP_CAP = 8
+
+/** A row in the panel's ledger: one list, every source in table order. */
 export type PanelRow =
   | {
-      kind: 'header'
-      sourceId: UpdateSource['id']
-      label: string
-      count: number
-      upgradeCommand: string
-      selectable: false
+      /** A source's band: name, count, command, its own upgrade-all. Not
+       * selectable; `u` on any row below it, or its button, upgrades it. */
+      kind: 'band'
+      source: UpdateSource
     }
   | {
       kind: 'item'
-      sourceId: UpdateSource['id']
-      name: string
-      installed: string
-      available: string
-      upgradeCommand: string
-      selectable: true
+      source: UpdateSource
+      item: UpdateItem
     }
   | {
-      kind: 'clean'
-      sourceId: UpdateSource['id']
-      upgradeCommand: string
-      selectable: true
+      /** "+N more": ↵ expands the group. */
+      kind: 'more'
+      source: UpdateSource
+      hidden: number
     }
+  | { kind: 'clean'; source: UpdateSource }
+  | { kind: 'error'; source: UpdateSource; error: string }
   | {
-      kind: 'error'
-      sourceId: UpdateSource['id']
-      error: string
-      upgradeCommand: string
-      selectable: true
+      /** A package put aside: dim, under its group; ↵ brings it back. */
+      kind: 'dismissed'
+      source: UpdateSource
+      item: UpdateItem
     }
 
+export const rowSelectable = (row: PanelRow) =>
+  row.kind === 'item' ||
+  row.kind === 'more' ||
+  row.kind === 'error' ||
+  row.kind === 'dismissed'
+
 /**
- * Flatten the report's sources into one selectable row list: a
- * non-selectable section header per source, then its items (sorted by
- * name), a single dim "up to date" row for a clean source, or a single
- * danger row for an errored one.
+ * The ledger: a band per source, then its packages (sorted by name, capped
+ * at `GROUP_CAP` unless the source is in `expanded`), or one dim "up to
+ * date" band for a clean source, or the band plus an error row for a source
+ * whose check failed. A source's dismissed packages close its group as dim
+ * rows, whatever else it shows.
  */
-export function panelRows(report: UpdatesReport): PanelRow[] {
+export function ledgerRows(
+  report: UpdatesReport,
+  expanded: ReadonlySet<string> = new Set(),
+): PanelRow[] {
   const rows: PanelRow[] = []
   for (const source of report.sources) {
-    rows.push({
-      kind: 'header',
-      sourceId: source.id,
-      label: source.label,
-      count: source.items.length,
-      upgradeCommand: source.upgradeCommand,
-      selectable: false,
-    })
     if (source.error != null) {
-      rows.push({
-        kind: 'error',
-        sourceId: source.id,
-        error: source.error,
-        upgradeCommand: source.upgradeCommand,
-        selectable: true,
-      })
-      continue
+      rows.push({ kind: 'band', source })
+      rows.push({ kind: 'error', source, error: source.error })
+    } else if (source.items.length === 0) {
+      rows.push({ kind: 'clean', source })
+    } else {
+      rows.push({ kind: 'band', source })
+      const items = sortedItems(source)
+      const shown = expanded.has(source.id) ? items : items.slice(0, GROUP_CAP)
+      for (const item of shown) rows.push({ kind: 'item', source, item })
+      if (shown.length < items.length) {
+        rows.push({
+          kind: 'more',
+          source,
+          hidden: items.length - shown.length,
+        })
+      }
     }
-    if (source.items.length === 0) {
-      rows.push({
-        kind: 'clean',
-        sourceId: source.id,
-        upgradeCommand: source.upgradeCommand,
-        selectable: true,
-      })
-      continue
-    }
-    const sorted = [...source.items].sort((a, b) =>
-      a.name.localeCompare(b.name),
-    )
-    for (const item of sorted) {
-      rows.push({
-        kind: 'item',
-        sourceId: source.id,
-        name: item.name,
-        installed: item.installed,
-        available: item.available,
-        upgradeCommand: source.upgradeCommand,
-        selectable: true,
-      })
+    for (const item of dismissedItems(source)) {
+      rows.push({ kind: 'dismissed', source, item })
     }
   }
   return rows
+}
+
+/** The command a row would run — what `c` copies and `t` hands to the terminal. */
+export function rowCommand(row: PanelRow): string {
+  return row.kind === 'item' || row.kind === 'dismissed'
+    ? row.item.upgradeCommand
+    : row.source.upgradeCommand
+}
+
+/** The `host.send` message a row's ↵ sends — an upgrade, or for a dismissed
+ * row its return — or null for a row that opens rather than runs ("+N
+ * more", a clean band). */
+export function rowUpgradeMessage(row: PanelRow): UpdatesMessage | null {
+  switch (row.kind) {
+    case 'item':
+      return { upgrade: row.source.id, item: row.item.name }
+    case 'band':
+    case 'error':
+      return { upgrade: row.source.id }
+    case 'dismissed':
+      return { restore: row.source.id, item: row.item.name }
+    default:
+      return null
+  }
+}
+
+/** The message `d` sends for a row: a pending package is put aside for
+ * `DISMISS_HOURS`, a dismissed one brought back; null for the rest. */
+export function rowDismissMessage(row: PanelRow): UpdatesMessage | null {
+  switch (row.kind) {
+    case 'item':
+      return {
+        dismiss: row.source.id,
+        item: row.item.name,
+        hours: DISMISS_HOURS,
+      }
+    case 'dismissed':
+      return { restore: row.source.id, item: row.item.name }
+    default:
+      return null
+  }
+}
+
+/** "5 updates · 3 managers" / "up to date · 1 dismissed" — the head's count
+ * line; managers = sources with something pending. */
+export function headline(report: UpdatesReport): string {
+  const total = totalUpdates(report)
+  const dismissed = totalDismissed(report)
+  const aside = dismissed > 0 ? ` · ${dismissed} dismissed` : ''
+  if (total === 0) return `up to date${aside}`
+  const managers = report.sources.filter((s) => s.items.length > 0).length
+  return `${countLine(total)} · ${managers} manager${managers === 1 ? '' : 's'}${aside}`
 }

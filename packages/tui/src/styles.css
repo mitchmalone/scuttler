@@ -869,3 +869,220 @@
   padding: 1px 4px;
   color: var(--_accent);
 }
+
+/* ---- Updates (packages/plugins/updates/panel.tsx) -------------------- */
+
+/* The ledger: one list, a band per package manager, its packages under a
+ * gutter rule. The band carries the name, a count chip, the command and the
+ * group's own upgrade-all; a clean manager folds to one dim band. */
+.tui-updates-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.tui-updates-band {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 6px;
+  border-top: 1px solid var(--_border);
+  margin-top: 6px;
+}
+.tui-updates-group:first-of-type .tui-updates-band {
+  border-top: none;
+  margin-top: 0;
+}
+
+.tui-updates-band-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--_fg);
+  white-space: nowrap;
+}
+.tui-updates-band-clean .tui-updates-band-name {
+  color: var(--_dim);
+  font-weight: 400;
+}
+
+.tui-updates-band-cmd {
+  color: var(--_dim);
+  font-size: 11px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tui-updates-chip {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border: 1px solid var(--_border);
+  color: var(--_fg);
+  min-width: 2.4em;
+  text-align: center;
+  white-space: nowrap;
+}
+.tui-updates-chip-zero {
+  color: var(--_dim);
+  font-weight: 400;
+}
+.tui-updates-chip-error {
+  border-color: var(--danger, #ff6b6b);
+  color: var(--danger, #ff6b6b);
+}
+.tui-updates-chip-running,
+.tui-updates-chip-queued {
+  border-color: var(--_accent);
+  color: var(--_accent);
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* The two buttons: a group's "upgrade all" and the head's "upgrade
+ * everything". Bordered like a segment; the key hint rides dim inside. */
+.tui .tui-updates-btn {
+  font-size: 12px;
+  color: var(--_fg);
+  border: 1px solid var(--_border);
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+.tui .tui-updates-btn:hover,
+.tui .tui-updates-btn:focus-visible {
+  background: var(--_selected);
+  outline: none;
+}
+.tui .tui-updates-btn-primary {
+  border-color: var(--_accent);
+}
+.tui .tui-updates-btn:disabled {
+  color: var(--_dim);
+  cursor: default;
+}
+.tui .tui-updates-btn:disabled:hover {
+  background: none;
+}
+.tui-updates-btn .tui-updates-key {
+  color: var(--_dim);
+  margin-left: 6px;
+}
+
+/* Packages hang under the band on a gutter rule; the cursor tints it. */
+.tui-updates-group .tui-row {
+  margin-left: 14px;
+  border-left: 2px solid var(--_border);
+  padding-left: 14px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+.tui-updates-group .tui-row-selected {
+  border-left-color: var(--_accent);
+}
+
+.tui-panel-head-right {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* `installed → available` on a row's right. */
+.tui-updates-versions {
+  display: inline-flex;
+  gap: 6px;
+  white-space: nowrap;
+}
+.tui-updates-from,
+.tui-updates-arrow {
+  color: var(--_dim);
+}
+.tui-updates-to {
+  color: var(--_fg);
+}
+
+/* Runner status: the word on a row's right. */
+.tui-updates-status {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.tui-updates-running,
+.tui-updates-queued {
+  color: var(--_accent);
+}
+.tui-updates-done {
+  color: var(--good, #3fb950);
+}
+.tui-updates-failed,
+.tui-updates-error {
+  color: var(--danger, #ff6b6b);
+}
+.tui-row .tui-updates-error {
+  color: var(--danger, #ff6b6b);
+}
+
+/* A row's right when a status word has an action riding after it (a failed
+ * row's "dismiss 24h", a dismissed row's "restore"). */
+.tui-updates-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.tui-updates-dismissed {
+  color: var(--_dim);
+}
+
+/* The run block: one meter line (headline · track · batch) and the last
+ * output line beneath, ruled off from the ledger. */
+.tui-updates-run {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 0 6px;
+  border-bottom: 1px solid var(--_border);
+}
+.tui-updates-run .tui-meter-label {
+  min-width: 0;
+  max-width: 50%;
+  text-align: left;
+  color: var(--_accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tui-updates-run-finished .tui-meter-label {
+  color: var(--_fg);
+}
+.tui-updates-run-failed .tui-meter-label {
+  color: var(--danger, #ff6b6b);
+}
+.tui-updates-run .tui-meter-right {
+  min-width: 0;
+}
+
+.tui-updates-tail {
+  color: var(--_dim);
+  font-size: 11px;
+  padding: 0 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The running row's glyph turns; still under Reduce Motion. */
+@keyframes tui-updates-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.tui-updates-spin {
+  animation: tui-updates-spin 1.2s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tui-updates-spin {
+    animation: none;
+  }
+}

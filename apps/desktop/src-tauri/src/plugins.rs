@@ -1111,9 +1111,11 @@ fn record_error(id: &str, generation: u64, err: &str) {
 }
 
 /// A native provider's own message handling — currently just `updates`,
-/// whose panel refreshes on `{"refresh":true}` or runs a source's upgrade
-/// command on `{"upgrade":"<sourceId>|all"}` instead of talking to a
-/// service's stdin. `None` = this native id has no handler for `message`.
+/// whose panel refreshes on `{"refresh":true}`, queues an upgrade on
+/// `{"upgrade":"<sourceId>|all"}` (one package with `"item":"<name>"`),
+/// puts a package aside on `{"dismiss":"<sourceId>","item":…,"hours":24}`
+/// and brings it back on `{"restore":"<sourceId>","item":…}` instead of
+/// talking to a service's stdin. `None` = this native id has no handler for `message`.
 fn native_send(
     name: &str,
     message: &serde_json::Value,
@@ -1127,7 +1129,8 @@ fn native_send(
         "updates" if message.get("upgrade").and_then(|u| u.as_str()).is_some() => {
             // infallible: guarded by is_some() above
             let source = message.get("upgrade").unwrap().as_str().unwrap();
-            Some(crate::updates::upgrade(source))
+            let item = message.get("item").and_then(|i| i.as_str());
+            Some(crate::updates::upgrade(source, item))
         }
         "updates"
             if message
@@ -1137,11 +1140,33 @@ fn native_send(
         {
             // infallible: guarded by is_some() above
             let source = message.get("upgradeInTerminal").unwrap().as_str().unwrap();
-            Some(upgrade_in_terminal(source, config))
+            let item = message.get("item").and_then(|i| i.as_str());
+            Some(upgrade_in_terminal(source, item, config))
         }
         "updates" if message.get("cancelUpgrade").and_then(|c| c.as_bool()) == Some(true) => {
             crate::updates::cancel_upgrade();
             Some(Ok(()))
+        }
+        "updates" if message.get("dismiss").and_then(|d| d.as_str()).is_some() => {
+            // infallible: guarded by is_some() above
+            let source = message.get("dismiss").unwrap().as_str().unwrap();
+            let hours = message
+                .get("hours")
+                .and_then(|h| h.as_u64())
+                .unwrap_or(24)
+                .clamp(1, 24 * 30);
+            Some(match message.get("item").and_then(|i| i.as_str()) {
+                Some(item) => crate::updates::dismiss(source, item, hours * 3600),
+                None => Err("dismiss needs an item".to_string()),
+            })
+        }
+        "updates" if message.get("restore").and_then(|r| r.as_str()).is_some() => {
+            // infallible: guarded by is_some() above
+            let source = message.get("restore").unwrap().as_str().unwrap();
+            Some(match message.get("item").and_then(|i| i.as_str()) {
+                Some(item) => crate::updates::restore(source, item),
+                None => Err("restore needs an item".to_string()),
+            })
         }
         _ => None,
     }
@@ -1152,9 +1177,17 @@ fn native_send(
 /// cask; `↵` runs it in the panel via `updates::upgrade`) — same
 /// hand-off as bang mode (`commands.rs::run_bang`): resolve the effective
 /// terminal, open a new window/tab per `bang_new_window`, fire-and-forget.
-fn upgrade_in_terminal(source: &str, config: &crate::config::Config) -> Result<(), String> {
-    let command = crate::updates::upgrade_command(source)
-        .ok_or_else(|| format!("unknown update source: {source}"))?;
+fn upgrade_in_terminal(
+    source: &str,
+    item: Option<&str>,
+    config: &crate::config::Config,
+) -> Result<(), String> {
+    let command = match item {
+        Some(name) => crate::updates::item_command(source, name)
+            .ok_or_else(|| format!("unknown package {name} in {source}"))?,
+        None => crate::updates::upgrade_command(source)
+            .ok_or_else(|| format!("unknown update source: {source}"))?,
+    };
     crate::terminal::run(config.terminal, &command, config.bang_new_window)
         .map_err(|e| e.to_string())?;
     let terminal = match crate::terminal::effective_terminal(config.terminal) {

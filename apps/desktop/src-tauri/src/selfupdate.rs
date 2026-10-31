@@ -183,6 +183,7 @@ pub fn check() -> UpdateSource {
         checked_at: now_secs(),
         error: None,
         items: Vec::new(),
+        dismissed: Vec::new(),
     };
     let Some(id) = identity() else {
         source.error = Some("not an installed, signed build".into());
@@ -197,6 +198,8 @@ pub fn check() -> UpdateSource {
                     installed: id.version.clone(),
                     available: latest.version,
                     kind: Some("app".into()),
+                    upgrade_command: UPGRADE_COMMAND.into(),
+                    dismissed_until: 0,
                 });
             }
         }

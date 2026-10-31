@@ -1788,3 +1788,37 @@ DiagnosticReports` and waits the full backoff instead of thrashing. One new comm
   missing agents return on their next hook event). Named group boxes and a group hover
   card (designed, parked). Spending colour on done · unread again (rejected: shape now
   carries the distinction colour was failing at).
+
+### 2026-10-31 · Updates upgrade in the app, per package or in bulk, through a queue
+
+- **Decision.** `updates ⏎` upgrades without leaving scuttlarr. Every `UpdateItem` carries
+  its own `upgrade_command` (`brew upgrade gcc`, `brew upgrade --cask repobar`,
+  `mas upgrade <id>`, `pnpm update -g <name>`, `mise upgrade <tool>`), computed by the
+  parser that read it. `updates::upgrade(source, item)` queues a job instead of refusing
+  while one runs: one child at a time, in order; `"all"` expands to one job per present
+  package manager so a failure in one does not stop the rest; a job already running or
+  waiting is not queued twice; the queue draining kicks the re-check. The report gains
+  `queue`, `recent` (finished runs this session, bounded) and `batch` (`done`/`total`
+  since the runner was last idle), from which the UI derives each row's state — queued,
+  upgrading, upgraded, failed — until the source is re-checked. `cancel_upgrade` kills
+  the child and empties the queue. No new Tauri command: the panel speaks through
+  `plugin_send` (`{"upgrade":"brew","item":"gcc"}`, `{"upgradeInTerminal":…,"item":…}`).
+- **UI.** The ledger (design asset `plans/assets/updates-panel-options.html`, option A,
+  picked 2026-10-31 over a two-pane sidebar and framed cards). One list, no view
+  switching: a band per package manager with its name, a count chip, its command and its
+  own "upgrade all"; its packages under a gutter rule, each a click or `↵` from
+  upgrading; a clean manager folds to one dim band; a long group caps at eight rows with
+  a "+N more" row that expands. "Upgrade everything" sits in the panel head (`Panel`
+  gains a `right` slot). The run block is one meter line (headline · progress · batch)
+  and the last output line. The hover card is the same bands, compact, with packages
+  listed under each. The first cut of the day borrowed the usage panel's segmented
+  control and tiles; Mitch found the managers blurred together, hence the asset.
+  Before this a click copied the source's command, which is why "nothing happened"
+  (JOURNAL 2026-10-31). `t` keeps the terminal hand-off for a sudo'ing cask, now per
+  package too.
+- **Why a queue.** Package-at-a-time only works if clicking a second package while the
+  first runs does something sensible; refusing it (the 2026-09-10 shape) made the panel
+  feel broken. One child at a time keeps brew's own locks out of the picture.
+- **Alternatives.** Running jobs in parallel (rejected: brew serialises on its own lock,
+  and interleaved tails are unreadable). Multi-select before starting (rejected for now:
+  a queue of clicks is the same thing with no mode). A pty for sudo (unchanged: `t`).

@@ -962,3 +962,204 @@
 .bar-card .bar-tone-accent {
   color: var(--accent, #9db2ff);
 }
+
+/* ---- updates (packages/plugins/updates/cell.tsx) ---------------------- */
+
+/* Right-anchored like usage, and shaped like it: a head with a glyph, a
+ * title and an uppercase status line, a badge for the state, then one ruled
+ * block per package manager listing its packages. Colour is spent only on
+ * state (a running upgrade, a failed check, a finished row). */
+.bar-updates {
+  position: relative;
+  display: inline-flex;
+}
+
+.bar-updates-card {
+  right: 0;
+  width: 384px;
+  padding: 22px 24px 16px;
+  gap: 0;
+}
+
+.bar-updates-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 20px;
+}
+
+.bar-updates-top > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.bar-updates-glyph {
+  display: inline-flex;
+  color: var(--fg, #dde1f0);
+}
+
+.bar-updates-title {
+  color: var(--fg, #dde1f0);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.bar-updates-sub {
+  color: var(--dim, #7f86a5);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.bar-updates-badge {
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--fg, #dde1f0);
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+
+/* State colours, shared by the badge, a block's headline and a row's word. */
+.bar-card .bar-updates-running,
+.bar-card .bar-updates-queued {
+  color: var(--accent, #9db2ff);
+}
+.bar-card .bar-updates-done {
+  color: var(--good, #3fb950);
+}
+.bar-card .bar-updates-failed,
+.bar-card .bar-updates-error {
+  color: var(--danger, #f85149);
+}
+.bar-card .bar-updates-clean {
+  color: var(--dim, #7f86a5);
+}
+.bar-card .bar-updates-pending {
+  color: var(--fg, #dde1f0);
+}
+.bar-card .bar-updates-queued {
+  font-weight: 400;
+}
+
+/* The live run: headline and the last output line, ruled off like a source. */
+.bar-updates-run {
+  border-top: 1px solid var(--border, #34364a);
+  padding: 14px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bar-updates-run-line {
+  color: var(--fg, #dde1f0);
+  font-weight: 700;
+}
+
+.bar-updates-source {
+  border-top: 1px solid var(--border, #34364a);
+  padding: 14px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bar-updates-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.bar-updates-name {
+  color: var(--fg, #dde1f0);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.bar-updates-chip {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0 7px;
+  border: 1px solid var(--border, #34364a);
+  color: var(--fg, #dde1f0);
+  min-width: 2.4em;
+  text-align: center;
+  line-height: 16px;
+}
+
+/* A block's packages hang under the band, as in the panel. */
+.bar-updates-row {
+  padding-left: 12px;
+}
+.bar-updates-clean .bar-updates-name {
+  color: var(--dim, #7f86a5);
+  font-weight: 400;
+}
+
+.bar-updates-headline {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.bar-updates-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  line-height: 20px;
+}
+
+.bar-updates-row-name {
+  color: var(--fg, #dde1f0);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar-updates-row-versions {
+  display: inline-flex;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.bar-updates-from {
+  color: var(--dim, #7f86a5);
+}
+.bar-updates-arrow {
+  color: var(--dim, #7f86a5);
+}
+.bar-updates-to {
+  color: var(--fg, #dde1f0);
+}
+
+.bar-updates-row-status {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.bar-updates-note {
+  color: var(--dim, #7f86a5);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar-updates-foot {
+  border-top: 1px solid var(--border, #34364a);
+  padding-top: 14px;
+  color: var(--dim, #7f86a5);
+  font-size: 11px;
+}

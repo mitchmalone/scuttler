@@ -6,6 +6,38 @@
 
 ---
 
+### 2026-10-31 · A batch of three said "3 of 3" in green while brew had failed
+
+First real "upgrade everything" (brew, mas, mise): brew exited 1 inside three seconds
+(`beeper/tap/cli` 0.6.3 is a broken formula: `Errno::ENOENT … bin/beeper`), mas and mise
+succeeded, and the run block read "mise upgraded · 3 of 3" with a green meter. Two
+causes. The block only ever described the _last_ job, so an earlier failure in the batch
+vanished behind a later success. And a row's `failed` mark was keyed to "finished since
+the source's last check": the drained queue kicks a re-check, which landed one second
+later and cleared the mark, so the still-listed package showed no sign it had just
+failed. Fixes: the batch counts `failed` and knows when it started, the block speaks for
+the batch once it is over ("2 upgraded · Homebrew failed", each failure's last output
+line beneath), and `failed` survives a re-check (the package being listed at all means
+the upgrade did not take; only `done` is cleared by the check, because a re-check removes
+a package that upgraded).
+
+### 2026-10-31 · "Clicking an update does nothing": the row copied, it did not run
+
+The updates panel's `ListRow` `onClick` called `host.copy(upgradeCommand)` while only `↵`
+ran `host.send({upgrade})`, so a mouse click silently put `brew upgrade` on the clipboard.
+The logbook confirmed it: a month of `refreshed:` lines and three `open_panel updates`,
+never one `upgrade … in panel`. A click and `↵` on the same row must do the same thing;
+copying is `c`. Fixed with the in-app queue (DECISIONS 2026-10-31).
+
+### 2026-10-31 · `~/.local/bin/pnpm` dangles after a mise node bump
+
+The pnpm/pnpx shims there are symlinks into
+`~/.local/share/mise/installs/node/24.21.0/lib/node_modules/corepack/dist/`; mise now has
+only `24.22.0`, so `pnpm` is "command not found" in any shell that does not resolve it
+some other way (agent shells). Workaround used: run
+`node ~/.local/share/mise/installs/node/24/lib/node_modules/corepack/dist/pnpm.js`. The
+durable fix is to point the shims at the `24` alias dir, not a pinned version.
+
 ### 2026-10-28 · A prompt hook hears the harness too
 
 Agent cells read like templates — `<task-notification> <task-id>…`,

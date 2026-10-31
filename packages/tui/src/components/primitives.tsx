@@ -5,6 +5,7 @@ export function Panel({
   title,
   subtitle,
   icon,
+  right,
   footer,
   className = '',
   onKeyDown,
@@ -14,6 +15,8 @@ export function Panel({
   title?: ReactNode
   subtitle?: ReactNode
   icon?: ReactNode
+  /** A head action on the right (a button, a badge); stays out of the title column. */
+  right?: ReactNode
   footer?: ReactNode
   className?: string
   onKeyDown?: (event: KeyboardEvent) => void
@@ -35,6 +38,7 @@ export function Panel({
             {title && <div className="tui-panel-title">{title}</div>}
             {subtitle && <div className="tui-panel-subtitle">{subtitle}</div>}
           </div>
+          {right != null && <div className="tui-panel-head-right">{right}</div>}
         </header>
       )}
       <div className="tui-panel-body">{children}</div>

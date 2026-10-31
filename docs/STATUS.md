@@ -3,7 +3,7 @@
 > The cursor: where we are, what needs hands, what's next. A snapshot, not a history —
 > history lives in git, `plans/done/`, `releases/` and `JOURNAL.md`.
 >
-> Last updated: 2026-10-28 (agent dots: states by shape, liveness fix, card redesign; v0.8.0 notes written, perf measured, ready to release; setup survives a launch toast; site copy matches the v0.8.0 defaults and first-launch setup; setup follows the theme; dmg step cause found; site theme picker; site pixel hero; defaults flip: bar on, tiling off; invariant 3 reworded)
+> Last updated: 2026-11-01 (updates: dismiss a package for a day, keyed to its version, bulk upgrades skip it; 2026-10-31: updates upgrade in the app: per package, per source, everything, through a queue; card and panel on the usage design; 2026-10-28: agent dots: states by shape, liveness fix, card redesign; v0.8.0 notes written, perf measured, ready to release; setup survives a launch toast; site copy matches the v0.8.0 defaults and first-launch setup; setup follows the theme; dmg step cause found; site theme picker; site pixel hero; defaults flip: bar on, tiling off; invariant 3 reworded)
 
 ## Where we are
 
@@ -25,6 +25,18 @@
   pixel field in the demo's picked theme; hands-check pending). The site theme picker
   (`plans/done/2026-10-20-site-theme-picker.md`: the whole site in any of the 14 app
   themes, light/dark switch and next-themes gone; hands-checked).
+- **Updates upgrade in the app** (`plans/done/2026-10-31-updates-in-app-upgrades.md`,
+  DECISIONS 2026-10-31): a click or `↵` on a package row runs that package's upgrade
+  (`brew upgrade gcc`, `mas upgrade <id>`, …), a source's "Upgrade all" row the source,
+  `a` everything; jobs queue one at a time with a batch meter, rows read queued /
+  upgrading / upgraded / failed, `x` cancels and empties the queue. Panel and card are
+  the ledger: a band per manager with its own "upgrade all", packages under a gutter
+  rule (design asset `plans/assets/updates-panel-options.html`, option A). Hands-check
+  pending (below). 2026-11-01 (`plans/done/2026-11-01-updates-dismiss.md`, DECISIONS):
+  `d` or a failed row's "dismiss 24h" puts a package aside for a day — out of the count
+  and of every bulk upgrade (the source's job becomes its pending packages by name),
+  dim under its manager with its time left, back early if a newer version lands, `↵`
+  restores. State in `~/.local/state/scuttlarr/updates-dismissed.json`.
 - **Agent dots** (`plans/done/2026-10-28-agent-dots.md`, DECISIONS 2026-10-28): states
   read by shape from one kit icon, attention in `warn`, a session stays while its pane or
   process lives, `read` after a visit, the card rebuilt (doing line, crumbs, clocks),
@@ -68,6 +80,25 @@
 - `opensource-readiness-review`: run before the next feature phase or not.
 
 ## Needs Mitch (hands-checks)
+
+Updates in the app (dev-installed 2026-10-31):
+
+- Hover the updates cell: the card lists Homebrew's outdated formula with its versions.
+- `updates ⏎` → click the formula row under Homebrew: it reads "upgrading…", the last
+  output line shows under the meter, then "upgraded"; the re-check drops the count. The
+  band's "upgrade all" and the head's "upgrade everything" buttons run on click.
+- `beeper/tap/cli` 0.6.3 fails to install (`bin/beeper` missing in the tap's formula, not
+  a scuttlarr bug). "upgrade everything" now reads "2 upgraded · Homebrew failed" with
+  brew's error line under the meter, and the row keeps its failed mark after the
+  re-check (JOURNAL 2026-10-31). Click a second row while one runs: it reads "queued"
+  and the meter says `1 of 2`.
+- Dismiss (2026-11-01): select `beeper/tap/cli` and press `d` (or click "dismiss 24h"
+  on its failed row): the count drops, the cell hides when nothing else is pending, the
+  row sits dim under Homebrew reading "dismissed · 23 h left", the head says
+  "… · 1 dismissed". "upgrade everything" now runs the other formulae by name and skips
+  it. `↵` on the dim row brings it back at once; relaunching keeps the dismissal.
+- `~/.local/bin/pnpm` is a dangling symlink after the mise node bump (JOURNAL
+  2026-10-31): repoint it at the `24` alias dir.
 
 Back from travel:
 
