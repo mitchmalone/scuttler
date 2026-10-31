@@ -3,17 +3,19 @@
 > The cursor: where we are, what needs hands, what's next. A snapshot, not a history —
 > history lives in git, `plans/done/`, `releases/` and `JOURNAL.md`.
 >
-> Last updated: 2026-11-01 (release smoke tests scripted, a release is one command; updates: dismiss a package for a day, keyed to its version, bulk upgrades skip it; 2026-10-31: updates upgrade in the app: per package, per source, everything, through a queue; card and panel on the usage design; 2026-10-28: agent dots: states by shape, liveness fix, card redesign; v0.8.0 notes written, perf measured, ready to release; setup survives a launch toast; site copy matches the v0.8.0 defaults and first-launch setup; setup follows the theme; dmg step cause found; site theme picker; site pixel hero; defaults flip: bar on, tiling off; invariant 3 reworded)
+> Last updated: 2026-11-01 (v0.8.0 released; release smoke tests scripted, a release is one command; updates: dismiss a package for a day, keyed to its version, bulk upgrades skip it; 2026-10-31: updates upgrade in the app: per package, per source, everything, through a queue; card and panel on the usage design; 2026-10-28: agent dots: states by shape, liveness fix, card redesign; v0.8.0 notes written, perf measured, ready to release; setup survives a launch toast; site copy matches the v0.8.0 defaults and first-launch setup; setup follows the theme; dmg step cause found; site theme picker; site pixel hero; defaults flip: bar on, tiling off; invariant 3 reworded)
 
 ## Where we are
 
 - **Released: v0.7.0** (2026-10-01), the first release as scuttlarr
   (`releases/v0.7.0.md`). Tap has `Casks/scuttlarr.rb`; `launcharr.rb` is the deprecated
   alias.
-- **v0.8.0 is ready to release** (`releases/v0.8.0.md`, perf measured 2026-10-21 on the
-  Mini; dry run green up to gh auth and signing). Needs Mitch's laptop:
-  `scripts/release.sh 0.8.0`.
-- **On main, unreleased:** per-source update-check intervals (2026-10-18); cleanup pass 1
+- **v0.8.0 released 2026-11-01** (`releases/v0.8.0.md`; GitHub Release with zip, dmg and
+  SHA256SUMS; fan-out all green: check, homebrew tap at 0.8.0, Notion, mitchmalone.com).
+  Everything below through the updates dismiss shipped in it. The smoke tests are
+  scripted since the same day (DECISIONS 2026-11-01), so the next release is one
+  command: `scripts/release.sh X.Y.Z`.
+- **In v0.8.0:** per-source update-check intervals (2026-10-18); cleanup pass 1
   (`plans/done/2026-10-19-cleanup-bugs-and-guardrails.md`: bar off means off, one atomic
   config writer, plugin panels keep identity, verify gate gains fmt, coverage floors,
   layering, purity lint, shellcheck); the docs-truth pass
