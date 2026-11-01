@@ -1,4 +1,4 @@
-import { fuzzyMatch } from '@scuttlarr/core/matcher'
+import { fuzzyMatch } from '@scuttler/core/matcher'
 
 /** Mirrors `Screenshot` in `src-tauri/src/screenshots.rs`. */
 export interface Screenshot {

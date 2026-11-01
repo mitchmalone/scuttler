@@ -2,13 +2,13 @@ import {
   type PolicyInputs,
   type Resolution,
   resolveAppearance,
-} from '@scuttlarr/core/appearance'
+} from '@scuttler/core/appearance'
 import {
   BUILTIN_THEME_SOURCES,
   type RenderedTheme,
   TEMPLATES,
   renderTheme,
-} from '@scuttlarr/theme'
+} from '@scuttler/theme'
 import { invoke } from '@tauri-apps/api/core'
 
 import {
@@ -21,8 +21,8 @@ import { type UserTheme, userThemes } from './user-themes'
 /**
  * The theme rung (DECISIONS 2026-09-11): render the active theme through the
  * package's templates and hand the bytes to Rust (`theme_apply`), which stages,
- * swaps `~/.local/state/scuttlarr/current/theme/`, and fans out reloads.
- * Rendering is pure and lives in `@scuttlarr/theme`; this file is the seam.
+ * swaps `~/.local/state/scuttler/current/theme/`, and fans out reloads.
+ * Rendering is pure and lives in `@scuttler/theme`; this file is the seam.
  */
 
 /** Mirrors `ThemeResult` in theme.rs. */
@@ -35,7 +35,7 @@ export type ThemeResult = {
 }
 
 /** The pre-rename default theme name still found in configs (`resolveTheme` aliases it too). */
-const ALIASES: Record<string, string> = { launcharr: 'scuttlarr' }
+const ALIASES: Record<string, string> = { launcharr: 'scuttler' }
 
 /** Merged with defaults. Until the user has touched the policy (`config.appearance`
  * absent) the pair is seeded with the current theme on both halves, so turning the
@@ -77,7 +77,7 @@ export function flipsMacos(config: Config): boolean {
   return a.macos && a.mode !== 'system'
 }
 
-/** Render the named theme: a user `colors.toml` (`~/.config/scuttlarr/themes/<name>/`,
+/** Render the named theme: a user `colors.toml` (`~/.config/scuttler/themes/<name>/`,
  * hand files honoured) wins over a built-in of the same name. Token-only custom
  * themes (`config.themes`) have no palette to render surfaces from. */
 export function renderNamed(

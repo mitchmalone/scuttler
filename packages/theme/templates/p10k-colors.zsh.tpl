@@ -1,4 +1,4 @@
-# scuttlarr theme: {{ name }} — rendered, do not edit. Sourced by the base .p10k.zsh
+# scuttler theme: {{ name }} — rendered, do not edit. Sourced by the base .p10k.zsh
 # before its segment styling, so a lean p10k config can say `$accent` / `$comment`
 # and retint with the theme on the next prompt.
 local background='{{ background }}'

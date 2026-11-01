@@ -86,7 +86,7 @@ pub(crate) fn apply_launch_at_login(app: &tauri::AppHandle, enabled: bool) {
     match result {
         Ok(()) if enabled => login_item::supervise(),
         Ok(()) => {}
-        Err(e) => eprintln!("[scuttlarr] launch-at-login ({enabled}) failed: {e}"),
+        Err(e) => eprintln!("[scuttler] launch-at-login ({enabled}) failed: {e}"),
     }
 }
 
@@ -203,16 +203,16 @@ pub fn run() {
             commands::plugin_permission_fix,
         ])
         .setup(move |app| {
-            // No Dock icon, no menu bar: scuttlarr is an accessory (PRD §6.2).
+            // No Dock icon, no menu bar: scuttler is an accessory (PRD §6.2).
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
-            // launcharr → scuttlarr paths, once, before anything reads them (rename.rs).
+            // launcharr → scuttler paths, once, before anything reads them (rename.rs).
             rename::boot();
             let (cfg, first_run) = config::load_or_create()?;
 
             let data_dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&data_dir)?;
-            let db = frecency::open(&data_dir.join("scuttlarr.db"))?;
+            let db = frecency::open(&data_dir.join("scuttler.db"))?;
             clipboard::init_table(&db)?;
 
             app.manage(AppState {
@@ -236,7 +236,7 @@ pub fn run() {
                     let inner = handle.clone();
                     let _ = handle.run_on_main_thread(move || {
                         if let Err(e) = bar::init(&inner) {
-                            eprintln!("[scuttlarr bar] init failed: {e:?}");
+                            eprintln!("[scuttler bar] init failed: {e:?}");
                         }
                     });
                 });
@@ -270,7 +270,7 @@ pub fn run() {
 
             // §7 budget: cold start → hotkey registered < 1s.
             eprintln!(
-                "[scuttlarr perf] cold start {}ms",
+                "[scuttler perf] cold start {}ms",
                 boot.elapsed().as_millis()
             );
 
@@ -306,7 +306,7 @@ pub fn run() {
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("error while building scuttlarr")
+        .expect("error while building scuttler")
         .run(|_app, event| {
             // Orderly quit takes the supervised `borders` child with us (desktop.rs).
             if let tauri::RunEvent::Exit = event {

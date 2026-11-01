@@ -1,7 +1,7 @@
 # migrations
 
 One-shot changes to a machine that a base change needs, run once each by
-`scuttlarr migrate` — which the app runs at startup when the Machine rung is on
+`scuttler migrate` — which the app runs at startup when the Machine rung is on
 (`setup::boot`). A base change that alters user-visible state ships with its migration
 in the same commit (`docs/SETUP.md`).
 
@@ -14,12 +14,12 @@ order. Only `*.zsh` files count; this README is ignored.
 
 - Sourced once, in a subshell, with `lib/` already loaded: `sc_log`, `sc_default`,
   `sc_file_generated`, `sc_manifest_*`, `sc_adopted_path` and the rest are all
-  available, as are `$SCUTTLARR_BASE`, `$SCUTTLARR_OVERLAY` and `$SCUTTLARR_STATE`.
+  available, as are `$SCUTTLER_BASE`, `$SCUTTLER_OVERLAY` and `$SCUTTLER_STATE`.
 - `err_exit` and `no_unset` are on: the first failing command fails the
   migration. `exit` ends the migration, not the run.
-- On success its filename is appended to `$SCUTTLARR_STATE/migrations` and it
+- On success its filename is appended to `$SCUTTLER_STATE/migrations` and it
   never runs again. On failure the run stops there and nothing after it runs
-  until the next `scuttlarr migrate`.
+  until the next `scuttler migrate`.
 
 ## Rules
 
@@ -28,4 +28,5 @@ order. Only `*.zsh` files count; this README is ignored.
 - Anything it writes outside the overlay goes through the manifest
   (`sc_file_generated`, `sc_manifest_add`), so `doctor` and `remove` know.
 
-Tests point `SCUTTLARR_MIGRATIONS_DIR` at fixtures; nothing real ships here yet.
+Tests point `SCUTTLER_MIGRATIONS_DIR` at fixtures. The first real one is
+`2026-11-01-rename-to-scuttler.zsh` (`test/rename.test.zsh` covers it).

@@ -1,6 +1,6 @@
 //! Bang-mode / agent-jump hand-off to the configured terminal.
 //!
-//! Ghostty (the default, and the stack's only terminal — scuttlarr AGENTS)
+//! Ghostty (the default, and the stack's only terminal — scuttler AGENTS)
 //! has no AppleScript dictionary and no `+new-window` on macOS, and `open -na
 //! Ghostty` while one is already running starts a second, unusable instance
 //! (two processes, two menu bars — found 2026-09-04). So Ghostty is never
@@ -440,7 +440,7 @@ pub fn run(configured: Terminal, command: &str, new_window: bool) -> CmdResult<(
     }
     let script = script_for(terminal, command, new_window);
     // Spawn, don't wait: the first run triggers macOS's Automation consent prompt, which
-    // blocks osascript until the user answers. scuttlarr must dismiss immediately (PRD §4.4).
+    // blocks osascript until the user answers. scuttler must dismiss immediately (PRD §4.4).
     Command::new("osascript")
         .arg("-e")
         .arg(&script)

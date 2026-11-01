@@ -1,46 +1,46 @@
 #!/bin/zsh
-# scuttlarr — the CLI. zsh 5.9, nothing else (DEVIATIONS.md).
+# scuttler — the CLI. zsh 5.9, nothing else (DEVIATIONS.md).
 #
-# Runnable from a checkout (`bin/scuttlarr doctor`) or from the app bundle
-# (`scuttlarr.app/Contents/Resources/setup/bin/scuttlarr`, which `link` puts on
-# PATH); SCUTTLARR_BASE is derived from this file's real location unless the
+# Runnable from a checkout (`bin/scuttler doctor`) or from the app bundle
+# (`scuttler.app/Contents/Resources/setup/bin/scuttler`, which `link` puts on
+# PATH); SCUTTLER_BASE is derived from this file's real location unless the
 # environment says otherwise.
 
 emulate -L zsh
 setopt err_exit no_unset pipe_fail
 
-SCUTTLARR_BASE="${SCUTTLARR_BASE:-${0:A:h:h}}"
-export SCUTTLARR_BASE
-source "$SCUTTLARR_BASE/lib/core.zsh"
-source "$SCUTTLARR_BASE/lib/manifest.zsh"
-source "$SCUTTLARR_BASE/lib/snapshot.zsh"
-source "$SCUTTLARR_BASE/lib/defaults.zsh"
-source "$SCUTTLARR_BASE/lib/files.zsh"
-source "$SCUTTLARR_BASE/lib/doctor.zsh"
-source "$SCUTTLARR_BASE/lib/link.zsh"
-source "$SCUTTLARR_BASE/lib/migrations.zsh"
-source "$SCUTTLARR_BASE/lib/shell.zsh"
-source "$SCUTTLARR_BASE/lib/remove.zsh"
-source "$SCUTTLARR_BASE/lib/sudoers.zsh"
+SCUTTLER_BASE="${SCUTTLER_BASE:-${0:A:h:h}}"
+export SCUTTLER_BASE
+source "$SCUTTLER_BASE/lib/core.zsh"
+source "$SCUTTLER_BASE/lib/manifest.zsh"
+source "$SCUTTLER_BASE/lib/snapshot.zsh"
+source "$SCUTTLER_BASE/lib/defaults.zsh"
+source "$SCUTTLER_BASE/lib/files.zsh"
+source "$SCUTTLER_BASE/lib/doctor.zsh"
+source "$SCUTTLER_BASE/lib/link.zsh"
+source "$SCUTTLER_BASE/lib/migrations.zsh"
+source "$SCUTTLER_BASE/lib/shell.zsh"
+source "$SCUTTLER_BASE/lib/remove.zsh"
+source "$SCUTTLER_BASE/lib/sudoers.zsh"
 
 usage() {
   cat <<EOF
-scuttlarr ${SCUTTLARR_VERSION} — scuttle the ship, sail the wreck.
+scuttler ${SCUTTLER_VERSION} — scuttle the ship, sail the wreck.
 
-  scuttlarr doctor                 what differs from base ⊕ overlay (read-only)
-  scuttlarr defaults               plan: every macOS default that would change
-  scuttlarr defaults --apply       apply them (snapshot first; asks once, --yes skips)
-  scuttlarr shell                  plan: zsh, prompt, Ghostty, tmux, git configs from base ⊕ overlay
-  scuttlarr shell --apply          write them (adopting what's there), clone the zsh plugins
-  scuttlarr link | unlink          put scuttlarr on PATH (~/.local/bin), or take it off
-  scuttlarr migrate                run the base migrations this machine hasn't yet
-  scuttlarr sudoers on | off       let awake switch macOS sleep off while it holds (one password)
-  scuttlarr remove                 undo every owned path and default; asks, --yes skips
-  scuttlarr help | version
+  scuttler doctor                 what differs from base ⊕ overlay (read-only)
+  scuttler defaults               plan: every macOS default that would change
+  scuttler defaults --apply       apply them (snapshot first; asks once, --yes skips)
+  scuttler shell                  plan: zsh, prompt, Ghostty, tmux, git configs from base ⊕ overlay
+  scuttler shell --apply          write them (adopting what's there), clone the zsh plugins
+  scuttler link | unlink          put scuttler on PATH (~/.local/bin), or take it off
+  scuttler migrate                run the base migrations this machine hasn't yet
+  scuttler sudoers on | off       let awake switch macOS sleep off while it holds (one password)
+  scuttler remove                 undo every owned path and default; asks, --yes skips
+  scuttler help | version
 
-Base     $(sc_tilde "$SCUTTLARR_BASE")
-Overlay  $(sc_tilde "$SCUTTLARR_OVERLAY")
-State    $(sc_tilde "$SCUTTLARR_STATE")
+Base     $(sc_tilde "$SCUTTLER_BASE")
+Overlay  $(sc_tilde "$SCUTTLER_OVERLAY")
+State    $(sc_tilde "$SCUTTLER_STATE")
 EOF
 }
 
@@ -132,7 +132,7 @@ cmd_remove() {
   fi
   print >&2
   sc_log "${SC_REMOVE_PATHS} owned path(s) to remove, ${SC_REMOVE_RESTORED} original(s) to restore, ${SC_REMOVE_DEFAULTS} default(s) to put back"
-  sc_log "overlay $(sc_tilde "$SCUTTLARR_OVERLAY") stays; so do Homebrew and the app"
+  sc_log "overlay $(sc_tilde "$SCUTTLER_OVERLAY") stays; so do Homebrew and the app"
   if (( ! yes )); then
     sc_confirm "remove?" || { print >&2; sc_log "left as is"; return 0; }
     print >&2
@@ -153,7 +153,7 @@ main() {
     migrate)  cmd_migrate "$@" ;;
     remove)   cmd_remove "$@" ;;
     sudoers)  sc_sudoers "$@" ;;
-    version)  print -r -- "$SCUTTLARR_VERSION" ;;
+    version)  print -r -- "$SCUTTLER_VERSION" ;;
     help|-h|--help) usage ;;
     *) sc_err "unknown command '$cmd'"; usage; return 1 ;;
   esac

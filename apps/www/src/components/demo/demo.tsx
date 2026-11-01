@@ -1,7 +1,7 @@
 'use client'
 
-import { parseInput } from '@scuttlarr/core/grammar'
-import type { Row } from '@scuttlarr/core/rows'
+import { parseInput } from '@scuttler/core/grammar'
+import type { Row } from '@scuttler/core/rows'
 import {
   type AskTurn,
   BUILTIN_THEMES,
@@ -9,8 +9,8 @@ import {
   launcherPrompt,
   themeNames,
   themeVars,
-} from '@scuttlarr/tui'
-import '@scuttlarr/tui/launcher.css'
+} from '@scuttler/tui'
+import '@scuttler/tui/launcher.css'
 import { useEffect, useRef, useState } from 'react'
 
 import { useAppTheme } from '@/lib/app-theme'
@@ -53,9 +53,9 @@ const SAMPLES = [
  * launcher panel hanging Spotlight-style below it.
  *
  * Everything the panel decides — grammar, fuzzy matching, ranking, row shapes —
- * runs in `@scuttlarr/core`; the prompt is the kit's `Launcher`, the same
+ * runs in `@scuttler/core`; the prompt is the kit's `Launcher`, the same
  * component the app's panel window renders, and the TUI panels are the real
- * `@scuttlarr/tui` components. The website supplies a fake index and fake OS
+ * `@scuttler/tui` components. The website supplies a fake index and fake OS
  * data; it never forks engine logic or retypes the UI (invariants 5 and 10).
  */
 export function Demo() {
@@ -86,7 +86,7 @@ export function Demo() {
     [],
   )
 
-  const theme = BUILTIN_THEMES[themeName] ?? BUILTIN_THEMES.scuttlarr!
+  const theme = BUILTIN_THEMES[themeName] ?? BUILTIN_THEMES.scuttler!
 
   const showToast = (message: string) => {
     setToast(message)

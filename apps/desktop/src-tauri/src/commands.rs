@@ -135,7 +135,7 @@ pub async fn awake_readings(
     }
 }
 
-/// Mirrors `AwakeReading` in @scuttlarr/core.
+/// Mirrors `AwakeReading` in @scuttler/core.
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AwakeReading {
@@ -262,7 +262,7 @@ pub async fn theme_current() -> Option<String> {
     crate::theme::current_name(&crate::config::state_dir())
 }
 
-/// User themes (`~/.config/scuttlarr/themes/<name>/colors.toml`, user_themes.rs).
+/// User themes (`~/.config/scuttler/themes/<name>/colors.toml`, user_themes.rs).
 #[tauri::command]
 pub async fn theme_user_list() -> Vec<crate::user_themes::UserTheme> {
     crate::user_themes::list(&crate::config::config_dir())
@@ -312,7 +312,7 @@ pub fn hooks_status() -> crate::hooks::HooksStatus {
 }
 
 /// Install the adapter to its stable path and register it in every Claude
-/// config dir's settings.json (idempotent; one-time `.bak-scuttlarr`).
+/// config dir's settings.json (idempotent; one-time `.bak-scuttler`).
 #[tauri::command]
 pub async fn hooks_install() -> CmdResult<crate::hooks::HooksStatus> {
     crate::hooks::install()
@@ -375,7 +375,7 @@ pub fn execute(
     // Dismiss first: the <50ms Enter budget is about perceived latency.
     panel::hide(&app);
 
-    if item.id != "scuttlarr:quit" {
+    if item.id != "scuttler:quit" {
         let db = state.db.lock().unwrap();
         frecency::record(&db, &item.id, &query, frecency::now_secs())?;
     }
@@ -418,17 +418,17 @@ pub fn execute(
                 crate::system_commands::run(slug)?;
             }
         }
-        ItemKind::Scuttlarr => match item.id.as_str() {
-            "scuttlarr:quit" => app.exit(0),
-            "scuttlarr:settings" => crate::settings_window::open(&app)?,
-            "scuttlarr:reindex" => crate::indexer::refresh(&app),
-            "scuttlarr:colorpicker" => crate::colorpicker::pick(&app),
+        ItemKind::Scuttler => match item.id.as_str() {
+            "scuttler:quit" => app.exit(0),
+            "scuttler:settings" => crate::settings_window::open(&app)?,
+            "scuttler:reindex" => crate::indexer::refresh(&app),
+            "scuttler:colorpicker" => crate::colorpicker::pick(&app),
             // A launchable row (so a custom shortcut can bind it): summon into `theme ⏎`.
-            "scuttlarr:theme" => open_panel(app.clone(), "theme".into())?,
-            "scuttlarr:wallpaper" => {
+            "scuttler:theme" => open_panel(app.clone(), "theme".into())?,
+            "scuttler:wallpaper" => {
                 crate::theme::wallpaper_next_current()?;
             }
-            "scuttlarr:config" => {
+            "scuttler:config" => {
                 Command::new("open")
                     .arg(crate::config::config_path())
                     .spawn()?;
@@ -608,7 +608,7 @@ pub fn write_config(config: Config) -> CmdResult<()> {
     crate::config::save(&config)
 }
 
-/// Open scuttlarr's editable surfaces from settings: the config file (default editor),
+/// Open scuttler's editable surfaces from settings: the config file (default editor),
 /// the scripts folder (Finder), or System Settings → Battery (the battery hover card's
 /// click target — macOS owns power mode, we only report it). Validated enum — never an
 /// arbitrary path across IPC.

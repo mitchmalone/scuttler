@@ -1,4 +1,4 @@
-import { applyTheme } from '@scuttlarr/tui'
+import { applyTheme } from '@scuttler/tui'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { useCallback, useEffect, useRef, useState } from 'react'

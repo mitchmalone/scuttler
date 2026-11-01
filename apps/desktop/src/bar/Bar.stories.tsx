@@ -1,12 +1,12 @@
-import { usageReportAt } from '@scuttlarr/plugins/usage/fixtures'
+import { usageReportAt } from '@scuttler/plugins/usage/fixtures'
 import {
   Bar,
   type BarSnapshot,
   defineStories,
   foldUsageBarState,
   usageCardHeight,
-} from '@scuttlarr/tui'
-import '@scuttlarr/tui/bar.css'
+} from '@scuttler/tui'
+import '@scuttler/tui/bar.css'
 
 import {
   type BarZones,

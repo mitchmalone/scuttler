@@ -1,4 +1,4 @@
-import { defineStories } from '@scuttlarr/tui'
+import { defineStories } from '@scuttler/tui'
 
 import type { Screenshot } from '../lib/screenshots'
 import { ScreenshotsPanel } from './ScreenshotsPanel'

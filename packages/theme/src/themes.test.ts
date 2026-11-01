@@ -16,7 +16,7 @@ import { type ThemeTokens, toTokens } from './tokens.ts'
 const THEMES_DIR = fileURLToPath(new URL('../themes', import.meta.url))
 
 const CURRENT_TUI_THEMES: Record<string, ThemeTokens> = {
-  scuttlarr: {
+  scuttler: {
     bg: '#1c1d2a',
     surface: '#262838',
     glass: 'rgba(28, 29, 42, 0.96)',

@@ -4,7 +4,7 @@ import type { BarModule, BarZones } from './types'
 /**
  * The bar's default arrangement and the one normalization every renderer of
  * `bar.layout` applies — the app's bar and Settings, and the site demo, so a
- * fresh install and scuttlarr.com show the same strip (AGENTS invariant 10;
+ * fresh install and www.scuttler.app show the same strip (AGENTS invariant 10;
  * DECISIONS 2026-11-01). `config.rs` writes `DEFAULT_BAR_LAYOUT` into a fresh
  * config.json and a Rust test pins it equal to this list — change both.
  */

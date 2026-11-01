@@ -4,16 +4,16 @@
 //! failed. Every reload here is one the tool documents (docs/THEMES.md):
 //!
 //! - VS Code / Cursor: the rendered theme becomes a local extension
-//!   (`<ext>/scuttlarr.theme-0.0.1`), registered in `extensions.json` so the
+//!   (`<ext>/scuttler.theme-0.0.1`), registered in `extensions.json` so the
 //!   extension host adds it live (VS Code's ExtensionsWatcher); `_watch: true`
 //!   on the contribution makes the theme service reload the file on change;
 //!   `workbench.colorTheme` in settings.json applies live.
-//! - Zed: `~/.config/zed/themes/scuttlarr.json` (Zed watches that dir) and
+//! - Zed: `~/.config/zed/themes/scuttler.json` (Zed watches that dir) and
 //!   `"theme"` in settings.json (watched too).
 //! - Neovim: every server socket under nvim's run dir gets
 //!   `:set background` + `:colorscheme` over `--remote-send`.
 //! - Helix: `theme = "…"` in config.toml, then `SIGUSR1` (documented reload).
-//! - btop: `themes/scuttlarr.theme` + `color_theme` in btop.conf, then
+//! - btop: `themes/scuttler.theme` + `color_theme` in btop.conf, then
 //!   `SIGUSR2` (its documented config reload).
 //!
 //! Only the pure parts are tested: JSON/JSONC key set, TOML line rewrite,
@@ -32,14 +32,14 @@ pub enum Outcome {
     Failed(String),
 }
 
-pub const EXTENSION_ID: &str = "scuttlarr.theme";
+pub const EXTENSION_ID: &str = "scuttler.theme";
 pub const EXTENSION_VERSION: &str = "0.0.1";
-pub const THEME_LABEL: &str = "scuttlarr";
-const BACKUP_SUFFIX: &str = ".bak-scuttlarr";
+pub const THEME_LABEL: &str = "scuttler";
+const BACKUP_SUFFIX: &str = ".bak-scuttler";
 
 // ---------------------------------------------------------------- pure edits
 
-/// Copy `path` to `<path>.bak-scuttlarr` the first time we touch it.
+/// Copy `path` to `<path>.bak-scuttler` the first time we touch it.
 fn backup_once(path: &Path) -> std::io::Result<()> {
     if !path.exists() {
         return Ok(());
@@ -296,9 +296,9 @@ pub fn extension_manifest(mode: &str) -> String {
     let ui = if mode == "light" { "vs" } else { "vs-dark" };
     let manifest = json!({
         "name": "theme",
-        "displayName": "scuttlarr",
-        "description": "scuttlarr colour theme — rendered at theme set, do not edit",
-        "publisher": "scuttlarr",
+        "displayName": "scuttler",
+        "description": "scuttler colour theme — rendered at theme set, do not edit",
+        "publisher": "scuttler",
         "version": EXTENSION_VERSION,
         "engines": { "vscode": "^1.70.0" },
         "categories": ["Themes"],
@@ -306,7 +306,7 @@ pub fn extension_manifest(mode: &str) -> String {
             "themes": [{
                 "label": THEME_LABEL,
                 "uiTheme": ui,
-                "path": "./themes/scuttlarr.json",
+                "path": "./themes/scuttler.json",
                 "_watch": true
             }]
         }
@@ -351,7 +351,7 @@ pub fn apply_vscode(flavour: &VsCodeFlavour, theme_json: &str, mode: &str) -> Ou
     let ext_base = flavour.home.join("extensions");
     let ext_dir = ext_base.join(format!("{EXTENSION_ID}-{EXTENSION_VERSION}"));
     let steps = || -> Result<(), String> {
-        write_file(&ext_dir.join("themes/scuttlarr.json"), theme_json)?;
+        write_file(&ext_dir.join("themes/scuttler.json"), theme_json)?;
         write_file(&ext_dir.join("package.json"), &extension_manifest(mode))?;
         let registry = ext_base.join("extensions.json");
         let current = std::fs::read_to_string(&registry).unwrap_or_default();
@@ -388,7 +388,7 @@ pub fn apply_zed(config_dir: &Path, theme_json: &str) -> Outcome {
         return Outcome::Skipped("zed not installed".into());
     }
     let steps = || -> Result<(), String> {
-        write_file(&config_dir.join("themes/scuttlarr.json"), theme_json)?;
+        write_file(&config_dir.join("themes/scuttler.json"), theme_json)?;
         edit_file(&config_dir.join("settings.json"), |s| {
             set_string_key(s, "theme", THEME_LABEL)
         })
@@ -461,7 +461,7 @@ pub fn apply_btop(config_dir: &Path, theme_text: &str) -> Outcome {
         return Outcome::Skipped("btop not installed".into());
     }
     let steps = || -> Result<(), String> {
-        write_file(&config_dir.join("themes/scuttlarr.theme"), theme_text)?;
+        write_file(&config_dir.join("themes/scuttler.theme"), theme_text)?;
         edit_file(&config_dir.join("btop.conf"), |s| {
             Ok(set_toml_root_string(s, "color_theme", THEME_LABEL))
         })
@@ -484,7 +484,7 @@ mod tests {
 
     fn scratch() -> PathBuf {
         let d = std::env::temp_dir().join(format!(
-            "scuttlarr-editors-{}-{}",
+            "scuttler-editors-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -500,18 +500,18 @@ mod tests {
         let out = set_string_key(
             r#"{"editor.fontSize": 14, "workbench.colorTheme": "Dark+", "z": [1]}"#,
             "workbench.colorTheme",
-            "scuttlarr",
+            "scuttler",
         )
         .unwrap();
         assert_eq!(
             out,
-            "{\n  \"editor.fontSize\": 14,\n  \"workbench.colorTheme\": \"scuttlarr\",\n  \"z\": [\n    1\n  ]\n}\n"
+            "{\n  \"editor.fontSize\": 14,\n  \"workbench.colorTheme\": \"scuttler\",\n  \"z\": [\n    1\n  ]\n}\n"
         );
-        let added = set_string_key(r#"{"a": 1}"#, "theme", "scuttlarr").unwrap();
-        assert_eq!(added, "{\n  \"a\": 1,\n  \"theme\": \"scuttlarr\"\n}\n");
+        let added = set_string_key(r#"{"a": 1}"#, "theme", "scuttler").unwrap();
+        assert_eq!(added, "{\n  \"a\": 1,\n  \"theme\": \"scuttler\"\n}\n");
         assert_eq!(
-            set_string_key("", "theme", "scuttlarr").unwrap(),
-            "{\n  \"theme\": \"scuttlarr\"\n}\n"
+            set_string_key("", "theme", "scuttler").unwrap(),
+            "{\n  \"theme\": \"scuttler\"\n}\n"
         );
     }
 
@@ -520,22 +520,22 @@ mod tests {
         let out = set_string_key(
             r#"{"theme": {"mode": "system", "light": "One Light", "dark": "One Dark"}}"#,
             "theme",
-            "scuttlarr",
+            "scuttler",
         )
         .unwrap();
         let v: Value = serde_json::from_str(&out).unwrap();
         assert_eq!(v["theme"]["mode"], "system");
-        assert_eq!(v["theme"]["light"], "scuttlarr");
-        assert_eq!(v["theme"]["dark"], "scuttlarr");
+        assert_eq!(v["theme"]["light"], "scuttler");
+        assert_eq!(v["theme"]["dark"], "scuttler");
     }
 
     #[test]
     fn jsonc_set_edits_in_place_and_keeps_comments() {
         let src = "{\n  // my settings\n  \"editor.fontSize\": 14,\n  \"workbench.colorTheme\": \"Dark+\", // trailing\n}\n";
-        let out = set_string_key(src, "workbench.colorTheme", "scuttlarr").unwrap();
+        let out = set_string_key(src, "workbench.colorTheme", "scuttler").unwrap();
         assert_eq!(
             out,
-            "{\n  // my settings\n  \"editor.fontSize\": 14,\n  \"workbench.colorTheme\": \"scuttlarr\", // trailing\n}\n"
+            "{\n  // my settings\n  \"editor.fontSize\": 14,\n  \"workbench.colorTheme\": \"scuttler\", // trailing\n}\n"
         );
         let added = set_string_key("{\n  // c\n  \"a\": 1,\n}\n", "theme", "x").unwrap();
         assert_eq!(added, "{\n  \"theme\": \"x\",\n  // c\n  \"a\": 1,\n}\n");
@@ -569,9 +569,9 @@ mod tests {
             set_toml_root_string(
                 "color_theme=\"Default\"\nvim_keys = False",
                 "color_theme",
-                "scuttlarr"
+                "scuttler"
             ),
-            "color_theme = \"scuttlarr\"\nvim_keys = False\n"
+            "color_theme = \"scuttler\"\nvim_keys = False\n"
         );
         // `theme_x = …` is not `theme`.
         assert_eq!(
@@ -600,16 +600,16 @@ mod tests {
 
     #[test]
     fn extension_registry_replaces_our_entry_and_keeps_others() {
-        let dir = PathBuf::from("/x/ext/scuttlarr.theme-0.0.1");
-        let list = r#"[{"identifier":{"id":"other.ext"},"version":"1"},{"identifier":{"id":"scuttlarr.theme"},"version":"0.0.0"}]"#;
+        let dir = PathBuf::from("/x/ext/scuttler.theme-0.0.1");
+        let list = r#"[{"identifier":{"id":"other.ext"},"version":"1"},{"identifier":{"id":"scuttler.theme"},"version":"0.0.0"}]"#;
         let out = register_extension(list, &dir).unwrap();
         let v: Value = serde_json::from_str(&out).unwrap();
         let arr = v.as_array().unwrap();
         assert_eq!(arr.len(), 2);
         assert_eq!(arr[0]["identifier"]["id"], "other.ext");
         assert_eq!(arr[1]["identifier"]["id"], EXTENSION_ID);
-        assert_eq!(arr[1]["location"]["fsPath"], "/x/ext/scuttlarr.theme-0.0.1");
-        assert_eq!(arr[1]["relativeLocation"], "scuttlarr.theme-0.0.1");
+        assert_eq!(arr[1]["location"]["fsPath"], "/x/ext/scuttler.theme-0.0.1");
+        assert_eq!(arr[1]["relativeLocation"], "scuttler.theme-0.0.1");
         assert!(register_extension("{}", &dir).is_err());
         let fresh: Value = serde_json::from_str(&register_extension("", &dir).unwrap()).unwrap();
         assert_eq!(fresh.as_array().unwrap().len(), 1);
@@ -620,7 +620,7 @@ mod tests {
         let v: Value = serde_json::from_str(&extension_manifest("light")).unwrap();
         assert_eq!(v["contributes"]["themes"][0]["uiTheme"], "vs");
         assert_eq!(v["contributes"]["themes"][0]["_watch"], true);
-        assert_eq!(v["publisher"], "scuttlarr");
+        assert_eq!(v["publisher"], "scuttler");
         let v: Value = serde_json::from_str(&extension_manifest("dark")).unwrap();
         assert_eq!(v["contributes"]["themes"][0]["uiTheme"], "vs-dark");
     }
@@ -662,17 +662,17 @@ mod tests {
             apply_zed(&zed, "{\"themes\":[]}"),
             Outcome::Done(_)
         ));
-        assert!(zed.join("themes/scuttlarr.json").is_file());
+        assert!(zed.join("themes/scuttler.json").is_file());
         assert_eq!(
-            std::fs::read_to_string(zed.join("settings.json.bak-scuttlarr")).unwrap(),
+            std::fs::read_to_string(zed.join("settings.json.bak-scuttler")).unwrap(),
             "{\n  \"theme\": \"One Dark\"\n}\n"
         );
         assert!(std::fs::read_to_string(zed.join("settings.json"))
             .unwrap()
-            .contains("\"scuttlarr\""));
+            .contains("\"scuttler\""));
         apply_zed(&zed, "{}");
         assert!(
-            std::fs::read_to_string(zed.join("settings.json.bak-scuttlarr"))
+            std::fs::read_to_string(zed.join("settings.json.bak-scuttler"))
                 .unwrap()
                 .contains("One Dark")
         );
@@ -683,13 +683,13 @@ mod tests {
             apply_vscode(&flavour, "{\"type\":\"dark\"}", "dark"),
             Outcome::Done(_)
         ));
-        let ext = flavour.home.join("extensions/scuttlarr.theme-0.0.1");
-        assert!(ext.join("themes/scuttlarr.json").is_file());
+        let ext = flavour.home.join("extensions/scuttler.theme-0.0.1");
+        assert!(ext.join("themes/scuttler.json").is_file());
         assert!(ext.join("package.json").is_file());
         let reg = std::fs::read_to_string(flavour.home.join("extensions/extensions.json")).unwrap();
-        assert!(reg.contains("\"scuttlarr.theme\""));
+        assert!(reg.contains("\"scuttler.theme\""));
         let settings: Value =
             serde_json::from_str(&std::fs::read_to_string(&flavour.settings).unwrap()).unwrap();
-        assert_eq!(settings["workbench.colorTheme"], "scuttlarr");
+        assert_eq!(settings["workbench.colorTheme"], "scuttler");
     }
 }

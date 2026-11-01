@@ -1,4 +1,4 @@
-import { normalizeDesktop } from '@scuttlarr/core/desktop'
+import { normalizeDesktop } from '@scuttler/core/desktop'
 import {
   Bot,
   Camera,
@@ -18,7 +18,7 @@ import {
 import type { Config } from '../lib/config'
 
 /**
- * Panel metadata is `@scuttlarr/core/panels` — one list for the app and the
+ * Panel metadata is `@scuttler/core/panels` — one list for the app and the
  * site demo (invariant 10). This module adds what only the app knows: the icon
  * per panel and the settings gates. Adding a tenant: one entry in core + its
  * component in App.tsx.
@@ -27,7 +27,7 @@ export {
   PANEL_INFO,
   PANEL_TRIGGERS,
   type PanelInfo,
-} from '@scuttlarr/core/panels'
+} from '@scuttler/core/panels'
 
 /** Lucide icon per panel — launcher rows and panel headers share it. */
 export const PANEL_ICONS: Record<string, LucideIcon> = {

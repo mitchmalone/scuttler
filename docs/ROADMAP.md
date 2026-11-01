@@ -14,10 +14,10 @@
 | v0.3.0 / v0.3.1 (2026-08-12/13)        | Settings as a native surface, fourteen themes, signed and notarized. `releases/v0.3.0.md`, `v0.3.1.md`                                                                           |
 | v0.4.0 (2026-08-17)                    | The control surface: bar, TUI kit and workbench, panels (wifi, dns, audio, clipboard, awake, aerospace, help, screenshots), agent cells, wrapped AeroSpace desktop layer.        |
 | v0.5.0 (2026-08-19)                    | Multi-display (bar per screen, launcher on the mouse's screen), glyph-only bar strip, awake timer card. `releases/v0.5.0.md`                                                     |
-| v0.6.0 (2026-08-27)                    | Widgets (TypeScript files in `~/.config/scuttlarr/widgets/`), then plugins as code (`cell.tsx`, `panel.tsx`, Bun services); usage and calendar as plugins. `releases/v0.6.0.md`  |
+| v0.6.0 (2026-08-27)                    | Widgets (TypeScript files in `~/.config/scuttler/widgets/`), then plugins as code (`cell.tsx`, `panel.tsx`, Bun services); usage and calendar as plugins. `releases/v0.6.0.md`   |
 | v0.7.0 (2026-10-01)                    | The fold: launcharr + the scuttlarr distro → one product. Rungs: Desktop, Theme (Omarchy `colors.toml`, policy, live retint), Machine (the setup CLI). Ghostty hand-off. awake.  |
 | v0.8.0 (2026-11-01)                    | First-launch setup, the updates ledger (in-app upgrades, queue, dismiss), agent dots, defaults flipped (bar on, tiling off), the site in any app theme, scripted release.        |
-| v0.9.0 (planned)                       | The rename to scuttler at `www.scuttler.app`; `plans/active/2026-11-01-rename-to-scuttler.md`. The name and the docs, nothing else.                                              |
+| v0.8.1 (next)                          | The rename: scuttlarr → scuttler at `www.scuttler.app`, bundle id kept; `plans/active/2026-11-01-rename-to-scuttler.md`. The name and the docs, nothing else.                    |
 
 ## Open, with triggers
 
@@ -38,7 +38,7 @@ surface absorbs the item.
 | Item                                                                                                                                                                                                                      | Trigger                                               |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
 | Theme policy gate never holds: `config.appearance` is a plain struct so the webview always sees it; a fresh install in light mode flips to `solarized-light` (JOURNAL 2026-10-19; `it.fails` test in `lib/theme.test.ts`) | Light mode first-class, or the next `config.rs` touch |
-| Hotkeys bound to built-in `scuttlarr — …` rows do nothing (empty `path`; link `browser` ignored on that path)                                                                                                             | Touch of `indexer.rs` / custom shortcuts              |
+| Hotkeys bound to built-in `scuttler — …` rows do nothing (empty `path`; link `browser` ignored on that path)                                                                                                              | Touch of `indexer.rs` / custom shortcuts              |
 | 23 zombie children in a long-lived instance (JOURNAL 2026-08-26); amaran status replies arriving in one run of four                                                                                                       | Either recurs visibly                                 |
 
 ### Product
@@ -82,7 +82,7 @@ surface absorbs the item.
 
 File search, snippets, Windows/Linux. Zero permissions for the launcher core (zero
 network was retired 2026-09-04 — DECISIONS). Window management arrives _wrapped_
-(AeroSpace brings its own Accessibility grant; scuttlarr itself still requests nothing).
+(AeroSpace brings its own Accessibility grant; scuttler itself still requests nothing).
 Nothing distro-shaped left the list on 2026-09-11: it is the Machine rung (`SETUP.md`);
 light mode is a palette in the Theme rung (`THEMES.md`). Credentialed, networked bar cells
 are per plugin, fail-visible, never telemetry. No native alerts, no emoji, no second copy

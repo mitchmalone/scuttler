@@ -1,5 +1,5 @@
-# scuttlarr theme: {{ name }} — rendered, do not edit. Written to ~/.config/btop/themes/scuttlarr.theme;
-# btop.conf carries color_theme = "scuttlarr" and a running btop reloads on SIGUSR2.
+# scuttler theme: {{ name }} — rendered, do not edit. Written to ~/.config/btop/themes/scuttler.theme;
+# btop.conf carries color_theme = "scuttler" and a running btop reloads on SIGUSR2.
 # Main background, empty for terminal default, need to be empty if you want transparent background
 theme[main_bg]="{{ background }}"
 

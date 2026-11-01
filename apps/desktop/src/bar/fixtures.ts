@@ -1,17 +1,17 @@
-import type { AwakeSpec, AwakeStatus } from '@scuttlarr/core/awake'
+import type { AwakeSpec, AwakeStatus } from '@scuttler/core/awake'
 import {
   UPDATES_PLUGIN,
   updatesReportAt,
-} from '@scuttlarr/plugins/updates/fixtures'
-import { USAGE_PLUGIN, usageReportAt } from '@scuttlarr/plugins/usage/fixtures'
+} from '@scuttler/plugins/updates/fixtures'
+import { USAGE_PLUGIN, usageReportAt } from '@scuttler/plugins/usage/fixtures'
 import type {
   AgentSession,
   BarHoverApi,
   BarSnapshot,
   BatteryDetail,
   WifiDetail,
-} from '@scuttlarr/tui'
-import type { PluginState } from '@scuttlarr/tui/plugins'
+} from '@scuttler/tui'
+import type { PluginState } from '@scuttler/tui/plugins'
 
 /* Sample data shaped like bar.rs's 1 Hz push and the hover-only commands
  * (`bar_battery_detail`, `wifi_status`, `awake_status`). Stamped at render
@@ -28,7 +28,7 @@ const agent = (
   mux: 'tmux',
   muxTarget: '%1',
   updatedAt: nowSecs() - 30,
-  muxGroup: 'scuttlarr',
+  muxGroup: 'scuttler',
   muxIndex: 1,
   muxLabel: 'main',
   pid: null,
@@ -163,7 +163,7 @@ export function snapshot(over: Partial<BarSnapshot> = {}): BarSnapshot {
           tone: 'ok',
           card: {
             title: 'GitHub Actions',
-            subtitle: 'mitchmalone/scuttlarr',
+            subtitle: 'mitchmalone/scuttler',
             rows: [
               { dot: 'ok', text: 'verify', hint: 'main · 4m' },
               { dot: 'ok', text: 'release', hint: 'v0.7.0 · 18d' },

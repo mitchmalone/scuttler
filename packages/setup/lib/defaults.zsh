@@ -31,9 +31,9 @@ sc_defaults_read() {
   emulate -L zsh
   local host="$1" domain="$2" key="$3" out
   if [[ "$host" == currentHost ]]; then
-    out="$("$SCUTTLARR_DEFAULTS_BIN" -currentHost read "$domain" "$key" 2>/dev/null)" || { print -r -- "$SC_ABSENT"; return 0; }
+    out="$("$SCUTTLER_DEFAULTS_BIN" -currentHost read "$domain" "$key" 2>/dev/null)" || { print -r -- "$SC_ABSENT"; return 0; }
   else
-    out="$("$SCUTTLARR_DEFAULTS_BIN" read "$domain" "$key" 2>/dev/null)" || { print -r -- "$SC_ABSENT"; return 0; }
+    out="$("$SCUTTLER_DEFAULTS_BIN" read "$domain" "$key" 2>/dev/null)" || { print -r -- "$SC_ABSENT"; return 0; }
   fi
   print -r -- "$out"
 }
@@ -127,7 +127,7 @@ sc_default() {
       local -a args
       args=("${(@f)$(_sc_write_args "$type" "${value[@]}")}")
       if (( ${#args} < 2 )); then sc_err "$label: unknown type '$type'"; (( SC_DEFAULTS_FAILED++ )); return 0; fi
-      local -a cmd=("$SCUTTLARR_DEFAULTS_BIN")
+      local -a cmd=("$SCUTTLER_DEFAULTS_BIN")
       [[ "$host" == currentHost ]] && cmd+=(-currentHost)
       if ! "${cmd[@]}" write "$domain" "$key" "${args[@]}" 2>/dev/null; then
         (( SC_DEFAULTS_FAILED++ ))
@@ -169,11 +169,11 @@ sc_defaults_run() {
   SC_MODE="$mode"
   # Files (sc_file_generated) act as they're sourced; defaults are collected.
   SC_COLLECT=1
-  for f in "$SCUTTLARR_BASE"/defaults/*.zsh(N); do
+  for f in "$SCUTTLER_BASE"/defaults/*.zsh(N); do
     source "$f"
   done
-  if [[ -r "$SCUTTLARR_OVERLAY/defaults.sh" ]]; then
-    source "$SCUTTLARR_OVERLAY/defaults.sh"
+  if [[ -r "$SCUTTLER_OVERLAY/defaults.sh" ]]; then
+    source "$SCUTTLER_OVERLAY/defaults.sh"
   fi
   unset SC_COLLECT
   local id parts
@@ -196,7 +196,7 @@ sc_defaults_run() {
 # The apps that only pick up their defaults on relaunch.
 _sc_defaults_restart_apps() {
   emulate -L zsh
-  [[ -n "${SCUTTLARR_NO_KILLALL-}" ]] && return 0
+  [[ -n "${SCUTTLER_NO_KILLALL-}" ]] && return 0
   local domain
   for domain in "${(k)SC_DEFAULTS_TOUCHED[@]}"; do
     case "$domain" in

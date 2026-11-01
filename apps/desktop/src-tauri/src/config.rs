@@ -241,7 +241,7 @@ pub struct Config {
     pub sigil: String,
     /// Prompt sigil in bang mode.
     pub bang_sigil: String,
-    /// Register scuttlarr as a login item (a launcher that isn't running is furniture).
+    /// Register scuttler as a login item (a launcher that isn't running is furniture).
     pub launch_at_login: bool,
     /// Custom links: indexed like apps, Enter opens the URL in the default browser.
     pub links: Vec<Link>,
@@ -252,7 +252,7 @@ pub struct Config {
     pub search_fallback: String,
     /// Opt-in: index browser bookmarks (Chrome-family + Safari) as results. Default off.
     pub index_bookmarks: bool,
-    /// Active theme: a built-in name (scuttlarr, dracula, terminal) or a key of `themes`.
+    /// Active theme: a built-in name (scuttler, dracula, terminal) or a key of `themes`.
     /// Resolution and the token model live frontend-side (src/lib/themes.ts).
     pub theme: String,
     /// User-defined themes: name → token overrides. Opaque to Rust; just persisted.
@@ -262,7 +262,7 @@ pub struct Config {
     /// Agent monitoring + usage monitor (all off by default).
     pub agents: AgentsConfig,
     /// The desktop layer (v0.4): tiling via AeroSpace, JankyBorders, corner radius.
-    /// Opaque to Rust — the shape and defaults live in `@scuttlarr/core/desktop`;
+    /// Opaque to Rust — the shape and defaults live in `@scuttler/core/desktop`;
     /// desktop.rs only receives rendered bytes and argv.
     pub desktop: serde_json::Value,
     /// The machine rung (DECISIONS 2026-09-11): the bundled setup CLI on PATH and
@@ -272,7 +272,7 @@ pub struct Config {
     /// own windows — Ghostty, tmux, prompt, delta, Claude Code — and optionally flip
     /// macOS light/dark with it. Off by default; the app windows always theme.
     pub appearance: AppearanceConfig,
-    /// `colorpicker` uses the scuttlarr loupe (2×, needs Screen Recording — the toggle
+    /// `colorpicker` uses the scuttler loupe (2×, needs Screen Recording — the toggle
     /// is the only thing that ever asks) instead of Apple's permission-free sampler.
     /// Default off (invariant 1).
     pub color_loupe: bool,
@@ -287,14 +287,14 @@ pub struct Config {
     pub widgets: std::collections::HashMap<String, std::collections::HashMap<String, String>>,
     /// Plugins: disabled ids (docs/PLUGINS.md).
     pub plugins: PluginsConfig,
-    /// scuttlarr's own updates (selfupdate.rs, DECISIONS 2026-09-16).
+    /// scuttler's own updates (selfupdate.rs, DECISIONS 2026-09-16).
     pub updates: UpdatesConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(default, rename_all = "camelCase")]
 pub struct UpdatesConfig {
-    /// Ask GitHub Releases for the newest scuttlarr every 6 h and offer it in
+    /// Ask GitHub Releases for the newest scuttler every 6 h and offer it in
     /// `updates ⏎`. The request carries nothing about the user (invariant 2); off
     /// means no request is ever made. Default on.
     pub check_self: bool,
@@ -315,7 +315,7 @@ pub struct MachineConfig {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(default, rename_all = "camelCase")]
 pub struct AppearanceConfig {
-    /// Render the theme into `~/.local/state/scuttlarr/current/theme/` and reload.
+    /// Render the theme into `~/.local/state/scuttler/current/theme/` and reload.
     pub everywhere: bool,
     /// Also set macOS light/dark from the theme's mode.
     pub macos: bool,
@@ -326,7 +326,7 @@ pub struct AppearanceConfig {
     /// consent, first time). Off by default — the OSC retint needs no consent.
     pub ghostty: bool,
     /// The policy — mode (system | light | dark | schedule), schedule, pair, Focus
-    /// mappings. Opaque to Rust: `@scuttlarr/core/appearance` owns the shape.
+    /// mappings. Opaque to Rust: `@scuttler/core/appearance` owns the shape.
     #[serde(flatten)]
     pub policy: serde_json::Map<String, serde_json::Value>,
 }
@@ -358,7 +358,7 @@ impl Default for Config {
             shortcuts: std::collections::HashMap::new(),
             search_fallback: "https://www.google.com/search?q={query}".into(),
             index_bookmarks: false,
-            theme: "scuttlarr".into(),
+            theme: "scuttler".into(),
             themes: std::collections::HashMap::new(),
             bar: BarConfig::default(),
             agents: AgentsConfig::default(),
@@ -421,17 +421,17 @@ pub fn migrate_defaults(raw: &mut serde_json::Value) -> bool {
 }
 
 pub fn config_dir() -> PathBuf {
-    // ~/.config/scuttlarr — XDG-style, deliberate: a terminal-nerd path, not ~/Library.
+    // ~/.config/scuttler — XDG-style, deliberate: a terminal-nerd path, not ~/Library.
     // Briefly ~/.launcharr on 2026-08-10, reversed same day (see DECISIONS); migrate_home
-    // brings any dir at the old spot back. ~/.config/launcharr → ~/.config/scuttlarr is
+    // brings any dir at the old spot back. ~/.config/launcharr → ~/.config/scuttler is
     // rename.rs (2026-09-11) and runs first.
     dirs::home_dir()
         .unwrap_or_else(|| PathBuf::from("/tmp"))
         .join(".config")
-        .join("scuttlarr")
+        .join("scuttler")
 }
 
-/// `~/.local/state/scuttlarr` (XDG_STATE_HOME honoured): the manifest, the agents
+/// `~/.local/state/scuttler` (XDG_STATE_HOME honoured): the manifest, the agents
 /// socket, and the rendered current theme live here — shared with the setup CLI.
 pub fn state_dir() -> PathBuf {
     std::env::var_os("XDG_STATE_HOME")
@@ -442,7 +442,7 @@ pub fn state_dir() -> PathBuf {
                 .unwrap_or_else(|| PathBuf::from("/tmp"))
                 .join(".local/state")
         })
-        .join("scuttlarr")
+        .join("scuttler")
 }
 
 pub fn config_path() -> PathBuf {
@@ -505,7 +505,7 @@ pub fn load_or_create() -> CmdResult<(Config, bool)> {
     if let Err(e) = migrate_home(&legacy_config_dir(), &config_dir()) {
         // Don't brick startup over a failed move; the old path simply stays put and a
         // fresh default is created at the new one.
-        eprintln!("scuttlarr: home migration failed: {e}");
+        eprintln!("scuttler: home migration failed: {e}");
     }
     load_or_create_at(&config_path())
 }
@@ -535,14 +535,14 @@ fn load_or_create_at(path: &std::path::Path) -> CmdResult<(Config, bool)> {
                 // full serialised Config: an upgrade shouldn't reformat a hand-edit.
                 if let Ok(json) = serde_json::to_string_pretty(&value) {
                     if let Err(e) = write_json_at(path, json) {
-                        eprintln!("[scuttlarr] defaults migration not saved: {e}");
+                        eprintln!("[scuttler] defaults migration not saved: {e}");
                     }
                 }
             }
             cfg
         }
         Err(e) => {
-            eprintln!("[scuttlarr] config.json unreadable, using defaults: {e}");
+            eprintln!("[scuttler] config.json unreadable, using defaults: {e}");
             Config::default()
         }
     };
@@ -550,7 +550,7 @@ fn load_or_create_at(path: &std::path::Path) -> CmdResult<(Config, bool)> {
     Ok((parsed, false))
 }
 
-/// Watch ~/.config/scuttlarr for edits; reload, re-register the hotkey, notify the frontend.
+/// Watch ~/.config/scuttler for edits; reload, re-register the hotkey, notify the frontend.
 pub fn watch(app: AppHandle) {
     std::thread::spawn(move || {
         use notify::{RecursiveMode, Watcher};
@@ -558,12 +558,12 @@ pub fn watch(app: AppHandle) {
         let mut watcher = match notify::recommended_watcher(tx) {
             Ok(w) => w,
             Err(e) => {
-                eprintln!("[scuttlarr] config watcher failed: {e}");
+                eprintln!("[scuttler] config watcher failed: {e}");
                 return;
             }
         };
         if let Err(e) = watcher.watch(&config_dir(), RecursiveMode::NonRecursive) {
-            eprintln!("[scuttlarr] config watch failed: {e}");
+            eprintln!("[scuttler] config watch failed: {e}");
             return;
         }
         loop {
@@ -601,7 +601,7 @@ pub fn watch(app: AppHandle) {
                     }
                     let _ = app.emit("config-changed", &new_config);
                 }
-                Err(e) => eprintln!("[scuttlarr] config reload failed: {e}"),
+                Err(e) => eprintln!("[scuttler] config reload failed: {e}"),
             }
         }
     });
@@ -646,7 +646,7 @@ mod tests {
 
     #[test]
     fn save_writes_valid_json_and_leaves_no_temp() {
-        let dir = std::env::temp_dir().join(format!("scuttlarr-save-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("scuttler-save-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         let path = dir.join("nested").join("config.json");
         let mut cfg = Config {
@@ -675,7 +675,7 @@ mod tests {
     #[test]
     fn theme_fields_default_and_parse() {
         let cfg: Config = serde_json::from_str("{}").unwrap();
-        assert_eq!(cfg.theme, "scuttlarr");
+        assert_eq!(cfg.theme, "scuttler");
         assert!(cfg.themes.is_empty());
         let cfg: Config =
             serde_json::from_str(r##"{"theme":"dracula","themes":{"mine":{"accent":"#f00"}}}"##)
@@ -734,7 +734,7 @@ mod tests {
     }
 
     fn temp_config(tag: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("scuttlarr-{tag}-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("scuttler-{tag}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir.join("config.json")
@@ -847,7 +847,7 @@ mod tests {
 
     #[test]
     fn migrate_home_moves_once_and_only_when_target_absent() {
-        let base = std::env::temp_dir().join(format!("scuttlarr-mig-{}", std::process::id()));
+        let base = std::env::temp_dir().join(format!("scuttler-mig-{}", std::process::id()));
         let old = base.join("old");
         let new = base.join("new");
         fs::create_dir_all(old.join("scripts")).unwrap();

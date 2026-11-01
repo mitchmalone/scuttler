@@ -66,7 +66,7 @@ describe('renderTheme', () => {
       templates: { 'ghostty.tpl': GHOSTTY },
     })
     const ghostty = out.files.ghostty!
-    expect(ghostty).toContain('# scuttlarr theme: tokyo-night')
+    expect(ghostty).toContain('# scuttler theme: tokyo-night')
     expect(ghostty).toContain('background = #1a1b26')
     expect(ghostty).toContain('palette = 9=#f991a5')
     expect(ghostty).toContain('palette = 15=#a9b1d6')
@@ -107,12 +107,12 @@ describe('renderTheme', () => {
     for (const text of Object.values(out.files))
       expect(text).not.toContain('{{')
     const vscode = JSON.parse(out.files['vscode-theme.json']!)
-    expect(vscode.name).toBe('scuttlarr — tokyo-night')
+    expect(vscode.name).toBe('scuttler — tokyo-night')
     expect(vscode.type).toBe('dark')
     expect(vscode.colors['editor.background']).toBe('#1a1b26')
     expect(vscode.tokenColors.length).toBeGreaterThan(10)
     const zed = JSON.parse(out.files['zed-theme.json']!)
-    expect(zed.themes[0].name).toBe('scuttlarr')
+    expect(zed.themes[0].name).toBe('scuttler')
     expect(zed.themes[0].appearance).toBe('dark')
     expect(zed.themes[0].style['editor.background']).toBe('#1a1b26')
     expect(zed.themes[0].style['terminal.ansi.red']).toBe('#f7768e')
@@ -120,7 +120,7 @@ describe('renderTheme', () => {
     expect(out.files['neovim.lua']).toContain('colorscheme = "tokyonight"')
     expect(out.files['btop.theme']).toContain('theme[main_bg]="#1a1b26"')
     expect(out.editors).toEqual({
-      vscode_theme: 'scuttlarr',
+      vscode_theme: 'scuttler',
       neovim_colorscheme: 'tokyonight',
       helix_theme: 'tokyonight',
     })
@@ -136,7 +136,7 @@ describe('renderTheme', () => {
         'zed-theme.json.tpl': EDITOR_TEMPLATES['zed-theme.json.tpl'],
       },
     })
-    expect(out.files.e).toBe('scuttlarr default mine')
+    expect(out.files.e).toBe('scuttler default mine')
     expect(JSON.parse(out.files['zed-theme.json']!).themes[0].appearance).toBe(
       'light',
     )

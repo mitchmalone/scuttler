@@ -1,6 +1,6 @@
-import { USAGE_PLUGIN, usageReportAt } from '@scuttlarr/plugins/usage/fixtures'
-import { Bar } from '@scuttlarr/tui'
-import '@scuttlarr/tui/bar.css'
+import { USAGE_PLUGIN, usageReportAt } from '@scuttler/plugins/usage/fixtures'
+import { Bar } from '@scuttler/tui'
+import '@scuttler/tui/bar.css'
 
 import { held, noop, nowSecs, snapshot } from '../bar/fixtures'
 import { type BarModulesConfig, barZoneNodes } from '../bar/modules'

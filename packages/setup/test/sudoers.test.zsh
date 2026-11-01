@@ -1,19 +1,22 @@
 #!/bin/zsh
 source "${0:A:h}/harness.zsh"
 
-cli="$SCUTTLARR_BASE/bin/scuttlarr"
+cli="$SCUTTLER_BASE/bin/scuttler"
 
-export SCUTTLARR_SUDOERS_PATH="$T/sudoers.d/scuttlarr"
-export SCUTTLARR_SUDO_BIN="$SCUTTLARR_BASE/test/fixtures/bin/sudo"
+export SCUTTLER_SUDOERS_PATH="$T/sudoers.d/scuttler"
+# The previous name's file too: the default is the real /etc path, which may exist
+# on the developer's Mac (rename.test.zsh covers what happens when it does).
+export SCUTTLER_SUDOERS_PREVIOUS_PATH="$T/sudoers.d/scuttlarr"
+export SCUTTLER_SUDO_BIN="$SCUTTLER_BASE/test/fixtures/bin/sudo"
 export FAKE_SUDO_LOG="$T/sudo.log"
 mkdir -p "$T/sudoers.d"
-target="$SCUTTLARR_SUDOERS_PATH"
+target="$SCUTTLER_SUDOERS_PATH"
 
 # The rule names exactly the two pmset commands, for this user, no password.
 rule="$(sc_sudoers_rule)"
 assert_match "rule allows disablesleep 1" "$rule" "/usr/bin/pmset -a disablesleep 1"
 assert_match "rule allows disablesleep 0" "$rule" "/usr/bin/pmset -a disablesleep 0"
-assert_match "rule is for this user" "$rule" "${USER:-$(id -un)} ALL=(root) NOPASSWD: SCUTTLARR_SLEEP"
+assert_match "rule is for this user" "$rule" "${USER:-$(id -un)} ALL=(root) NOPASSWD: SCUTTLER_SLEEP"
 print -r -- "$rule" > "$T/rule"
 assert_ok "visudo accepts the rule" /usr/sbin/visudo -cf "$T/rule"
 

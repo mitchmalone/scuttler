@@ -1,12 +1,12 @@
-import type { AppearanceMode } from '@scuttlarr/core/appearance'
-import type { Link } from '@scuttlarr/core/types'
+import type { AppearanceMode } from '@scuttler/core/appearance'
+import type { Link } from '@scuttler/core/types'
 import type {
   BarSnapshot,
   BarWidget,
   UsageReport,
   WidgetSetting,
-} from '@scuttlarr/tui'
-import { GithubIcon, XIcon } from '@scuttlarr/tui/icons'
+} from '@scuttler/tui'
+import { GithubIcon, XIcon } from '@scuttler/tui/icons'
 import { getVersion } from '@tauri-apps/api/app'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
@@ -70,7 +70,7 @@ import HotkeyRecorder from './HotkeyRecorder'
 import MachineTab from './MachineTab'
 import { PluginsSection } from './PluginsSection'
 import SubTabs from './SubTabs'
-import iconUrl from './scuttlarr.svg'
+import iconUrl from './scuttler.svg'
 
 /**
  * The settings window: a live view over config.json. Every edit autosaves (debounced);
@@ -91,10 +91,10 @@ const TABS = [
   { id: 'about', label: 'About', icon: Info },
 ] as const
 
-/** Where scuttlarr lives on the web — the About tab's links. */
-const SITE_URL = 'https://scuttlarr.com'
-const DOCS_URL = 'https://scuttlarr.com/docs'
-const GITHUB_URL = 'https://github.com/mitchmalone/scuttlarr'
+/** Where scuttler lives on the web — the About tab's links. */
+const SITE_URL = 'https://www.scuttler.app'
+const DOCS_URL = 'https://www.scuttler.app/docs'
+const GITHUB_URL = 'https://github.com/mitchmalone/scuttler'
 const RELEASES_URL = `${GITHUB_URL}/releases`
 const X_URL = 'https://x.com/mitchmalone'
 
@@ -290,7 +290,7 @@ function GeneralBasics({
             checked={config.updates?.checkSelf ?? true}
             onChange={(e) => set('updates', { checkSelf: e.target.checked })}
           />
-          Check for scuttlarr updates
+          Check for scuttler updates
         </label>
         <p className="hint">
           Every 6 h, from GitHub Releases; the newest shows in{' '}
@@ -350,7 +350,7 @@ function ColorPickerSection({ config, set }: { config: Config; set: SetFn }) {
             checked={config.colorLoupe}
             onChange={(e) => set('colorLoupe', e.target.checked)}
           />
-          Use the scuttlarr loupe
+          Use the scuttler loupe
         </label>
         {config.colorLoupe && (
           <label className="check">
@@ -380,10 +380,10 @@ function ColorPickerSection({ config, set }: { config: Config; set: SetFn }) {
         )}
         <p className="hint">
           Off (default): <code>colorpicker</code> uses Apple's own sampler — no
-          permission, its zoom. On: scuttlarr draws its own loupe, which needs{' '}
+          permission, its zoom. On: scuttler draws its own loupe, which needs{' '}
           <strong>Screen Recording</strong> — the first pick after switching
-          asks macOS once; grant it, relaunch scuttlarr, and picks use the
-          loupe. Flip back any time to compare.
+          asks macOS once; grant it, relaunch scuttler, and picks use the loupe.
+          Flip back any time to compare.
         </p>
       </Row>
     </>
@@ -410,7 +410,7 @@ function ConfigSection() {
         </div>
         <p className="hint">
           This whole window is a view over{' '}
-          <code>~/.config/scuttlarr/config.json</code> — edit either place,
+          <code>~/.config/scuttler/config.json</code> — edit either place,
           changes apply live.
         </p>
       </Row>
@@ -454,10 +454,10 @@ function ThemeSelect({
 
 /**
  * Settings → General ▸ Theme: the pick, the policy that decides which theme is
- * active when (DECISIONS 2026-09-11, `@scuttlarr/core/appearance`), then the
+ * active when (DECISIONS 2026-09-11, `@scuttler/core/appearance`), then the
  * rung that renders it beyond the app.
  */
-/** `~/.config/scuttlarr/themes/<name>/colors.toml`: list, install from git, update, remove. */
+/** `~/.config/scuttler/themes/<name>/colors.toml`: list, install from git, update, remove. */
 function UserThemesRow() {
   const user = useUserThemes()
   const [url, setUrl] = useState('')
@@ -475,9 +475,9 @@ function UserThemesRow() {
       {user.length === 0 && (
         <p className="hint">
           None yet. Drop a <code>colors.toml</code> in{' '}
-          <code>~/.config/scuttlarr/themes/&lt;name&gt;/</code> (Omarchy's
-          format — any Omarchy theme works as-is), or install one from git
-          below. A theme named after a built-in replaces it.
+          <code>~/.config/scuttler/themes/&lt;name&gt;/</code> (Omarchy's format
+          — any Omarchy theme works as-is), or install one from git below. A
+          theme named after a built-in replaces it.
         </p>
       )}
       {user.map((t) => (
@@ -730,7 +730,7 @@ function ThemeSection({
           Code
         </label>
         <p className="hint">
-          Files land in <code>~/.local/state/scuttlarr/current/theme/</code>;
+          Files land in <code>~/.local/state/scuttler/current/theme/</code>;
           every open shell retints at once (tmux or not, any terminal, no
           permission), new terminal windows read the files. Themes you add in
           config.json are token-only and stay app-only.
@@ -766,7 +766,7 @@ function ThemeSection({
         </label>
         <p className="hint">
           Installs a generated theme for each and switches to it in their own
-          settings files (a one-time <code>.bak-scuttlarr</code> beside each).
+          settings files (a one-time <code>.bak-scuttler</code> beside each).
           Running instances change on the spot; ones not installed are skipped.
         </p>
         <p className="hint">
@@ -992,7 +992,7 @@ function AgentsTab({ config, set }: { config: Config; set: SetFn }) {
                 Account limits (“how soon am I rate-limited?”) are computed by
                 the providers, so showing them means one HTTPS request to each —
                 using credentials the CLIs already store. Grant access per
-                provider; scuttlarr picks the freshest source, falls back
+                provider; scuttler picks the freshest source, falls back
                 automatically, and never refreshes or writes tokens.
               </p>
               <label className="check">
@@ -1687,7 +1687,7 @@ function WidgetsSection({
     <section className="row-full">
       <div className="zonehead">Custom widgets</div>
       <p className="hint">
-        Executables in <code>~/.config/scuttlarr/widgets/</code> that answer{' '}
+        Executables in <code>~/.config/scuttler/widgets/</code> that answer{' '}
         <code>manifest</code> and <code>tick</code> — any language, live, no
         restart. Contract and reference widgets: docs/WIDGETS.md.
       </p>
@@ -1830,7 +1830,7 @@ function MenubarTab({ config, set }: { config: Config; set: SetFn }) {
                   set('bar', { ...config.bar, enabled: e.target.checked })
                 }
               />
-              Enable the scuttlarr bar
+              Enable the scuttler bar
             </label>
             <p className="hint">
               Replaces the macOS menu bar with an Omarchy-style strip. Applies
@@ -1902,7 +1902,7 @@ function AboutTab() {
   const open = (url: string) => invoke('open_url', { url }).catch(console.error)
   const links: { label: string; url: string; icon: React.ReactNode }[] = [
     {
-      label: 'scuttlarr.com',
+      label: 'www.scuttler.app',
       url: SITE_URL,
       icon: <Globe size={15} strokeWidth={1.75} aria-hidden />,
     },
@@ -1921,9 +1921,9 @@ function AboutTab() {
   ]
   return (
     <div className="about">
-      <img className="appicon" src={iconUrl} alt="scuttlarr icon" />
+      <img className="appicon" src={iconUrl} alt="scuttler icon" />
       <p className="wordmark">
-        <span className="sigil">❯</span> scuttlarr
+        <span className="sigil">❯</span> scuttler
         {version ? ` v${version}` : ''}
       </p>
       <p className="hint">The keyboard control surface for macOS.</p>
@@ -1944,7 +1944,7 @@ function AboutTab() {
       </div>
       <p className="hint aboutfoot">
         Zero granted permissions, zero network. Your config lives at{' '}
-        <code>~/.config/scuttlarr/config.json</code>; scripts extend the prompt
+        <code>~/.config/scuttler/config.json</code>; scripts extend the prompt
         (see docs). Because the apps won’t launch themselves. Yarr.
       </p>
     </div>

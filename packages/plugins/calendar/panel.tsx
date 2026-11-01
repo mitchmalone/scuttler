@@ -5,8 +5,8 @@ import {
   Panel,
   stepMonth,
   yearProgress,
-} from '@scuttlarr/tui'
-import type { PluginPanelProps } from '@scuttlarr/tui/plugins'
+} from '@scuttler/tui'
+import type { PluginPanelProps } from '@scuttler/tui/plugins'
 import { CalendarDays } from 'lucide-react'
 import { useState } from 'react'
 

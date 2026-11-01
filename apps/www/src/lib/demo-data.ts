@@ -1,27 +1,27 @@
 import {
   PANEL_INFO as CORE_PANELS,
   type PanelInfo,
-} from '@scuttlarr/core/panels'
+} from '@scuttler/core/panels'
 import {
   UPDATES_PLUGIN,
   updatesReportAt,
-} from '@scuttlarr/plugins/updates/fixtures'
-import updatesManifest from '@scuttlarr/plugins/updates/manifest.json'
-import { USAGE_PLUGIN, usageReportAt } from '@scuttlarr/plugins/usage/fixtures'
-import usageManifest from '@scuttlarr/plugins/usage/manifest.json'
-import type { AgentSession, BarSnapshot } from '@scuttlarr/tui'
+} from '@scuttler/plugins/updates/fixtures'
+import updatesManifest from '@scuttler/plugins/updates/manifest.json'
+import { USAGE_PLUGIN, usageReportAt } from '@scuttler/plugins/usage/fixtures'
+import usageManifest from '@scuttler/plugins/usage/manifest.json'
+import type { AgentSession, BarSnapshot } from '@scuttler/tui'
 
 /**
  * Mock payloads for the website demo. Shapes mirror what the app's Rust side pushes
  * (wifi.rs, usage.rs, the agent socket monitor) so the demo panels are the real
- * `@scuttlarr/tui` components fed plausible data — the website has no OS behind it.
+ * `@scuttler/tui` components fed plausible data — the website has no OS behind it.
  *
  * Nothing here is engine logic: grammar, matching and ranking all run in
- * `@scuttlarr/core` (invariant 5). This file is data only.
+ * `@scuttler/core` (invariant 5). This file is data only.
  */
 
 /**
- * Every panel the demo's launcher knows: the app's registry (`@scuttlarr/core/panels`,
+ * Every panel the demo's launcher knows: the app's registry (`@scuttler/core/panels`,
  * the same list the app renders) plus the bundled plugins that declare a panel in
  * their manifest (`usage ⏎`, `updates ⏎`) — exactly how the app assembles its
  * own list at load time (invariant 10).
@@ -59,14 +59,14 @@ export const WIFI = {
 
 /** The fictional usage report the bar and `usage ⏎` share — the fixture the
  * first-party plugin ships (invariant 10: one copy, imported). */
-export { USAGE_REPORT } from '@scuttlarr/plugins/usage/fixtures'
+export { USAGE_REPORT } from '@scuttler/plugins/usage/fixtures'
 
 /** Same story for the updates plugin's fixture. */
-export { UPDATES_REPORT } from '@scuttlarr/plugins/updates/fixtures'
+export { UPDATES_REPORT } from '@scuttler/plugins/updates/fixtures'
 
 /**
  * Fictional agent sessions, in the shape the app's Rust side pushes
- * (`AgentSession` from `@scuttlarr/tui`). The glyphs, colours, grouping and card
+ * (`AgentSession` from `@scuttler/tui`). The glyphs, colours, grouping and card
  * layout are the kit's — the website supplies data only (AGENTS invariant 10).
  *
  * `updatedAt` is epoch seconds, so the demo builds these relative to load time.
@@ -199,15 +199,15 @@ export function demoSnapshot(nowSeconds: number, focused: string): BarSnapshot {
 export const ASK_ANSWERS: { match: RegExp; text: string }[] = [
   {
     match: /quicklink/i,
-    text: 'Quicklinks are trigger words bound to URL templates. Type a URL in the panel and choose "Add quicklink…" — you pick a name, a browser, and scuttlarr fetches the favicon — a request you asked for; nothing here phones home about you.\n\nA {query} placeholder makes it Raycast-style:\n\n  yt cute otters ⏎   → youtube.com/results?search_query=cute+otters\n  gh tauri ⏎         → github.com/search?q=tauri\n\nA bare trigger opens the site itself. Triggers are whole-word only, so typing "yt" mid-search never hijacks a fuzzy match.',
+    text: 'Quicklinks are trigger words bound to URL templates. Type a URL in the panel and choose "Add quicklink…" — you pick a name, a browser, and scuttler fetches the favicon — a request you asked for; nothing here phones home about you.\n\nA {query} placeholder makes it Raycast-style:\n\n  yt cute otters ⏎   → youtube.com/results?search_query=cute+otters\n  gh tauri ⏎         → github.com/search?q=tauri\n\nA bare trigger opens the site itself. Triggers are whole-word only, so typing "yt" mid-search never hijacks a fuzzy match.',
   },
   {
     match: /script|hack|extend|plugin/i,
-    text: 'Scripts are the plugin API. Drop any executable into ~/.config/scuttlarr/scripts/ and it joins the grammar — no restart, no manifest file, no store.\n\nThe contract is two invocations:\n\n  <script> manifest      → {"trigger": "uuid", "name": "UUID"}\n  <script> query <args>  → {"items": [{"title": …, "action": …}]}\n\nTypeScript under Bun, or any executable. stderr is ignored; a slow script gets killed, not waited for. json and ip ship bundled as reference implementations.',
+    text: 'Scripts are the plugin API. Drop any executable into ~/.config/scuttler/scripts/ and it joins the grammar — no restart, no manifest file, no store.\n\nThe contract is two invocations:\n\n  <script> manifest      → {"trigger": "uuid", "name": "UUID"}\n  <script> query <args>  → {"items": [{"title": …, "action": …}]}\n\nTypeScript under Bun, or any executable. stderr is ignored; a slow script gets killed, not waited for. json and ip ship bundled as reference implementations.',
   },
   {
     match: /bar|menubar/i,
-    text: "The bar is scuttlarr's menubar replacement — an Omarchy-flat strip: no boxes, dim glyphs, one solid block marking the active workspace.\n\nModules live in explicit left / center / right zones under bar.layout in config.json, ordered within each zone. Notched displays get their own arrangement, since the camera housing owns the middle. Every cell opens a panel in the launcher, and the strip is themed by the same tokens as the launcher; plugins and widgets add cells of their own.",
+    text: "The bar is scuttler's menubar replacement — an Omarchy-flat strip: no boxes, dim glyphs, one solid block marking the active workspace.\n\nModules live in explicit left / center / right zones under bar.layout in config.json, ordered within each zone. Notched displays get their own arrangement, since the camera housing owns the middle. Every cell opens a panel in the launcher, and the strip is themed by the same tokens as the launcher; plugins and widgets add cells of their own.",
   },
   {
     match: /.*/,

@@ -1,7 +1,7 @@
 'use client'
 
-import UpdatesCell from '@scuttlarr/plugins/updates/cell'
-import UsageCell from '@scuttlarr/plugins/usage/cell'
+import UpdatesCell from '@scuttler/plugins/updates/cell'
+import UsageCell from '@scuttler/plugins/usage/cell'
 import {
   Bar,
   BarAgents,
@@ -12,17 +12,14 @@ import {
   BarWifiCell,
   BarWorkspaces,
   formatBarClock,
-} from '@scuttlarr/tui'
-import type { BarModule, BarZones } from '@scuttlarr/tui'
-import {
-  DEFAULT_BAR_LAYOUT,
-  normalizeBarZones,
-} from '@scuttlarr/tui/bar/layout'
+} from '@scuttler/tui'
+import type { BarModule, BarZones } from '@scuttler/tui'
+import { DEFAULT_BAR_LAYOUT, normalizeBarZones } from '@scuttler/tui/bar/layout'
 import {
   NOOP_HOST,
   type PluginCellComponent,
   pluginIdOf,
-} from '@scuttlarr/tui/plugins'
+} from '@scuttler/tui/plugins'
 import { type ReactNode, useEffect, useMemo, useState } from 'react'
 
 import { WIFI, demoSnapshot } from '@/lib/demo-data'
@@ -48,7 +45,7 @@ const LAYOUT: BarZones = normalizeBarZones(
 )
 
 /**
- * The bar — the *actual* components from `@scuttlarr/tui`, the same ones the
+ * The bar — the *actual* components from `@scuttler/tui`, the same ones the
  * desktop app renders, arranged by the same default layout. Live across the top
  * of the demo desktop (a ticking clock, switchable workspaces) or frozen at a
  * fixed instant as a still for the explainer section. The website supplies a

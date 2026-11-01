@@ -1,10 +1,10 @@
 # Setup: the Machine rung
 
-> The design of `packages/setup` — the `scuttlarr` CLI shipped inside the app — and the
+> The design of `packages/setup` — the `scuttler` CLI shipped inside the app — and the
 > source of AGENTS invariant 11: _a path outside our own config has exactly one owner,
 > recorded in a manifest; adopt moves, never overwrites._ History: the CLI began as a
 > separate "distro" repo (DECISIONS 2026-08-25, 2026-08-28) and folded into this one on
-> 2026-09-11 (DECISIONS; `plans/done/2026-09-11-unify-into-scuttlarr.md`). Nothing in it
+> 2026-09-11 (DECISIONS; `plans/done/2026-09-11-unify-into-scuttler.md`). Nothing in it
 > runs unless the Machine rung is on (`machine.enabled`, off by default; invariant 12).
 
 ## The idea in one paragraph
@@ -19,22 +19,22 @@ everything else is overlay. The manifest is what makes it a system instead of a 
 
 ```
 <app bundle>/Contents/Resources/setup/   the base — read-only, versioned with the app
-  bin/scuttlarr                          the CLI (zsh 5.9, nothing else; DEVIATIONS.md)
+  bin/scuttler                          the CLI (zsh 5.9, nothing else; DEVIATIONS.md)
   lib/                                   core, manifest, snapshot, defaults, files, doctor,
                                          link, migrations, shell, remove, sudoers
   defaults/                              macOS defaults, one file per concern, idempotent
   shell/                                 zshrc loader + NN-*.zsh (env, path, prompt, completion,
                                          aliases, tools, terminal title, plugins)
-  prompt/p10k.zsh  terminal/{ghostty,tmux.conf}  git/scuttlarr.gitconfig
+  prompt/p10k.zsh  terminal/{ghostty,tmux.conf}  git/scuttler.gitconfig
   migrations/                            YYYY-MM-DD-slug.zsh, run once each by `migrate`
 
-~/.config/scuttlarr/                     the overlay — the only place you write
+~/.config/scuttler/                     the overlay — the only place you write
   defaults.sh                            defaults flipped back or added (last declaration wins)
   zsh/*.zsh                              sourced after the base, in sorted order
   ghostty, tmux.conf                     fragments appended to the rendered configs
   (config.json, scripts/, plugins/, widgets/, themes/ are the app's; same directory, not setup's)
 
-~/.local/state/scuttlarr/                state — what doctor and remove need; never hand-edited
+~/.local/state/scuttler/                state — what doctor and remove need; never hand-edited
   manifest                               every owned path + its mode (below)
   defaults.before                        value (or absence) of every key the base wrote, pre-apply
   adopted/                               originals moved aside, tree-shaped (adopted/.zshrc, …)
@@ -53,15 +53,15 @@ into `current/theme/`, and the generated shell files import from that path.
 The CLI targets the **standard** locations — `~/.zshrc`, `~/.p10k.zsh`,
 `~/.config/ghostty/config`, `~/.config/tmux/tmux.conf`, `~/.config/git/`, macOS
 `defaults`, `~/.local/bin` — so every other tool keeps working with no knowledge of
-scuttlarr. Each owned path has exactly one mode, recorded in the manifest:
+scuttler. Each owned path has exactly one mode, recorded in the manifest:
 
 | Mode               | For                                                                                                    | doctor / remove                                             |
 | ------------------ | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
-| **symlink → base** | `~/.local/bin/scuttlarr` (`link`)                                                                      | Checks the link target; remove unlinks                      |
-| **generated**      | `.zshrc`, `.p10k.zsh`, Ghostty, tmux, `scuttlarr.gitconfig` — rendered from base ⊕ overlay             | Re-renders and diffs (hash in the manifest); remove deletes |
-| **adopted**        | A file that existed before scuttlarr wrote the same path                                               | Parked in `state/adopted/`; remove puts it back             |
+| **symlink → base** | `~/.local/bin/scuttler` (`link`)                                                                       | Checks the link target; remove unlinks                      |
+| **generated**      | `.zshrc`, `.p10k.zsh`, Ghostty, tmux, `scuttler.gitconfig` — rendered from base ⊕ overlay              | Re-renders and diffs (hash in the manifest); remove deletes |
+| **adopted**        | A file that existed before scuttler wrote the same path                                                | Parked in `state/adopted/`; remove puts it back             |
 | **touched**        | A file that stays yours but carries one marker-bounded stanza of ours (`~/.config/git/config` include) | Hashes the block; remove strips it                          |
-| **root**           | The one root-owned file: `/etc/sudoers.d/scuttlarr` (`sudoers on`)                                     | Hash recorded (0444); remove sudo-deletes                   |
+| **root**           | The one root-owned file: `/etc/sudoers.d/scuttler` (`sudoers on`)                                      | Hash recorded (0444); remove sudo-deletes                   |
 
 Manifest line shape (one per path, tab-separated):
 
@@ -74,7 +74,7 @@ Adopt **moves, never overwrites**: a foreign file at a path we are about to writ
 than aspirational: the defaults snapshot (`defaults.before`) is taken before the first
 write of each key and never updated afterwards, and nothing is ever overwritten in place.
 
-`scuttlarr sudoers on` installs a two-command rule — `pmset -a disablesleep 1` and `0`,
+`scuttler sudoers on` installs a two-command rule — `pmset -a disablesleep 1` and `0`,
 this user, no password — so the app's `awake` can switch macOS sleep off while a hold is
 armed. The app only ever runs `sudo -n`: without the rule it asks nothing and holds on
 power assertions alone. `off` removes it (DECISIONS 2026-10-01).
@@ -89,7 +89,7 @@ default, and `--apply` only ever follows a plan (`--yes` skips the one question)
 | `doctor`             | Read-only. Defaults in check mode (drift per key), the shell files re-rendered and diffed, every manifest entry verified (link intact? hash equal? original still parked?). Exit 1 on any drift.                                                                                                                        |
 | `defaults [--apply]` | Plan: every `defaults` key the base ⊕ overlay declares, current → new. Apply: snapshot each unseen key, write, read back, restart the apps that cache them (Dock, Finder, SystemUIServer).                                                                                                                              |
 | `shell [--apply]`    | Plan: the generated files above, diffed. Apply: adopt what's there, write, record; clone the zsh plugins (p10k, autosuggestions, syntax-highlighting, history-substring-search, completions) under `~/.local/share/zsh/plugins`.                                                                                        |
-| `link` / `unlink`    | Put `scuttlarr` on PATH at `~/.local/bin/scuttlarr` (a symlink into the bundle; adopts anything foreign at that path), or take it off.                                                                                                                                                                                  |
+| `link` / `unlink`    | Put `scuttler` on PATH at `~/.local/bin/scuttler` (a symlink into the bundle; adopts anything foreign at that path), or take it off.                                                                                                                                                                                    |
 | `migrate`            | Run every base migration this machine has not yet run, in date order; the app runs this at startup when the rung is on (`setup::boot`). Format and rules: `packages/setup/migrations/README.md`.                                                                                                                        |
 | `sudoers on \| off`  | The root-owned rule above; one password.                                                                                                                                                                                                                                                                                |
 | `remove`             | The manifest in reverse: links unlinked, generated files deleted (noting any you edited since), adopted originals restored, touched stanzas stripped, the sudoers file removed; `defaults.before` restored (keys that had no value deleted); then the CLI's own records. Leaves the overlay — it's yours — and the app. |
@@ -102,11 +102,11 @@ window); `remove` and `sudoers` are terminal-only by design.
 ## The install, as the user sees it
 
 ```sh
-curl -fsSL https://scuttlarr.com/install | sh
+curl -fsSL https://www.scuttler.app/install | sh
 ```
 
 That is the **app's** install (`install/install.sh`): preflight (Apple Silicon, macOS
-14+, Xcode CLT, Homebrew), `brew install --cask mitchmalone/tap/scuttlarr`, open the app.
+14+, Xcode CLT, Homebrew), `brew install --cask mitchmalone/tap/scuttler`, open the app.
 It changes no defaults and touches no dotfiles. The Machine rung is a toggle in Settings
 afterwards; turning it on shows the defaults plan and asks once. Fresh Mac or existing one,
 same path; the difference is how many adopt lines the plan prints.
@@ -117,7 +117,7 @@ Cleanly reversed by `remove`: every file it wrote, every adopted original, every
 default it changed (to the value found, or deleted if there was none), the PATH link, the
 sudoers rule, the git include stanza. The overlay is untouched.
 
-Left behind, and said so: Homebrew and the app itself (`brew uninstall --cask scuttlarr`
+Left behind, and said so: Homebrew and the app itself (`brew uninstall --cask scuttler`
 is the app's uninstall, README), the zsh plugin clones under `~/.local/share/zsh/plugins`,
 permission grants and the login item (macOS won't let us revoke; the app's own), Dock and
 WindowManager keys (restored, but visibly revert only after logout).
@@ -125,18 +125,18 @@ WindowManager keys (restored, but visibly revert only after logout).
 ## And dotfiles?
 
 The author's private chezmoi repo is a fleet config (Macs, Pis, cloud). On a Mac it
-writes exactly one scuttlarr thing: `~/.config/scuttlarr/` — the overlay. Fleet identity,
+writes exactly one scuttler thing: `~/.config/scuttler/` — the overlay. Fleet identity,
 ssh, git identity, Linux hosts, backups stay there. The shell base lives in this repo's
 `packages/setup/shell/`; Linux hosts can pull that directory in via a chezmoi external so
 they keep the shared shell without a copy.
 
 Split by **audience**, not by machine:
 
-| What                          | Where                                    | Who    |
-| ----------------------------- | ---------------------------------------- | ------ |
-| good-for-anyone Mac opinions  | the base (`packages/setup`)              | public |
-| only-you Mac residue          | `~/.config/scuttlarr/` (chezmoi-managed) | you    |
-| fleet: hosts, identity, Linux | dotfiles repo                            | you    |
+| What                          | Where                                   | Who    |
+| ----------------------------- | --------------------------------------- | ------ |
+| good-for-anyone Mac opinions  | the base (`packages/setup`)             | public |
+| only-you Mac residue          | `~/.config/scuttler/` (chezmoi-managed) | you    |
+| fleet: hosts, identity, Linux | dotfiles repo                           | you    |
 
 ## The one rule
 

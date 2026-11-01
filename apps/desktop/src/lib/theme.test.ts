@@ -26,7 +26,7 @@ describe('appearanceOf', () => {
         appearance: { everywhere: true, macos: true, mode: 'dark' } as never,
       }),
     )
-    expect(a.pair).toEqual({ light: 'solarized-light', dark: 'scuttlarr' })
+    expect(a.pair).toEqual({ light: 'solarized-light', dark: 'scuttler' })
     expect(a.schedule).toEqual({ light: '07:00', dark: '19:00' })
     expect(a.everywhere).toBe(true)
   })
@@ -45,7 +45,7 @@ describe('a config with no appearance key', () => {
   }
 
   it('never switches the theme when the key is absent in the webview', () => {
-    expect(switches(cfg({ theme: 'scuttlarr', appearance: undefined }))).toBe(
+    expect(switches(cfg({ theme: 'scuttler', appearance: undefined }))).toBe(
       false,
     )
   })
@@ -56,7 +56,7 @@ describe('a config with no appearance key', () => {
   // `it.fails` into `it` with the fix.
   it.fails('never switches the theme for the shape Rust delivers', () => {
     const fromRust = cfg({
-      theme: 'scuttlarr',
+      theme: 'scuttler',
       appearance: {
         everywhere: false,
         macos: true,
@@ -92,7 +92,7 @@ describe('themeApplyRequest', () => {
     expect(req.btop).toBeNull()
     expect(req.neovimColorscheme).toBeNull()
     expect(req.helixTheme).toBeNull()
-    expect(req.claude).toContain('"name": "scuttlarr — dracula"')
+    expect(req.claude).toContain('"name": "scuttler — dracula"')
     for (const gone of [
       'claude.json',
       'vscode-theme.json',
@@ -111,7 +111,7 @@ describe('themeApplyRequest', () => {
     expect(req.editors).toBe(true)
     expect(req.mode).toBe('dark')
     expect(JSON.parse(req.vscode!).type).toBe('dark')
-    expect(JSON.parse(req.zed!).themes[0].name).toBe('scuttlarr')
+    expect(JSON.parse(req.zed!).themes[0].name).toBe('scuttler')
     expect(req.btop).toContain('theme[main_bg]="#282a36"')
     expect(req.neovimColorscheme).toBe('dracula')
     expect(req.helixTheme).toBe('dracula')

@@ -1,8 +1,8 @@
 #!/bin/zsh
 source "${0:A:h}/harness.zsh"
-cli="$SCUTTLARR_BASE/bin/scuttlarr"
+cli="$SCUTTLER_BASE/bin/scuttler"
 
-assert_eq "$SCUTTLARR_VERSION" "$("$cli" version)" "version"
+assert_eq "$SCUTTLER_VERSION" "$("$cli" version)" "version"
 assert_ok "help exits 0" "$cli" help
 assert_fails "unknown command" "$cli" nope >/dev/null 2>&1
 
@@ -29,7 +29,7 @@ out="$("$cli" defaults --apply --yes 2>&1)"
 assert_match "second apply is a no-op" "$out" "already as declared"
 
 # Drift after the fact is reported.
-"$SCUTTLARR_DEFAULTS_BIN" write com.apple.dock tilesize -int 96
+"$SCUTTLER_DEFAULTS_BIN" write com.apple.dock tilesize -int 96
 assert_fails "doctor sees drift" "$cli" doctor 2>/dev/null
 out="$("$cli" doctor 2>&1)"
 assert_match "names the key" "$out" "com.apple.dock tilesize: expected 48, is 96"

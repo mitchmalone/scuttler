@@ -10,7 +10,7 @@ import {
 describe('editorThemesFor', () => {
   it('maps every built-in in the table to its editor ports', () => {
     expect(editorThemesFor('dracula')).toEqual({
-      vscode_theme: 'scuttlarr',
+      vscode_theme: 'scuttler',
       neovim_colorscheme: 'dracula',
       helix_theme: 'dracula',
     })
@@ -28,7 +28,7 @@ describe('editorThemesFor', () => {
   })
 
   it('falls back to default for a theme with no port', () => {
-    expect(editorThemesFor('scuttlarr')).toEqual({
+    expect(editorThemesFor('scuttler')).toEqual({
       vscode_theme: RENDERED_EDITOR_THEME,
       neovim_colorscheme: 'default',
       helix_theme: 'default',

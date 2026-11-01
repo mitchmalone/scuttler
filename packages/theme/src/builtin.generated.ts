@@ -1,10 +1,10 @@
-// GENERATED — do not edit; pnpm --filter @scuttlarr/theme build
+// GENERATED — do not edit; pnpm --filter @scuttler/theme build
 // Source: packages/theme/themes/<name>/colors.toml, baked by packages/theme/src/generate.ts.
 // `pnpm verify:themes` fails when this file is stale.
 
 /** Built-in theme name → its colors.toml, verbatim. */
 export const BUILTIN_THEME_SOURCES: Record<string, string> = {
-  scuttlarr: `# scuttlarr — the house theme. Ink-blue ground, coral accent; ANSI in the same key.
+  scuttler: `# scuttler — the house theme. Ink-blue ground, coral accent; ANSI in the same key.
 # Shades not listed (bright_*, brown) derive by Omarchy's rules.
 mode = "dark"
 
@@ -505,8 +505,8 @@ border = "#3b4261"
 
 /** Template file name → template text. */
 export const TEMPLATES: Record<string, string> = {
-  'btop.theme.tpl': `# scuttlarr theme: {{ name }} — rendered, do not edit. Written to ~/.config/btop/themes/scuttlarr.theme;
-# btop.conf carries color_theme = "scuttlarr" and a running btop reloads on SIGUSR2.
+  'btop.theme.tpl': `# scuttler theme: {{ name }} — rendered, do not edit. Written to ~/.config/btop/themes/scuttler.theme;
+# btop.conf carries color_theme = "scuttler" and a running btop reloads on SIGUSR2.
 # Main background, empty for terminal default, need to be empty if you want transparent background
 theme[main_bg]="{{ background }}"
 
@@ -602,7 +602,7 @@ theme[gradient_color_6]="{{ light_foreground }}"
 theme[gradient_color_7]="{{ bright_foreground }}"
 `,
   'claude.json.tpl': `{
-  "name": "scuttlarr — {{ name }}",
+  "name": "scuttler — {{ name }}",
   "base": "{{ mode }}",
   "overrides": {
     "claude": "{{ accent }}",
@@ -643,8 +643,8 @@ theme[gradient_color_7]="{{ bright_foreground }}"
   }
 }
 `,
-  'delta.gitconfig.tpl': `# scuttlarr theme: {{ name }} — rendered, do not edit. The base git config has
-# \`[include] path = ~/.local/state/scuttlarr/current/theme/delta.gitconfig\`.
+  'delta.gitconfig.tpl': `# scuttler theme: {{ name }} — rendered, do not edit. The base git config has
+# \`[include] path = ~/.local/state/scuttler/current/theme/delta.gitconfig\`.
 [delta]
     {{ mode }} = true
     syntax-theme = {{ bat_theme }}
@@ -661,8 +661,8 @@ theme[gradient_color_7]="{{ bright_foreground }}"
     plus-style = syntax "{{ mix background green 20% }}"
     plus-emph-style = syntax "{{ mix background green 40% }}"
 `,
-  'ghostty.tpl': `# scuttlarr theme: {{ name }} — rendered, do not edit. Imported by the base
-# Ghostty config via \`config-file = ?~/.local/state/scuttlarr/current/theme/ghostty\`.
+  'ghostty.tpl': `# scuttler theme: {{ name }} — rendered, do not edit. Imported by the base
+# Ghostty config via \`config-file = ?~/.local/state/scuttler/current/theme/ghostty\`.
 background = {{ background }}
 foreground = {{ foreground }}
 cursor-color = {{ bright_foreground }}
@@ -686,8 +686,8 @@ palette = 13={{ bright_magenta }}
 palette = 14={{ bright_cyan }}
 palette = 15={{ bright_foreground }}
 `,
-  'neovim.lua.tpl': `-- scuttlarr theme: {{ name }} — rendered, do not edit. A LazyVim spec: add
--- dofile(vim.fn.expand("~/.local/state/scuttlarr/current/theme/neovim.lua")) to your
+  'neovim.lua.tpl': `-- scuttler theme: {{ name }} — rendered, do not edit. A LazyVim spec: add
+-- dofile(vim.fn.expand("~/.local/state/scuttler/current/theme/neovim.lua")) to your
 -- lazy specs; running instances get \`:colorscheme\` over --remote-send at theme set.
 return {
   {
@@ -698,7 +698,7 @@ return {
   },
 }
 `,
-  'p10k-colors.zsh.tpl': `# scuttlarr theme: {{ name }} — rendered, do not edit. Sourced by the base .p10k.zsh
+  'p10k-colors.zsh.tpl': `# scuttler theme: {{ name }} — rendered, do not edit. Sourced by the base .p10k.zsh
 # before its segment styling, so a lean p10k config can say \`$accent\` / \`$comment\`
 # and retint with the theme on the next prompt.
 local background='{{ background }}'
@@ -715,8 +715,8 @@ local blue='{{ blue }}'
 local purple='{{ magenta }}'
 local pink='{{ bright_magenta }}'
 `,
-  'tmux.conf.tpl': `# scuttlarr theme: {{ name }} — rendered, do not edit. The base tmux.conf ends with
-# \`source-file -q ~/.local/state/scuttlarr/current/theme/tmux.conf\`; \`theme set\`
+  'tmux.conf.tpl': `# scuttler theme: {{ name }} — rendered, do not edit. The base tmux.conf ends with
+# \`source-file -q ~/.local/state/scuttler/current/theme/tmux.conf\`; \`theme set\`
 # also pushes OSC colours into every running pane, so this only has to style tmux.
 set -g status-style "bg={{ background }},fg={{ foreground }}"
 set -g status-left "#[fg={{ background }},bg={{ accent }},bold] #S #[fg={{ accent }},bg={{ background }}] "
@@ -732,7 +732,7 @@ set -g window-style "fg={{ foreground }},bg={{ background }}"
 set -g window-active-style "fg={{ foreground }},bg={{ background }}"
 `,
   'vscode-theme.json.tpl': `{
-    "name": "scuttlarr — {{ name }}",
+    "name": "scuttler — {{ name }}",
     "$schema": "vscode://schemas/color-theme",
     "type": "{{ mode }}",
     "semanticHighlighting": true,
@@ -2074,11 +2074,11 @@ set -g window-active-style "fg={{ foreground }},bg={{ background }}"
 `,
   'zed-theme.json.tpl': `{
   "$schema": "https://zed.dev/schema/themes/v0.2.0.json",
-  "name": "scuttlarr",
-  "author": "scuttlarr — rendered from theme {{ name }}, do not edit",
+  "name": "scuttler",
+  "author": "scuttler — rendered from theme {{ name }}, do not edit",
   "themes": [
     {
-      "name": "scuttlarr",
+      "name": "scuttler",
       "appearance": "{{ mode }}",
       "style": {
         "background": "{{ background }}",

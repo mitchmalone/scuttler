@@ -4,12 +4,12 @@
 # name per line, the ones that have run. sc_migrate sources every unrun file
 # in sorted order (the date prefix is the sequence) in a subshell with lib/
 # loaded and err_exit on: success appends the name, failure stops the run
-# so the rest wait for a fix. SCUTTLARR_MIGRATIONS_DIR points tests at fixtures.
+# so the rest wait for a fix. SCUTTLER_MIGRATIONS_DIR points tests at fixtures.
 
 typeset -gi SC_MIGRATIONS_RAN=0 SC_MIGRATIONS_DONE=0 SC_MIGRATIONS_PENDING=0
 
-sc_migrations_dir()    { print -r -- "${SCUTTLARR_MIGRATIONS_DIR:-$SCUTTLARR_BASE/migrations}"; }
-sc_migrations_record() { print -r -- "$SCUTTLARR_STATE/migrations"; }
+sc_migrations_dir()    { print -r -- "${SCUTTLER_MIGRATIONS_DIR:-$SCUTTLER_BASE/migrations}"; }
+sc_migrations_record() { print -r -- "$SCUTTLER_STATE/migrations"; }
 
 # sc_migration_done <name> → status 0 if recorded.
 sc_migration_done() {

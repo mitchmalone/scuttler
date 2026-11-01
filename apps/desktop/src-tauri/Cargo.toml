@@ -1,12 +1,12 @@
 [package]
-name = "scuttlarr"
+name = "scuttler"
 version = "0.8.0"
 description = "Scuttle the ship. Sail the wreck. An opinionated macOS desktop for terminal developers"
 authors = ["Mitch Malone"]
 edition = "2021"
 
 [lib]
-name = "scuttlarr_lib"
+name = "scuttler_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

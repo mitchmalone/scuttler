@@ -1,7 +1,7 @@
-//! The Claude Code hook adapter, owned by scuttlarr rather than by a checkout.
+//! The Claude Code hook adapter, owned by scuttler rather than by a checkout.
 //!
 //! `hooks/claude-status.py` is compiled into the binary and installed to
-//! `~/.config/scuttlarr/hooks/claude-status.py` — a stable path a user (or a
+//! `~/.config/scuttler/hooks/claude-status.py` — a stable path a user (or a
 //! distro) can point at, and one that survives the repo moving. Registration
 //! edits every Claude config dir's `settings.json` (`~/.claude`,
 //! `~/.claude-*` — the same account convention usage.rs discovers) so each
@@ -12,7 +12,7 @@
 //!   an older path. It never adds a registration: touching a user's Claude
 //!   settings without being asked is the settings window's job.
 //! - `install` (Settings → Agents): the script, plus a registration for every
-//!   event in every account, with a one-time `settings.json.bak-scuttlarr`.
+//!   event in every account, with a one-time `settings.json.bak-scuttler`.
 //!
 //! "Ours" is any command ending in `/hooks/claude-status.py` (or the `.sh` it
 //! replaced): the file name is the signature, the directory is incidental.
@@ -45,7 +45,7 @@ pub const EVENTS: [&str; 10] = [
 ];
 
 const SIGNATURES: [&str; 2] = ["/hooks/claude-status.py", "/hooks/claude-status.sh"];
-const BACKUP_SUFFIX: &str = ".bak-scuttlarr";
+const BACKUP_SUFFIX: &str = ".bak-scuttler";
 
 pub fn script_path() -> PathBuf {
     config::config_dir().join("hooks").join("claude-status.py")
@@ -386,7 +386,7 @@ pub fn install() -> CmdResult<HooksStatus> {
         if register(&mut settings, &target) {
             backup_once(&path)?;
             write_settings(&path, &settings)?;
-            eprintln!("[scuttlarr hooks] registered in {}", path.display());
+            eprintln!("[scuttler hooks] registered in {}", path.display());
         }
     }
     Ok(status())
@@ -399,10 +399,10 @@ pub fn install() -> CmdResult<HooksStatus> {
 pub fn boot() {
     let script = script_path();
     match install_script_at(&script) {
-        Ok(true) => eprintln!("[scuttlarr hooks] installed {}", script.display()),
+        Ok(true) => eprintln!("[scuttler hooks] installed {}", script.display()),
         Ok(false) => {}
         Err(e) => {
-            eprintln!("[scuttlarr hooks] install failed: {e}");
+            eprintln!("[scuttler hooks] install failed: {e}");
             return;
         }
     }
@@ -412,16 +412,16 @@ pub fn boot() {
         let mut settings = match read_settings(&path) {
             Ok(v) => v,
             Err(e) => {
-                eprintln!("[scuttlarr hooks] {e}");
+                eprintln!("[scuttler hooks] {e}");
                 continue;
             }
         };
         if mend(&mut settings, &target) {
             if let Err(e) = backup_once(&path).and_then(|()| write_settings(&path, &settings)) {
-                eprintln!("[scuttlarr hooks] repair of {} failed: {e}", path.display());
+                eprintln!("[scuttler hooks] repair of {} failed: {e}", path.display());
             } else {
                 eprintln!(
-                    "[scuttlarr hooks] repaired stale hook paths in {}",
+                    "[scuttler hooks] repaired stale hook paths in {}",
                     path.display()
                 );
             }
@@ -433,8 +433,10 @@ pub fn boot() {
 mod tests {
     use super::*;
 
-    const T: &str = "/Users/x/.config/scuttlarr/hooks/claude-status.py";
-    const OLD: &str = "/Users/x/Developer/scuttlarr/apps/desktop/hooks/claude-status.py";
+    const T: &str = "/Users/x/.config/scuttler/hooks/claude-status.py";
+    /// The path the previous name installed to — what a renamed home's
+    /// `settings.json` still says until `boot` mends it (rename.rs).
+    const OLD: &str = "/Users/x/.config/scuttlarr/hooks/claude-status.py";
 
     fn entry(command: &str) -> Value {
         json!({ "hooks": [{ "type": "command", "command": command }] })
@@ -561,7 +563,7 @@ mod tests {
     #[test]
     fn script_install_is_idempotent_and_executable() {
         use std::os::unix::fs::PermissionsExt;
-        let dir = std::env::temp_dir().join(format!("scuttlarr-hooks-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("scuttler-hooks-{}", std::process::id()));
         let path = dir.join("hooks").join("claude-status.py");
         assert!(install_script_at(&path).unwrap());
         assert!(!install_script_at(&path).unwrap());
@@ -577,8 +579,7 @@ mod tests {
 
     #[test]
     fn config_dirs_follow_the_account_convention() {
-        let home =
-            std::env::temp_dir().join(format!("scuttlarr-hooks-home-{}", std::process::id()));
+        let home = std::env::temp_dir().join(format!("scuttler-hooks-home-{}", std::process::id()));
         for d in [
             ".claude",
             ".claude-work",

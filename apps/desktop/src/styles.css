@@ -1,6 +1,6 @@
-/* scuttlarr — terminal prompt cosplay. Dark, monospace, no chrome.
+/* scuttler — terminal prompt cosplay. Dark, monospace, no chrome.
  * The launcher window's own chrome; the prompt itself is styled by
- * @scuttlarr/tui/launcher.css. */
+ * @scuttler/tui/launcher.css. */
 
 * {
   margin: 0;

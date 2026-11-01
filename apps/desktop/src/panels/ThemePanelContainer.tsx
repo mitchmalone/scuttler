@@ -1,4 +1,4 @@
-import { resolveAppearance } from '@scuttlarr/core/appearance'
+import { resolveAppearance } from '@scuttler/core/appearance'
 import { invoke } from '@tauri-apps/api/core'
 import { useEffect, useState } from 'react'
 

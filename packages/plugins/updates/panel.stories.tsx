@@ -1,5 +1,5 @@
-import { defineStories } from '@scuttlarr/tui'
-import { NOOP_HOST } from '@scuttlarr/tui/plugins'
+import { defineStories } from '@scuttler/tui'
+import { NOOP_HOST } from '@scuttler/tui/plugins'
 
 import {
   UPDATES_PLUGIN,

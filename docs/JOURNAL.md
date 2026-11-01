@@ -6,6 +6,18 @@
 
 ---
 
+### 2026-11-01 · The rename's two zsh gotchas: `end` is a reserved word, and a local shadows `(P)`
+
+- `for begin end in …` is a parse error: zsh keeps `end` for its csh-style `foreach … end`
+  loop. Loop variables are `b_mark e_mark` in `files.zsh` now.
+- `local -a lines; lines=("${(@P)1}")` with `$1 == lines` copies the fresh, empty local —
+  the `local` lands before `(P)` looks the name up. Name the copy something the caller
+  would never use (`_span_lines`).
+- The setup suite can write through into the repo: `link.test.zsh` symlinks
+  `~/.local/bin/scuttler` at the real `bin/scuttler`, and when a lib parse error made every
+  `$cli unlink` fail, `print "theirs" > "$link"` followed the live link and replaced the
+  CLI with one word. The test now `rm -f`s first; a one-line `bin/scuttler` is the tell.
+
 ### 2026-11-01 · Both logs had been appended at the bottom for two months; one re-sort
 
 JOURNAL and DECISIONS each say "newest first", and both were, until 2026-09-10: every entry

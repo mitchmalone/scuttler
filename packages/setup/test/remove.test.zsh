@@ -1,6 +1,6 @@
 #!/bin/zsh
 source "${0:A:h}/harness.zsh"
-cli="$SCUTTLARR_BASE/bin/scuttlarr"
+cli="$SCUTTLER_BASE/bin/scuttler"
 
 # Nothing applied yet: nothing to remove.
 out="$("$cli" remove --yes 2>&1)"; rc=$?
@@ -13,15 +13,15 @@ mkdir -p "${dict:h}"; print "their dict" > "$dict"          # adopted, then gene
 t_seed com.apple.dock tilesize 47                            # snapshot holds 47
 "$cli" defaults --apply --yes >/dev/null 2>&1
 "$cli" link >/dev/null 2>&1                                  # symlink
-link="$HOME/.local/bin/scuttlarr"
+link="$HOME/.local/bin/scuttler"
 adopted="$HOME/.config/foo/rc"                               # a bare `adopted` line
 mkdir -p "${adopted:h}"; print "ours" > "$adopted"
 mkdir -p "$(sc_adopted_path "$adopted")"; rmdir "$(sc_adopted_path "$adopted")"
 print "theirs" > "$(sc_adopted_path "$adopted")"
 sc_manifest_add adopted "$adopted" "$(sc_adopted_path "$adopted")" foo
 print -r -- "2026-01-01-first.zsh" > "$(sc_migrations_record)"
-mkdir -p "$SCUTTLARR_OVERLAY"; print "mine" > "$SCUTTLARR_OVERLAY/defaults.sh"
-print "{}" > "$SCUTTLARR_STATE/awake.json"; : > "$SCUTTLARR_STATE/agents.sock"
+mkdir -p "$SCUTTLER_OVERLAY"; print "mine" > "$SCUTTLER_OVERLAY/defaults.sh"
+print "{}" > "$SCUTTLER_STATE/awake.json"; : > "$SCUTTLER_STATE/agents.sock"
 
 assert_eq generated "$(sc_manifest_mode "$dict")" "setup: dict generated"
 assert_eq "their dict" "$(cat "$(sc_adopted_path "$dict")")" "setup: their dict parked"
@@ -55,15 +55,15 @@ assert_eq 0 "$rc" "remove exits 0"
 assert_no_file "$link" "symlink removed"
 assert_eq "their dict" "$(cat "$dict")" "generated removed, adopted original back"
 assert_eq "theirs" "$(cat "$adopted")" "adopted-mode original back"
-assert_no_file "$SCUTTLARR_STATE/adopted" "adopted/ tree gone"
+assert_no_file "$SCUTTLER_STATE/adopted" "adopted/ tree gone"
 assert_eq 47 "$(t_read read com.apple.dock tilesize)" "default restored from snapshot"
 assert_fails "absent-before key deleted" t_read read com.apple.dock autohide
 assert_no_file "$(sc_manifest_path)" "manifest gone"
 assert_no_file "$(sc_snapshot_path)" "snapshot gone"
 assert_no_file "$(sc_migrations_record)" "migrations record gone"
-assert_eq "mine" "$(cat "$SCUTTLARR_OVERLAY/defaults.sh")" "overlay untouched"
-assert_file "$SCUTTLARR_STATE/awake.json" "app state untouched"
-assert_ok "app socket untouched" test -e "$SCUTTLARR_STATE/agents.sock"
+assert_eq "mine" "$(cat "$SCUTTLER_OVERLAY/defaults.sh")" "overlay untouched"
+assert_file "$SCUTTLER_STATE/awake.json" "app state untouched"
+assert_ok "app socket untouched" test -e "$SCUTTLER_STATE/agents.sock"
 
 # Twice: nothing to do.
 out="$("$cli" remove --yes 2>&1)"

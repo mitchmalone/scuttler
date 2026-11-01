@@ -8,33 +8,33 @@ setopt no_unset pipe_fail
 typeset -gi T_PASS=0 T_FAIL=0
 T_NAME="${ZSH_ARGZERO:t}"
 _t_nl=$'\n'
-T="$(mktemp -d "${TMPDIR:-/tmp}/scuttlarr-test.XXXXXX")"
+T="$(mktemp -d "${TMPDIR:-/tmp}/scuttler-test.XXXXXX")"
 export T
 export HOME="$T/home"
-export SCUTTLARR_BASE="${SCUTTLARR_BASE:-${${(%):-%x}:A:h:h}}"
-export SCUTTLARR_STATE="$T/state"
-export SCUTTLARR_OVERLAY="$T/overlay"
-export SCUTTLARR_DEFAULTS_BIN="$SCUTTLARR_BASE/test/fixtures/bin/defaults"
+export SCUTTLER_BASE="${SCUTTLER_BASE:-${${(%):-%x}:A:h:h}}"
+export SCUTTLER_STATE="$T/state"
+export SCUTTLER_OVERLAY="$T/overlay"
+export SCUTTLER_DEFAULTS_BIN="$SCUTTLER_BASE/test/fixtures/bin/defaults"
 export FAKE_DEFAULTS_STORE="$T/defaults.store"
-export SCUTTLARR_GIT_BIN="$SCUTTLARR_BASE/test/fixtures/bin/git"
+export SCUTTLER_GIT_BIN="$SCUTTLER_BASE/test/fixtures/bin/git"
 export FAKE_GIT_LOG="$T/git.log"
 # The shell layer resolves XDG paths itself; keep them under $T's HOME.
 unset XDG_CONFIG_HOME XDG_DATA_HOME XDG_STATE_HOME XDG_CACHE_HOME ZDOTDIR
-export SCUTTLARR_NO_KILLALL=1
+export SCUTTLER_NO_KILLALL=1
 export NO_COLOR=1
 mkdir -p "$HOME"
 
-source "$SCUTTLARR_BASE/lib/core.zsh"
-source "$SCUTTLARR_BASE/lib/manifest.zsh"
-source "$SCUTTLARR_BASE/lib/snapshot.zsh"
-source "$SCUTTLARR_BASE/lib/defaults.zsh"
-source "$SCUTTLARR_BASE/lib/files.zsh"
-source "$SCUTTLARR_BASE/lib/doctor.zsh"
-source "$SCUTTLARR_BASE/lib/link.zsh"
-source "$SCUTTLARR_BASE/lib/migrations.zsh"
-source "$SCUTTLARR_BASE/lib/shell.zsh"
-source "$SCUTTLARR_BASE/lib/remove.zsh"
-source "$SCUTTLARR_BASE/lib/sudoers.zsh"
+source "$SCUTTLER_BASE/lib/core.zsh"
+source "$SCUTTLER_BASE/lib/manifest.zsh"
+source "$SCUTTLER_BASE/lib/snapshot.zsh"
+source "$SCUTTLER_BASE/lib/defaults.zsh"
+source "$SCUTTLER_BASE/lib/files.zsh"
+source "$SCUTTLER_BASE/lib/doctor.zsh"
+source "$SCUTTLER_BASE/lib/link.zsh"
+source "$SCUTTLER_BASE/lib/migrations.zsh"
+source "$SCUTTLER_BASE/lib/shell.zsh"
+source "$SCUTTLER_BASE/lib/remove.zsh"
+source "$SCUTTLER_BASE/lib/sudoers.zsh"
 
 _t_where() { print -r -- "${funcfiletrace[2]:-?}"; }
 
@@ -59,10 +59,10 @@ assert_no_file() { if [[ ! -e "$1" ]]; then (( T_PASS++ )); else (( T_FAIL++ ));
 # Seed the fake defaults store directly: t_seed [-currentHost] domain key rawvalue
 t_seed() {
   local host='-'
-  if [[ "$1" == -currentHost ]]; then host=currentHost; shift; "$SCUTTLARR_DEFAULTS_BIN" -currentHost delete "$1" "$2"; else "$SCUTTLARR_DEFAULTS_BIN" delete "$1" "$2"; fi
+  if [[ "$1" == -currentHost ]]; then host=currentHost; shift; "$SCUTTLER_DEFAULTS_BIN" -currentHost delete "$1" "$2"; else "$SCUTTLER_DEFAULTS_BIN" delete "$1" "$2"; fi
   print -r -- "${host}	$1	$2	$3" >> "$FAKE_DEFAULTS_STORE"
 }
-t_read() { "$SCUTTLARR_DEFAULTS_BIN" "$@" 2>/dev/null; }
+t_read() { "$SCUTTLER_DEFAULTS_BIN" "$@" 2>/dev/null; }
 
 t_done() {
   rm -rf "$T"

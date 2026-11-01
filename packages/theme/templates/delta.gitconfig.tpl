@@ -1,5 +1,5 @@
-# scuttlarr theme: {{ name }} — rendered, do not edit. The base git config has
-# `[include] path = ~/.local/state/scuttlarr/current/theme/delta.gitconfig`.
+# scuttler theme: {{ name }} — rendered, do not edit. The base git config has
+# `[include] path = ~/.local/state/scuttler/current/theme/delta.gitconfig`.
 [delta]
     {{ mode }} = true
     syntax-theme = {{ bat_theme }}

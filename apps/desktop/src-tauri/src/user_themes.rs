@@ -1,11 +1,11 @@
-//! User themes: `~/.config/scuttlarr/themes/<name>/` (plan 3.6; DECISIONS 2026-09-11,
+//! User themes: `~/.config/scuttler/themes/<name>/` (plan 3.6; DECISIONS 2026-09-11,
 //! theme format). A directory is a theme when it holds `colors.toml`; a same-named
 //! directory overrides the built-in (one file, so the override is whole). Paid
 //! themes live here and never in the repo. `theme install <git-url>` clones into it
 //! with Omarchy's naming rules and its security filter: a cloned theme contributes
 //! only `colors.toml` and known hand files — never symlinks, never scripts.
 //!
-//! Rust reads bytes and runs git; parsing and rendering stay in `@scuttlarr/theme`.
+//! Rust reads bytes and runs git; parsing and rendering stay in `@scuttler/theme`.
 
 use std::path::{Path, PathBuf};
 
@@ -74,7 +74,7 @@ pub fn themes_dir(config_dir: &Path) -> PathBuf {
 }
 
 /// Omarchy's rule: `^[a-z0-9_][a-z0-9._+-]*$`, from the repo basename with `.git`,
-/// a leading `omarchy-`/`scuttlarr-` and a trailing `-theme` stripped.
+/// a leading `omarchy-`/`scuttler-` and a trailing `-theme` stripped.
 pub fn name_from_url(url: &str) -> Option<String> {
     let base = url
         .trim_end_matches('/')
@@ -84,7 +84,7 @@ pub fn name_from_url(url: &str) -> Option<String> {
         .to_ascii_lowercase();
     let name = base
         .strip_prefix("omarchy-")
-        .or_else(|| base.strip_prefix("scuttlarr-"))
+        .or_else(|| base.strip_prefix("scuttler-"))
         .unwrap_or(&base);
     let name = name.strip_suffix("-theme").unwrap_or(name);
     valid_name(name).then(|| name.to_string())
@@ -230,12 +230,12 @@ pub fn watch(app: AppHandle) {
         let mut watcher = match notify::recommended_watcher(tx) {
             Ok(w) => w,
             Err(e) => {
-                eprintln!("[scuttlarr themes] watcher failed: {e}");
+                eprintln!("[scuttler themes] watcher failed: {e}");
                 return;
             }
         };
         if let Err(e) = watcher.watch(&dir, RecursiveMode::Recursive) {
-            eprintln!("[scuttlarr themes] watch failed: {e}");
+            eprintln!("[scuttler themes] watch failed: {e}");
             return;
         }
         loop {
@@ -257,7 +257,7 @@ mod tests {
 
     fn scratch() -> PathBuf {
         let d = std::env::temp_dir().join(format!(
-            "scuttlarr-user-themes-{}-{}",
+            "scuttler-user-themes-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -275,7 +275,7 @@ mod tests {
             Some("catppuccin-latte")
         );
         assert_eq!(
-            name_from_url("git@github.com:me/scuttlarr-dracula-pro.git").as_deref(),
+            name_from_url("git@github.com:me/scuttler-dracula-pro.git").as_deref(),
             Some("dracula-pro")
         );
         assert_eq!(name_from_url("https://x/Bad Name").as_deref(), None);

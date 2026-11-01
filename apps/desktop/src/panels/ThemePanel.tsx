@@ -1,10 +1,10 @@
 /**
  * Theme panel, presentational half (Omarchy's theme switcher as a tenant):
  * every theme name with a swatch of its tokens, the current one marked; ⏎
- * applies, esc closes, typing filters. Pure props + @scuttlarr/tui + the core
+ * applies, esc closes, typing filters. Pure props + @scuttler/tui + the core
  * matcher — no tauri imports.
  */
-import { fuzzyMatch } from '@scuttlarr/core/matcher'
+import { fuzzyMatch } from '@scuttler/core/matcher'
 import {
   type CustomThemes,
   KeyHints,
@@ -13,8 +13,8 @@ import {
   SectionHeader,
   TextPrompt,
   useListNav,
-} from '@scuttlarr/tui'
-import { resolveTheme, themeNames } from '@scuttlarr/tui/themes'
+} from '@scuttler/tui'
+import { resolveTheme, themeNames } from '@scuttler/tui/themes'
 import { Palette } from 'lucide-react'
 import { useMemo, useState } from 'react'
 

@@ -8,7 +8,7 @@ vi.mock('@tauri-apps/api/core', () => ({ invoke }))
 
 // What a fresh install's config.json gives the webview: `desktop` is `{}`.
 const fresh = {
-  theme: 'scuttlarr',
+  theme: 'scuttler',
   themes: {},
   bar: { enabled: true, layout: { left: [], center: [], right: [] } },
   desktop: {},
@@ -34,7 +34,7 @@ describe('a fresh install', () => {
       ...fresh,
       desktop: { tiling: { enabled: true } },
     } as Config
-    expect(planDesktop(pinned).toml).toContain('scuttlarr')
+    expect(planDesktop(pinned).toml).toContain('scuttler')
     await applyDesktop(pinned)
     expect(invoke).toHaveBeenCalledWith('desktop_status')
   })

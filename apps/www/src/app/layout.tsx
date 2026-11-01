@@ -23,7 +23,7 @@ const ibmPlexSans = IBM_Plex_Sans({
   variable: '--font-ibm-plex-sans',
 })
 
-const TITLE = 'scuttlarr — the terminal developer’s desktop for macOS'
+const TITLE = 'scuttler — the terminal developer’s desktop for macOS'
 const DESCRIPTION =
   'An opinionated macOS desktop for terminal developers: a menubar replacement, a launcher that dresses up as a shell prompt, one theme rendered into everything, keyboard-first — tiling and a de-shined Mac a toggle away. The Omarchy shape, without Linux. Free and open source.'
 

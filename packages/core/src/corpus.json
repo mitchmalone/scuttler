@@ -621,10 +621,10 @@
       "keywords": []
     },
     {
-      "id": "/Applications/scuttlarr.app",
-      "name": "scuttlarr",
+      "id": "/Applications/scuttler.app",
+      "name": "scuttler",
       "kind": "app",
-      "path": "/Applications/scuttlarr.app",
+      "path": "/Applications/scuttler.app",
       "hint": "app",
       "icon": null,
       "aliases": [],
@@ -1897,29 +1897,29 @@
       "aliases": []
     },
     {
-      "id": "scuttlarr:settings",
-      "name": "scuttlarr — Settings",
-      "kind": "scuttlarr",
+      "id": "scuttler:settings",
+      "name": "scuttler — Settings",
+      "kind": "scuttler",
       "path": "",
-      "hint": "scuttlarr",
+      "hint": "scuttler",
       "icon": null,
       "aliases": ["settings", "preferences", "options"]
     },
     {
-      "id": "scuttlarr:reindex",
-      "name": "scuttlarr — Reindex apps",
-      "kind": "scuttlarr",
+      "id": "scuttler:reindex",
+      "name": "scuttler — Reindex apps",
+      "kind": "scuttler",
       "path": "",
-      "hint": "scuttlarr",
+      "hint": "scuttler",
       "icon": null,
       "aliases": ["reindex"]
     },
     {
-      "id": "scuttlarr:colorpicker",
+      "id": "scuttler:colorpicker",
       "name": "Color Picker",
-      "kind": "scuttlarr",
+      "kind": "scuttler",
       "path": "",
-      "hint": "scuttlarr",
+      "hint": "scuttler",
       "icon": null,
       "aliases": [
         "colorpicker",
@@ -1931,20 +1931,20 @@
       ]
     },
     {
-      "id": "scuttlarr:config",
-      "name": "scuttlarr — Open config",
-      "kind": "scuttlarr",
+      "id": "scuttler:config",
+      "name": "scuttler — Open config",
+      "kind": "scuttler",
       "path": "",
-      "hint": "scuttlarr",
+      "hint": "scuttler",
       "icon": null,
       "aliases": ["config", "settings", "preferences"]
     },
     {
-      "id": "scuttlarr:theme",
-      "name": "scuttlarr — Theme switcher",
-      "kind": "scuttlarr",
+      "id": "scuttler:theme",
+      "name": "scuttler — Theme switcher",
+      "kind": "scuttler",
       "path": "",
-      "hint": "scuttlarr",
+      "hint": "scuttler",
       "icon": null,
       "aliases": [
         "theme",
@@ -1956,20 +1956,20 @@
       ]
     },
     {
-      "id": "scuttlarr:wallpaper",
-      "name": "scuttlarr — Next wallpaper",
-      "kind": "scuttlarr",
+      "id": "scuttler:wallpaper",
+      "name": "scuttler — Next wallpaper",
+      "kind": "scuttler",
       "path": "",
-      "hint": "scuttlarr",
+      "hint": "scuttler",
       "icon": null,
       "aliases": ["wallpaper", "background", "desktop", "picture", "next"]
     },
     {
-      "id": "scuttlarr:quit",
-      "name": "scuttlarr — Quit",
-      "kind": "scuttlarr",
+      "id": "scuttler:quit",
+      "name": "scuttler — Quit",
+      "kind": "scuttler",
       "path": "",
-      "hint": "scuttlarr",
+      "hint": "scuttler",
       "icon": null,
       "aliases": ["quit", "exit"]
     }
@@ -2046,7 +2046,7 @@
     {
       "query": "settings",
       "top": "/Applications/System Settings.app",
-      "note": "the app beats every pane’s alias and scuttlarr’s own Settings row"
+      "note": "the app beats every pane’s alias and scuttler’s own Settings row"
     },
     {
       "query": "wifi",
@@ -2155,7 +2155,7 @@
     },
     {
       "query": "quit",
-      "top": "scuttlarr:quit"
+      "top": "scuttler:quit"
     },
     {
       "query": "preview",

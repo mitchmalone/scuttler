@@ -3,8 +3,8 @@ import {
   formatSeconds,
   holdLabel,
   parseSpec,
-} from '@scuttlarr/core/awake'
-import type { AwakeStatus } from '@scuttlarr/core/awake'
+} from '@scuttler/core/awake'
+import type { AwakeStatus } from '@scuttler/core/awake'
 import {
   BarAgents,
   BarAwakeCard,
@@ -21,8 +21,8 @@ import {
   type WidgetAction,
   type WifiDetail,
   formatBarClock,
-} from '@scuttlarr/tui'
-import { pluginIdOf } from '@scuttlarr/tui/plugins'
+} from '@scuttler/tui'
+import { pluginIdOf } from '@scuttler/tui/plugins'
 import type { ReactNode } from 'react'
 
 import {

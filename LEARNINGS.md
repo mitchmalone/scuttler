@@ -12,11 +12,11 @@ AGENTS.md rules here.
   (2026-08-08).
 - `open Foo.app` re-activates a running instance; always `pkill` before relaunching a rebuild.
 - TCC judges a child process by the **responsible app's** Info.plist. A helper spawned from
-  scuttlarr.app that touches a privacy-gated API (Bluetooth, camera, …) needs the matching
+  scuttler.app that touches a privacy-gated API (Bluetooth, camera, …) needs the matching
   `NS…UsageDescription` in `apps/desktop/src-tauri/Info.plist` or it is killed with no prompt —
   the only trace is `~/Library/Logs/DiagnosticReports/<helper>-*.ips` (2026-09-10).
 - Spawned CLIs inherit the app's TCC identity: pin their `current_dir` to a directory we own
-  and disallow filesystem tools, or macOS prompts "as scuttlarr" for whatever they scan
+  and disallow filesystem tools, or macOS prompts "as scuttler" for whatever they scan
   (2026-08-10).
 - TCC grants are keyed to the code-signing requirement: an ad-hoc dev build gets a fresh
   cdhash per rebuild and silently loses Screen Recording. Sign dev builds with the Developer
@@ -133,7 +133,7 @@ AGENTS.md rules here.
 - eslint-config-next 16's `react-hooks/set-state-in-effect` rejects the classic
   `useEffect(() => setMounted(true), [])` hydration guard — use the `useSyncExternalStore`
   mounted pattern (`apps/www/src/lib/app-theme.ts`).
-- A Server Component imports kit **leaves** (`@scuttlarr/tui/themes`, `…/bar`), never the
+- A Server Component imports kit **leaves** (`@scuttler/tui/themes`, `…/bar`), never the
   root barrel, whose client components pull hooks into a server context. Bitten 2026-08-16
   and 2026-11-01 (four days of failed deploys); `verify:www` builds the site in the gate.
 - Vercel's Ignored Build Step: `ignoreCommand` is capped at 256 characters (hence

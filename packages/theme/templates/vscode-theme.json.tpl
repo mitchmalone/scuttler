@@ -1,5 +1,5 @@
 {
-    "name": "scuttlarr — {{ name }}",
+    "name": "scuttler — {{ name }}",
     "$schema": "vscode://schemas/color-theme",
     "type": "{{ mode }}",
     "semanticHighlighting": true,

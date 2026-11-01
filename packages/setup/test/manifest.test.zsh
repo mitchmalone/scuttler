@@ -5,7 +5,7 @@ assert_eq "" "$(sc_manifest_list)" "empty manifest lists nothing"
 assert_fails "get on empty" sc_manifest_get /x
 
 sc_manifest_add generated "$HOME/.zshrc" abc123 shell
-sc_manifest_add symlink "$HOME/.config/tmux/tmux.conf" "$SCUTTLARR_BASE/shell/tmux.conf" terminal
+sc_manifest_add symlink "$HOME/.config/tmux/tmux.conf" "$SCUTTLER_BASE/shell/tmux.conf" terminal
 assert_eq "generated	$HOME/.zshrc	abc123	shell" "$(sc_manifest_get "$HOME/.zshrc")" "get returns the line"
 assert_eq generated "$(sc_manifest_mode "$HOME/.zshrc")" "mode"
 assert_eq symlink "$(sc_manifest_mode "$HOME/.config/tmux/tmux.conf")" "second entry"

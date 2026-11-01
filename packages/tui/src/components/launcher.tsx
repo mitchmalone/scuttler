@@ -1,4 +1,4 @@
-import type { Row } from '@scuttlarr/core/rows'
+import type { Row } from '@scuttler/core/rows'
 import type React from 'react'
 import type { ReactNode, Ref } from 'react'
 
@@ -58,7 +58,7 @@ export function launcherPrompt({
  * the confirmation toast, a `?` conversation, the ask/bang hint row, the
  * result list, or the empty line. Pure presentation: the app owns grammar,
  * rows, keys and every IPC call, and hands the outcome in as props.
- * Styles: `@scuttlarr/tui/launcher.css` (its class names are the launcher
+ * Styles: `@scuttler/tui/launcher.css` (its class names are the launcher
  * window's own, so only consumers that render a launcher import it).
  */
 export function Launcher({

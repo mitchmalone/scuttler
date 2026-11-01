@@ -1,31 +1,31 @@
 /**
  * Themes: a flat map of the color tokens both windows already style with. Built-ins live
  * here; user themes are plain JSON in config.json under `themes` (name → partial token
- * map), overlaying the scuttlarr defaults — or, when named after a built-in, that
- * built-in. Selection is `config.theme`; unknown names fall back to `scuttlarr` so a
+ * map), overlaying the scuttler defaults — or, when named after a built-in, that
+ * built-in. Selection is `config.theme`; unknown names fall back to `scuttler` so a
  * hand-edit can't blank the UI.
  *
- * Reachable as `@scuttlarr/tui/themes` as well as through the barrel, and that second
+ * Reachable as `@scuttler/tui/themes` as well as through the barrel, and that second
  * entry point is load-bearing: this module is pure data, so a React Server Component
  * (apps/www) can import the tokens directly. Going through `.` instead drags in
  * `components/controls.tsx`, whose hooks fail a server build. Keep it free of React.
  */
-import type { ThemeTokens } from '@scuttlarr/theme/tokens'
+import type { ThemeTokens } from '@scuttler/theme/tokens'
 
 import { BUILTIN_THEMES } from './themes.generated'
 
 /**
- * The token shape is owned by `@scuttlarr/theme` (packages/theme/src/theme-tokens.ts); the
+ * The token shape is owned by `@scuttler/theme` (packages/theme/src/theme-tokens.ts); the
  * built-in map is generated from `packages/theme/themes/<name>/colors.toml` — edit the
- * palette, then `pnpm --filter @scuttlarr/theme build`. Never hand-edit the map.
+ * palette, then `pnpm --filter @scuttler/theme build`. Never hand-edit the map.
  */
 export type { ThemeTokens }
 export { BUILTIN_THEMES }
 
-const DEFAULT_THEME = 'scuttlarr'
+const DEFAULT_THEME = 'scuttler'
 
 /** Names that meant something before the 2026-09-11 rename; configs still carry them. */
-const THEME_ALIASES: Record<string, string> = { launcharr: 'scuttlarr' }
+const THEME_ALIASES: Record<string, string> = { launcharr: 'scuttler' }
 
 export type CustomThemes = Record<string, Partial<ThemeTokens>> | undefined
 

@@ -35,7 +35,7 @@ mkdir -p "${other:h}"; print "theirs" > "$other"
 SC_MODE=apply; sc_files_reset
 print "ours" | sc_file_generated "$other" foo 2>/dev/null
 assert_eq "ours" "$(cat "$other")" "ours in place"
-assert_eq "theirs" "$(cat "$SCUTTLARR_STATE/adopted/.config/foo/config")" "theirs parked under adopted/"
+assert_eq "theirs" "$(cat "$SCUTTLER_STATE/adopted/.config/foo/config")" "theirs parked under adopted/"
 assert_eq generated "$(sc_manifest_mode "$other")" "final mode is generated"
 
 t_done

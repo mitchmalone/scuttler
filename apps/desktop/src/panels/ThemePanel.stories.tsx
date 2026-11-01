@@ -1,4 +1,4 @@
-import { defineStories } from '@scuttlarr/tui'
+import { defineStories } from '@scuttler/tui'
 
 import { ThemePanel } from './ThemePanel'
 
@@ -10,7 +10,7 @@ export const themePanelStories = defineStories('ThemePanel (app)', [
     keys: '↑↓ move · ⏎ apply · esc close · type to filter',
     render: () => (
       <ThemePanel
-        current="scuttlarr"
+        current="scuttler"
         themes={{}}
         mode="system"
         dark={true}

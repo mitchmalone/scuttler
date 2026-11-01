@@ -1,4 +1,4 @@
-//! Agent session monitoring (plans/agent-monitoring.md): scuttlarr absorbs the
+//! Agent session monitoring (plans/agent-monitoring.md): scuttler absorbs the
 //! sketchybar-agent-status daemon. A unix-socket listener speaks that project's
 //! newline-JSON event protocol unchanged — Claude Code hooks (and any future
 //! adapter) emit `{session, agent, state, title, detail, tmux}` lines; the
@@ -190,7 +190,7 @@ fn own_list() -> Vec<AgentSession> {
     // and a stale copy in our file would outlive the server that owned it.
     if dropped {
         if let Err(e) = save(&state_file(), &fresh) {
-            eprintln!("[scuttlarr agents] state save failed: {e}");
+            eprintln!("[scuttler agents] state save failed: {e}");
         }
     }
     fresh
@@ -392,7 +392,7 @@ fn parse_panes(out: &str) -> Layout {
 }
 
 /// Old tmux integrations rename windows with a trailing status tag
-/// (`Scuttlarr [🧑‍🍳]`) — drop it, the cell already shows state.
+/// (`Scuttler [🧑‍🍳]`) — drop it, the cell already shows state.
 fn strip_status_suffix(name: &str) -> &str {
     match name.rsplit_once(" [") {
         Some((base, rest)) if rest.ends_with(']') => base.trim_end(),
@@ -410,7 +410,7 @@ pub fn start(app: AppHandle) {
         let path = socket_path();
         if let Some(dir) = path.parent() {
             if let Err(e) = std::fs::create_dir_all(dir) {
-                eprintln!("[scuttlarr agents] state dir failed: {e}");
+                eprintln!("[scuttler agents] state dir failed: {e}");
                 return;
             }
         }
@@ -419,12 +419,12 @@ pub fn start(app: AppHandle) {
         let listener = match UnixListener::bind(&path) {
             Ok(l) => l,
             Err(e) => {
-                eprintln!("[scuttlarr agents] socket bind failed: {e}");
+                eprintln!("[scuttler agents] socket bind failed: {e}");
                 return;
             }
         };
         if let Err(e) = restrict_permissions(&path) {
-            eprintln!("[scuttlarr agents] socket chmod failed: {e}");
+            eprintln!("[scuttler agents] socket chmod failed: {e}");
         }
         for stream in listener.incoming() {
             let Ok(stream) = stream else { continue };
@@ -450,7 +450,7 @@ fn handle(stream: UnixStream, app: &AppHandle) {
         };
         if applied {
             if let Err(e) = save(&state_file(), &own_list()) {
-                eprintln!("[scuttlarr agents] state save failed: {e}");
+                eprintln!("[scuttler agents] state save failed: {e}");
             }
             // The bar re-snapshots immediately — state flips beat the 1 Hz tick.
             crate::bar::push(app);
@@ -566,7 +566,7 @@ pub fn jump_session(app: &AppHandle, session_id: &str, terminal: Terminal) -> Cm
     jump(&target, terminal)?;
     mark_read(&mut SESSIONS.lock().unwrap(), session_id);
     if let Err(e) = save(&state_file(), &own_list()) {
-        eprintln!("[scuttlarr agents] state save failed: {e}");
+        eprintln!("[scuttler agents] state save failed: {e}");
     }
     crate::bar::push(app);
     Ok(())
@@ -594,7 +594,7 @@ pub fn forget_session(app: &AppHandle, session_id: &str) -> CmdResult<()> {
         }
     }
     if let Err(e) = save(&state_file(), &own_list()) {
-        eprintln!("[scuttlarr agents] state save failed: {e}");
+        eprintln!("[scuttler agents] state save failed: {e}");
     }
     crate::bar::push(app);
     Ok(())
@@ -717,7 +717,7 @@ fn state_dir() -> PathBuf {
         .map(PathBuf::from)
         .filter(|p| p.is_absolute())
         .unwrap_or_else(|| dirs::home_dir().unwrap_or_default().join(".local/state"))
-        .join("scuttlarr")
+        .join("scuttler")
 }
 
 /// The socket adapters emit to. Documented in the hook script and plan.
@@ -1321,7 +1321,7 @@ bad
 
     #[test]
     fn parses_tmux_pane_layout() {
-        let out = "%7\tgogogo\t1\tInfisical [😴]\n%23\tgogogo\t2\tScuttlarr\nbad line\n";
+        let out = "%7\tgogogo\t1\tInfisical [😴]\n%23\tgogogo\t2\tScuttler\nbad line\n";
         let layout = parse_panes(out);
         assert_eq!(
             layout.get("%7"),
@@ -1338,7 +1338,7 @@ bad
 
     #[test]
     fn strips_window_status_suffix() {
-        assert_eq!(strip_status_suffix("Scuttlarr [🧑‍🍳]"), "Scuttlarr");
+        assert_eq!(strip_status_suffix("Scuttler [🧑‍🍳]"), "Scuttler");
         assert_eq!(strip_status_suffix("plain"), "plain");
         assert_eq!(
             strip_status_suffix("keeps [brackets] inside"),
@@ -1401,8 +1401,7 @@ bad
 
     #[test]
     fn concurrent_saves_never_tear_the_file() {
-        let dir =
-            std::env::temp_dir().join(format!("scuttlarr-agents-race-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("scuttler-agents-race-{}", std::process::id()));
         let path = dir.join("agents.json");
         let make = |n: usize| {
             (0..n)
@@ -1469,8 +1468,7 @@ bad
 
     #[test]
     fn state_roundtrips_through_disk() {
-        let dir =
-            std::env::temp_dir().join(format!("scuttlarr-agents-test-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("scuttler-agents-test-{}", std::process::id()));
         let path = dir.join("agents.json");
         let sessions = vec![AgentSession {
             session: "a".into(),

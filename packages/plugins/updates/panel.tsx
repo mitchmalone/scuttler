@@ -1,5 +1,5 @@
-import { KeyHints, ListRow, MeterRow, Panel, useListNav } from '@scuttlarr/tui'
-import type { PluginPanelProps } from '@scuttlarr/tui/plugins'
+import { KeyHints, ListRow, MeterRow, Panel, useListNav } from '@scuttler/tui'
+import type { PluginPanelProps } from '@scuttler/tui/plugins'
 import {
   AlertTriangle,
   Check,

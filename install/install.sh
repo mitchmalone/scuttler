@@ -1,34 +1,34 @@
 #!/bin/sh
-# scuttlarr — scuttle the ship, sail the wreck.
+# scuttler — scuttle the ship, sail the wreck.
 #
-#   curl -fsSL https://scuttlarr.com/install | sh
+#   curl -fsSL https://www.scuttler.app/install | sh
 #
 # What this does, in order, and nothing else:
 #   1. preflight — Apple Silicon, macOS 14+, Xcode Command Line Tools (installs
 #      them if missing: one Apple dialog), Homebrew (installs it if missing: the
 #      one `sudo` you will see, Homebrew's own).
-#   2. brew install --cask mitchmalone/tap/scuttlarr — the app, signed and
+#   2. brew install --cask mitchmalone/tap/scuttler — the app, signed and
 #      notarised, from the shared tap.
-#   3. open scuttlarr — it registers the hotkey and shows the panel once.
+#   3. open scuttler — it registers the hotkey and shows the panel once.
 #
 # It does NOT change a single macOS default, shell file, or dotfile. Those are
-# the machine rung: Settings → Machine, or `scuttlarr defaults` in a terminal,
+# the machine rung: Settings → Machine, or `scuttler defaults` in a terminal,
 # both of which show you a plan and ask once. The install is `brew uninstall`
-# reversible; the rung is `scuttlarr remove` reversible.
+# reversible; the rung is `scuttler remove` reversible.
 #
-# POSIX sh on purpose: this runs before anything scuttlarr provides exists.
+# POSIX sh on purpose: this runs before anything scuttler provides exists.
 set -eu
 
-CASK="mitchmalone/tap/scuttlarr"
-APP="/Applications/scuttlarr.app"
+CASK="mitchmalone/tap/scuttler"
+APP="/Applications/scuttler.app"
 
 say()  { printf '\033[2m·\033[0m %s\n' "$*"; }
 ok()   { printf '\033[32m✓\033[0m %s\n' "$*"; }
 fail() { printf '\033[31m✗\033[0m %s\n' "$*" >&2; exit 1; }
 
 # 1. preflight ---------------------------------------------------------------
-[ "$(uname -s)" = "Darwin" ] || fail "scuttlarr is macOS only"
-[ "$(uname -m)" = "arm64" ] || fail "scuttlarr is Apple Silicon only (Intel: never, unless someone maintains it)"
+[ "$(uname -s)" = "Darwin" ] || fail "scuttler is macOS only"
+[ "$(uname -m)" = "arm64" ] || fail "scuttler is Apple Silicon only (Intel: never, unless someone maintains it)"
 major="$(sw_vers -productVersion | cut -d. -f1)"
 [ "$major" -ge 14 ] || fail "macOS 14 or newer required (found $(sw_vers -productVersion))"
 ok "macOS $(sw_vers -productVersion) on Apple Silicon"
@@ -60,9 +60,9 @@ else
   brew install --cask "$CASK"
 fi
 [ -d "$APP" ] || fail "install finished but $APP is missing — see brew's output above"
-ok "installed $(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$APP/Contents/Info.plist" 2>/dev/null || echo scuttlarr)"
+ok "installed $(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$APP/Contents/Info.plist" 2>/dev/null || echo scuttler)"
 
 # 3. run -----------------------------------------------------------------------
 open -g "$APP"
-ok "scuttlarr is running — ⌥Space summons it"
+ok "scuttler is running — ⌥Space summons it"
 say "want the rest (tiling, themes everywhere, the de-shined machine)? Settings → Desktop, General ▸ Theme, Machine. Each is a toggle and each shows a plan first."

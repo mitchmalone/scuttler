@@ -2,13 +2,13 @@ import type {
   AwakeReading,
   AwakeState,
   TriggerState,
-} from '@scuttlarr/core/awake'
+} from '@scuttler/core/awake'
 import {
   evaluate,
   neededReadings,
   needsWatching,
   parseSpec,
-} from '@scuttlarr/core/awake'
+} from '@scuttler/core/awake'
 import { invoke } from '@tauri-apps/api/core'
 
 /** Mirrors AwakeReadings in commands.rs. */

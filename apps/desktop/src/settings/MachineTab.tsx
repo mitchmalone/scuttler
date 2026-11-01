@@ -6,7 +6,7 @@ import { type SetupOutput, type SetupVerb, runSetup } from '../lib/setup'
 /**
  * Settings → Machine: the rung above theme (DECISIONS 2026-09-11). Everything
  * here is the bundled setup CLI (`packages/setup`) run with a fixed verb —
- * the tab is a front for `scuttlarr doctor | defaults | link | migrate`, not
+ * the tab is a front for `scuttler doctor | defaults | link | migrate`, not
  * a second implementation. `remove` stays terminal-only on purpose.
  */
 
@@ -60,9 +60,9 @@ export default function MachineTab({
     <>
       <p className="hint lead">
         The machine rung: macOS defaults with the shine scraped off, a manifest
-        of every file scuttlarr writes outside its own config, adopt never
-        overwrite, and a way back. Everything below is the{' '}
-        <code>scuttlarr</code> CLI, shipped inside the app.
+        of every file scuttler writes outside its own config, adopt never
+        overwrite, and a way back. Everything below is the <code>scuttler</code>{' '}
+        CLI, shipped inside the app.
       </p>
 
       <label className="check">
@@ -74,7 +74,7 @@ export default function MachineTab({
         Enable the machine rung
       </label>
       <p className="hint">
-        Puts <code>scuttlarr</code> on your PATH (<code>~/.local/bin</code>,
+        Puts <code>scuttler</code> on your PATH (<code>~/.local/bin</code>,
         recorded in the manifest) and runs pending migrations at every launch.
         Nothing else changes until you apply defaults or the shell base below.
         The shell base is what makes the Theme rung reach Ghostty, tmux, your
@@ -140,7 +140,7 @@ export default function MachineTab({
       {last && (
         <>
           <p className="hint tiny">
-            <code>scuttlarr {last.verb.replace('-', ' ')}</code>
+            <code>scuttler {last.verb.replace('-', ' ')}</code>
             {last.out.ok ? '' : ' — exited with an error'} · from{' '}
             <code>{last.out.base}</code>
           </p>
@@ -148,7 +148,7 @@ export default function MachineTab({
         </>
       )}
       <p className="hint tiny">
-        Undo everything: <code>scuttlarr remove</code> in a terminal — it walks
+        Undo everything: <code>scuttler remove</code> in a terminal — it walks
         the manifest in reverse and restores the defaults snapshot. It is not a
         button here on purpose.
       </p>

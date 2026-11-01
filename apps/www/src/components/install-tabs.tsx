@@ -74,10 +74,9 @@ export function InstallTabs() {
           </pre>
           <div className={FOOT}>
             What the script runs. The cask is{' '}
-            <code className={MONO_CODE}>auto_updates</code>: scuttlarr offers
-            its own newer releases in{' '}
-            <code className={MONO_CODE}>updates ⏎</code> and installs them in
-            place.
+            <code className={MONO_CODE}>auto_updates</code>: scuttler offers its
+            own newer releases in <code className={MONO_CODE}>updates ⏎</code>{' '}
+            and installs them in place.
           </div>
         </>
       ) : null}
@@ -86,10 +85,10 @@ export function InstallTabs() {
         <>
           <div className="grid gap-3 bg-(--bg) px-5 py-[22px] font-mono text-[13.5px]">
             <a href={RELEASE.artifacts.dmg.url}>
-              scuttlarr-{RELEASE.version}.dmg
+              scuttler-{RELEASE.version}.dmg
             </a>
             <a href={RELEASE.artifacts.zip.url}>
-              scuttlarr-{RELEASE.version}.zip
+              scuttler-{RELEASE.version}.zip
             </a>
           </div>
           <div className={FOOT}>
@@ -111,7 +110,7 @@ export function InstallTabs() {
           </pre>
           <div className={FOOT}>
             Requires Rust stable + pnpm ·{' '}
-            <a href={GITHUB_URL}>github.com/mitchmalone/scuttlarr</a>
+            <a href={GITHUB_URL}>github.com/mitchmalone/scuttler</a>
           </div>
         </>
       ) : null}

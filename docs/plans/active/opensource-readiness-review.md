@@ -20,7 +20,7 @@ this is about being _announced_, not visible.
 
 ## Context
 
-scuttlarr spans a privileged macOS boundary (Rust/Tauri: AppKit, process launch, the
+scuttler spans a privileged macOS boundary (Rust/Tauri: AppKit, process launch, the
 filesystem, a sudoers rule, self-update that swaps the bundle), a React interface, a shared
 pure TypeScript engine, a Bun runtime for user plugins and widgets (code the user installs
 and we run), the Theme rung (writes into editor and shell configs), the Machine rung (zsh,
@@ -35,7 +35,7 @@ security, dependencies or secrets.
 
 Inventory every shipped and runtime surface, inspect high-risk boundaries first
 (self-update verification, the sudoers rule, plugin/widget execution and their Keychain
-access, the Claude hook, everything written outside `~/.config/scuttlarr`), then review
+access, the Claude hook, everything written outside `~/.config/scuttler`), then review
 each module systematically. Combine manual review with the gate, `cargo audit`, `pnpm
 audit`, secret scanning and targeted static searches. Record only reproducible findings,
 each with severity, evidence, impact and a concrete remediation.

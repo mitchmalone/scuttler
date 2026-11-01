@@ -1,4 +1,4 @@
-import { defineStories } from '@scuttlarr/tui'
+import { defineStories } from '@scuttler/tui'
 
 import { type AgentSession, AgentsPanel } from './AgentsPanel'
 
@@ -15,7 +15,7 @@ const session = (over: Partial<AgentSession>): AgentSession => ({
   updatedAt: NOW - 42,
   muxGroup: 'gogogo',
   muxIndex: 2,
-  muxLabel: 'Scuttlarr',
+  muxLabel: 'Scuttler',
   pid: 4242,
   pidComm: 'claude',
   startedAt: NOW - 3600,

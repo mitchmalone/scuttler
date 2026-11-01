@@ -1,4 +1,4 @@
-import { defineStories } from '@scuttlarr/tui'
+import { defineStories } from '@scuttler/tui'
 
 import { WifiPanel, type WifiStatus } from './WifiPanel'
 

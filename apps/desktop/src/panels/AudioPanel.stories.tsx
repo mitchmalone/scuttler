@@ -1,4 +1,4 @@
-import { defineStories } from '@scuttlarr/tui'
+import { defineStories } from '@scuttler/tui'
 
 import { AudioPanel, type AudioStatus } from './AudioPanel'
 

@@ -2,12 +2,12 @@
 /* The real TUI kit's chrome — the demo panels are the shipping components, not
    mocks (DECISIONS 2026-08-16). Its colors resolve through --tui-* tokens that
    the demo sets per theme; without them they'd fall back to the *page* tokens. */
-@import '@scuttlarr/tui/styles.css';
+@import '@scuttler/tui/styles.css';
 /* The bar's chrome — the same stylesheet the desktop bar window loads. */
-@import '@scuttlarr/tui/bar.css';
+@import '@scuttler/tui/bar.css';
 
 /* Page colours are not typed here: every one is derived from the picked app theme
-   (src/lib/page-theme.ts) and set on <html> — server-rendered as scuttlarr, swapped
+   (src/lib/page-theme.ts) and set on <html> — server-rendered as scuttler, swapped
    before paint for a stored choice (DECISIONS 2026-10-20). */
 :root {
   --radius: 0.5rem;
@@ -18,7 +18,7 @@
     var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-sans: var(--font-ibm-plex-sans), system-ui, sans-serif;
 
-  /* shadcn/ui semantic tokens, MAPPED onto the scuttlarr palette above rather
+  /* shadcn/ui semantic tokens, MAPPED onto the scuttler palette above rather
      than imported (DECISIONS 2026-08-16). shadcn's own oklch defaults would
      fork the design tokens invariant 8 keeps single-source. Note the two
      vocabularies differ: shadcn's `accent` is a hover surface, ours is the

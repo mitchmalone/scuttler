@@ -1,4 +1,4 @@
-import { DEFAULT_POLICY } from '@scuttlarr/core/appearance'
+import { DEFAULT_POLICY } from '@scuttler/core/appearance'
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -18,7 +18,7 @@ const NOON = { hour: 12, minute: 0 }
 const WORK = 'com.apple.focus.work'
 
 const config = (appearance?: Config['appearance']): Config =>
-  ({ theme: 'scuttlarr', themes: {}, appearance }) as unknown as Config
+  ({ theme: 'scuttler', themes: {}, appearance }) as unknown as Config
 
 describe('policyInputs', () => {
   it('defaults missing inputs to no Focus, light', () => {

@@ -1,4 +1,4 @@
-# Powerlevel10k. Plugins are plain git clones, put there by `scuttlarr shell --apply`.
+# Powerlevel10k. Plugins are plain git clones, put there by `scuttler shell --apply`.
 # Style lives in ~/.p10k.zsh (generated); colours come from the current theme.
 ZSH_PLUGINS="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/plugins"
 

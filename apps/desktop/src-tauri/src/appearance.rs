@@ -1,6 +1,6 @@
 //! Theme-policy inputs (plan phase 4): what the machine says right now, reported
 //! to the panel window as an `appearance-input` event. The policy itself is pure
-//! TypeScript (`@scuttlarr/core/appearance`); Rust only watches two files, both
+//! TypeScript (`@scuttler/core/appearance`); Rust only watches two files, both
 //! readable with no permission:
 //!
 //! - `~/Library/DoNotDisturb/DB/Assertions.json` — the active macOS Focus mode
@@ -119,14 +119,14 @@ pub fn watch(app: AppHandle) {
         let mut watcher = match notify::recommended_watcher(tx) {
             Ok(w) => w,
             Err(e) => {
-                eprintln!("[scuttlarr appearance] watcher failed: {e}");
+                eprintln!("[scuttler appearance] watcher failed: {e}");
                 return;
             }
         };
         let home = home();
         for dir in [dnd_dir(&home), home.join("Library/Preferences")] {
             if let Err(e) = watcher.watch(&dir, RecursiveMode::NonRecursive) {
-                eprintln!("[scuttlarr appearance] watch {} failed: {e}", dir.display());
+                eprintln!("[scuttler appearance] watch {} failed: {e}", dir.display());
             }
         }
         let mut last = inputs();
@@ -142,7 +142,7 @@ pub fn watch(app: AppHandle) {
             let now = inputs();
             if now.focus_mode != last.focus_mode || now.system_dark != last.system_dark {
                 eprintln!(
-                    "[scuttlarr appearance] focus={:?} dark={}",
+                    "[scuttler appearance] focus={:?} dark={}",
                     now.focus_mode, now.system_dark
                 );
                 let _ = app.emit("appearance-input", &now);

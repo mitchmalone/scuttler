@@ -1,4 +1,4 @@
-# snapshot.zsh — what every defaults key was before scuttlarr touched it.
+# snapshot.zsh — what every defaults key was before scuttler touched it.
 #
 #   <domain>\t<key>\t<host>\t<value>
 #
@@ -11,7 +11,7 @@
 SC_ABSENT='<absent>'
 _sc_nl=$'\n'
 
-sc_snapshot_path() { print -r -- "$SCUTTLARR_STATE/defaults.before"; }
+sc_snapshot_path() { print -r -- "$SCUTTLER_STATE/defaults.before"; }
 
 # sc_snapshot_has <domain> <key> <host>
 sc_snapshot_has() {

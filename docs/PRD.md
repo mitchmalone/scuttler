@@ -1,10 +1,10 @@
-# scuttlarr — Product Requirements Document
+# scuttler — Product Requirements Document
 
 > _Scuttle the ship. Sail the wreck._
 
 |              |                                                                          |
 | ------------ | ------------------------------------------------------------------------ |
-| **Project**  | scuttlarr (always lowercase; launcharr until 11 Sep 2026)                |
+| **Project**  | scuttler (always lowercase; launcharr until 11 Sep 2026)                 |
 | **Version**  | living document; v0.8.0 shipped 1 Nov 2026 (v1 launcher 8 Aug 2026)      |
 | **Owner**    | Mitch Malone                                                             |
 | **Status**   | Revised 1 Nov 2026 (docs sweep); §1–§3 rewritten 11 Sep 2026 at the fold |
@@ -14,16 +14,16 @@
 
 ## 1. Vision
 
-scuttlarr is an opinionated macOS desktop for developers who live in the terminal: a menubar replacement, a launcher that dresses up as a shell prompt, one theme rendered into everything, keyboard-first — with tiling, de-shined defaults and a fast shell a toggle away. It is the Omarchy shape without taking on Linux to get it. Install gets the bar and the launcher; everything else is a rung you turn on — Desktop, Theme, Machine (README "The rungs"; `docs/THEMES.md`, `docs/SETUP.md`; DECISIONS 2026-09-11). The launcher is a feature, not the brand.
+scuttler is an opinionated macOS desktop for developers who live in the terminal: a menubar replacement, a launcher that dresses up as a shell prompt, one theme rendered into everything, keyboard-first — with tiling, de-shined defaults and a fast shell a toggle away. It is the Omarchy shape without taking on Linux to get it. Install gets the bar and the launcher; everything else is a rung you turn on — Desktop, Theme, Machine (README "The rungs"; `docs/THEMES.md`, `docs/SETUP.md`; DECISIONS 2026-09-11). The launcher is a feature, not the brand.
 
 The launcher is where it started and its temperament still governs the whole: where Alfred and Raycast dress up as polished macOS utility apps, the panel dresses up as a shell prompt — summon it with a hotkey, type into something that looks and feels like a REPL, and either launch an app or fling a command at your terminal without breaking flow.
 
 Two values govern every decision:
 
-1. **Lightweight.** scuttlarr should idle invisibly and summon instantly. When a feature and the weight budget conflict, the feature loses.
-2. **Hackable.** The long-term differentiator is that extending scuttlarr feels like scripting, not like app development: a script is an executable in a folder, a theme is one text file, a plugin is a directory. v1 laid the input-grammar and architecture groundwork; the script, widget and plugin protocols followed (`docs/SCRIPTS.md`, `docs/WIDGETS.md`, `docs/PLUGINS.md`).
+1. **Lightweight.** scuttler should idle invisibly and summon instantly. When a feature and the weight budget conflict, the feature loses.
+2. **Hackable.** The long-term differentiator is that extending scuttler feels like scripting, not like app development: a script is an executable in a folder, a theme is one text file, a plugin is a directory. v1 laid the input-grammar and architecture groundwork; the script, widget and plugin protocols followed (`docs/SCRIPTS.md`, `docs/WIDGETS.md`, `docs/PLUGINS.md`).
 
-History: v1 shipped 8 Aug 2026 as launcharr, and its definition of success was simple — **launcharr replaces whatever Mitch currently uses to launch apps, every day, and stays out of the way.** It did. The bar arrived in v0.4 (DECISIONS 2026-08-15), and on 11 Sep 2026 the launcher repo and the scuttlarr distro repo folded into one product under the scuttlarr name.
+History: v1 shipped 8 Aug 2026 as launcharr, and its definition of success was simple — **launcharr replaces whatever Mitch currently uses to launch apps, every day, and stays out of the way.** It did. The bar arrived in v0.4 (DECISIONS 2026-08-15), and on 11 Sep 2026 the launcher repo and the scuttler distro repo folded into one product under the scuttler name.
 
 ## 2. Target user
 
@@ -67,7 +67,7 @@ History: v1 shipped 8 Aug 2026 as launcharr, and its definition of success was s
 
 File search (deferred by choice, 9 Aug 2026 — Spotlight's `mdfind` is the route if demand
 appears), snippets, Windows/Linux, and anything requiring Accessibility permissions
-(this is why clipboard "paste" is copy-on-Enter: auto-⌘V needs Accessibility). scuttlarr runs
+(this is why clipboard "paste" is copy-on-Enter: auto-⌘V needs Accessibility). scuttler runs
 with **zero granted permissions** (the one exception: macOS's standard Automation consent
 prompt, only when a feature you turned on needs one — e.g. the terminal falling back to
 iTerm2; Ghostty needs none) and **sends no telemetry**. (The v1 "zero network requests" rule
@@ -75,7 +75,7 @@ was retired 4 Sep 2026 — DECISIONS — once usage limits, plugins, and app-upd
 it a fiction; the surviving rule is that no request exists to report on the user.)
 
 Two former non-goals left this list: window management arrives _wrapped_ (AeroSpace brings
-its own Accessibility grant; scuttlarr itself still requests nothing — the Desktop rung,
+its own Accessibility grant; scuttler itself still requests nothing — the Desktop rung,
 DECISIONS 2026-08-15/17), and "theming beyond the built-in look" and "anything
 distro-shaped" became the Theme and Machine rungs (DECISIONS 2026-09-11; `docs/THEMES.md`,
 `docs/SETUP.md`).
@@ -111,7 +111,7 @@ The panel is a terminal prompt cosplay, not an Alfred knock-off:
 
 ### 4.4 Bang mode (`!`)
 
-- If the **first character** of the input is `!`, scuttlarr switches to bang mode for the rest of that invocation. The prompt sigil changes (`❯` → `$`) and the results list is replaced by a single action line: `run in Ghostty ▸ <command>` — an unambiguous visual signal that Enter will not launch an app.
+- If the **first character** of the input is `!`, scuttler switches to bang mode for the rest of that invocation. The prompt sigil changes (`❯` → `$`) and the results list is replaced by a single action line: `run in Ghostty ▸ <command>` — an unambiguous visual signal that Enter will not launch an app.
 - **Enter** hands everything after the `!` to the terminal and dismisses. The default target is **Ghostty**, reached through the multiplexer its window is showing — a new herdr tab, or a new tmux window in the focused client, running the command in a login shell; with Ghostty not running, a fresh instance starts with the command. Ghostty has no way in without Accessibility otherwise, so Ghostty open with neither multiplexer raises it and copies the command (DECISIONS 2026-09-04, `terminal.rs`). The terminal is a setting (`terminal`: Ghostty, iTerm2, Terminal.app); when the chosen one isn't installed the effective target falls back Ghostty → iTerm2 → Terminal.app. iTerm2 and Terminal.app are driven over AppleScript, which asks for Automation consent once.
 - The command string is passed through verbatim — no shell parsing, no quoting games. What you typed is what runs.
 - `!` alone (empty command) opens a new terminal window (a new tmux window, under Ghostty) and nothing else.
@@ -120,7 +120,7 @@ The panel is a terminal prompt cosplay, not an Alfred knock-off:
 
 ### 4.5 First run
 
-On first launch: register the default hotkey, build the app index, and show the panel once with the **first-launch setup** in it (DECISIONS 2026-10-19): one question per screen (hotkey, bar, agents, theme, tiling), a recap of exactly what will change, and one Enter to apply. Nothing is written before that Enter; Esc skips a step, and Esc on the first screen puts setup off. It stays in the launcher panel (no window, no dialog) and writes only the keys Settings writes. Only a fresh install sees it (`setupPending` in config.json); anyone can run it again with `setup ⏎`. No account. The only request a fresh install makes is the update check against GitHub Releases (`updates.checkSelf`, Settings → General; off means no request). scuttlarr runs as an accessory app (no Dock icon) with a small menubar presence — a template icon whose menu covers summon/config/scripts/reindex/quit (added v1.1, 9 Aug 2026) — and the bar itself (on by default since 2026-10-19; `bar.enabled`). Everything in the menu stays reachable through the prompt itself (type `scuttlarr` — it self-indexes); the panel is always the primary surface.
+On first launch: register the default hotkey, build the app index, and show the panel once with the **first-launch setup** in it (DECISIONS 2026-10-19): one question per screen (hotkey, bar, agents, theme, tiling), a recap of exactly what will change, and one Enter to apply. Nothing is written before that Enter; Esc skips a step, and Esc on the first screen puts setup off. It stays in the launcher panel (no window, no dialog) and writes only the keys Settings writes. Only a fresh install sees it (`setupPending` in config.json); anyone can run it again with `setup ⏎`. No account. The only request a fresh install makes is the update check against GitHub Releases (`updates.checkSelf`, Settings → General; off means no request). scuttler runs as an accessory app (no Dock icon) with a small menubar presence — a template icon whose menu covers summon/config/scripts/reindex/quit (added v1.1, 9 Aug 2026) — and the bar itself (on by default since 2026-10-19; `bar.enabled`). Everything in the menu stays reachable through the prompt itself (type `scuttler` — it self-indexes); the panel is always the primary surface.
 
 ## 5. Core behaviors (functional requirements)
 
@@ -145,11 +145,11 @@ On first launch: register the default hotkey, build the app index, and show the 
 
 ### 5.4 Settings (minimal)
 
-A JSON file in `~/.config/scuttlarr/config.json` — hand-editable, watched for changes, and the source of truth; the Settings window (v1.2) is a form over it. Contents include: hotkey, terminal target (Ghostty/iTerm2/Terminal.app), new-window-vs-current-session for bang mode, prompt sigils, launch-at-login, custom links, custom shortcuts. A config file you edit in your editor _is_ the terminal-nerd settings UI.
+A JSON file in `~/.config/scuttler/config.json` — hand-editable, watched for changes, and the source of truth; the Settings window (v1.2) is a form over it. Contents include: hotkey, terminal target (Ghostty/iTerm2/Terminal.app), new-window-vs-current-session for bang mode, prompt sigils, launch-at-login, custom links, custom shortcuts. A config file you edit in your editor _is_ the terminal-nerd settings UI.
 
 ### 5.5 Scripts (v1.1)
 
-Executables in `~/.config/scuttlarr/scripts/` declare a trigger word (`<script> manifest`) and answer queries (`<script> query <args>`) with JSON items scuttlarr renders as results; actions are copy/open/none. Discovery is FSEvents-watched — drop a file in, its trigger is live. Full contract: `docs/SCRIPTS.md`. Bundled reference scripts: `lorem`, `json`, `ip`.
+Executables in `~/.config/scuttler/scripts/` declare a trigger word (`<script> manifest`) and answer queries (`<script> query <args>`) with JSON items scuttler renders as results; actions are copy/open/none. Discovery is FSEvents-watched — drop a file in, its trigger is live. Full contract: `docs/SCRIPTS.md`. Bundled reference scripts: `lorem`, `json`, `ip`.
 
 ### 5.6 Clipboard history (v1.1)
 
@@ -187,7 +187,7 @@ Guiding split: **Rust owns the OS, TypeScript owns the experience.** Anything to
 | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | Hotkey press → panel visible and accepting input | **< 100 ms** (target 50)                                                                                                                 |
 | Keystroke → updated results on screen            | **< 16 ms** (one frame)                                                                                                                  |
-| Enter → app launch initiated + panel dismissed   | **< 50 ms** scuttlarr-side                                                                                                               |
+| Enter → app launch initiated + panel dismissed   | **< 50 ms** scuttler-side                                                                                                                |
 | Idle memory (the receipt, panel hidden)          | **< 120 MB** (the receipt: `scripts/mem.sh --receipt`, reference config, DECISIONS 2026-11-01; the WKWebView floor makes sub-100 heroic) |
 | Cold app start → hotkey registered               | **< 1 s**                                                                                                                                |
 | Full index rebuild                               | **< 500 ms** for ~300 apps                                                                                                               |
@@ -225,4 +225,4 @@ The differentiating bet — **scripts as first-class citizens** — shipped earl
 
 ---
 
-_scuttlarr: Scuttle the ship. Sail the wreck. Yarr._
+_scuttler: Scuttle the ship. Sail the wreck. Yarr._

@@ -16,7 +16,7 @@ sc_files_reset() { SC_FILES_SEEN=0 SC_FILES_CHANGED=0; }
 sc_adopted_path() {
   local p="$1"
   [[ "$p" == "$HOME"/* ]] && p="${p#$HOME/}"
-  print -r -- "$SCUTTLARR_STATE/adopted/${p#/}"
+  print -r -- "$SCUTTLER_STATE/adopted/${p#/}"
 }
 
 # Is an original parked for <path>?
@@ -99,13 +99,35 @@ sc_file_generated() {
 # append keeps a copy of the file under state/touched/<relative path>; remove
 # strips the block (and deletes the file if that leaves it empty).
 
-SC_TOUCH_BEGIN='# scuttlarr: begin (scuttlarr remove strips this block)'
-SC_TOUCH_END='# scuttlarr: end'
+SC_TOUCH_BEGIN='# scuttler: begin (scuttler remove strips this block)'
+SC_TOUCH_END='# scuttler: end'
+# The previous name's markers (DECISIONS 2026-11-01): a block written before the
+# rename is still ours — found, updated and stripped like one of today's.
+SC_TOUCH_BEGIN_PREVIOUS='# scuttlarr: begin (scuttlarr remove strips this block)'
+SC_TOUCH_END_PREVIOUS='# scuttlarr: end'
+
+# _sc_touched_span <lines-array-name> → prints "b e" for the first block found,
+# today's markers first, then the previous name's; status 1 if none.
+_sc_touched_span() {
+  emulate -L zsh
+  # Copy the caller's array under another name: a local `lines` would shadow it
+  # before (P) looks it up.
+  local -a _span_lines; _span_lines=("${(@P)1}")
+  local b_mark e_mark
+  local -i b e
+  for b_mark e_mark in "$SC_TOUCH_BEGIN" "$SC_TOUCH_END" "$SC_TOUCH_BEGIN_PREVIOUS" "$SC_TOUCH_END_PREVIOUS"; do
+    b=${_span_lines[(ie)$b_mark]}; (( b <= ${#_span_lines} )) || continue
+    e=${_span_lines[(ieb:b:)$e_mark]}; (( e <= ${#_span_lines} )) || continue
+    print -r -- "$b $e"
+    return 0
+  done
+  return 1
+}
 
 sc_touched_copy_path() {
   local p="$1"
   [[ "$p" == "$HOME"/* ]] && p="${p#$HOME/}"
-  print -r -- "$SCUTTLARR_STATE/touched/${p#/}"
+  print -r -- "$SCUTTLER_STATE/touched/${p#/}"
 }
 
 # The block currently in <path>, markers included; status 1 if none.
@@ -114,9 +136,8 @@ sc_touched_block() {
   local file="$1"
   [[ -f "$file" ]] || return 1
   local -a lines; lines=("${(@f)$(<"$file")}")
-  local -i b e
-  b=${lines[(ie)$SC_TOUCH_BEGIN]}; (( b <= ${#lines} )) || return 1
-  e=${lines[(ieb:b:)$SC_TOUCH_END]}; (( e <= ${#lines} )) || return 1
+  local span; span="$(_sc_touched_span lines)" || return 1
+  local -i b=${span%% *} e=${span##* }
   print -rl -- "${(@)lines[b,e]}"
 }
 
@@ -126,9 +147,8 @@ sc_touched_strip() {
   local file="$1"
   [[ -f "$file" ]] || return 1
   local -a lines; lines=("${(@f)$(<"$file")}")
-  local -i b e
-  b=${lines[(ie)$SC_TOUCH_BEGIN]}; (( b <= ${#lines} )) || return 1
-  e=${lines[(ieb:b:)$SC_TOUCH_END]}; (( e <= ${#lines} )) || return 1
+  local span; span="$(_sc_touched_span lines)" || return 1
+  local -i b=${span%% *} e=${span##* }
   # the blank line we put before the block goes with it
   (( b > 1 )) && [[ -z "${lines[b-1]}" ]] && (( b-- ))
   lines[b,e]=()
@@ -150,15 +170,15 @@ sc_file_touched() {
   case "$mode" in
     plan)
       if (( same )); then :
-      elif [[ -n "$have" ]]; then (( SC_FILES_CHANGED++ )); sc_log "$shown: update the scuttlarr include"
-      elif [[ -e "$target" ]]; then (( SC_FILES_CHANGED++ )); sc_log "$shown: append the scuttlarr include (yours otherwise; a copy goes to $(sc_tilde "$(sc_touched_copy_path "$target")"))"
-      else (( SC_FILES_CHANGED++ )); sc_log "$shown: create with the scuttlarr include"
+      elif [[ -n "$have" ]]; then (( SC_FILES_CHANGED++ )); sc_log "$shown: update the scuttler include"
+      elif [[ -e "$target" ]]; then (( SC_FILES_CHANGED++ )); sc_log "$shown: append the scuttler include (yours otherwise; a copy goes to $(sc_tilde "$(sc_touched_copy_path "$target")"))"
+      else (( SC_FILES_CHANGED++ )); sc_log "$shown: create with the scuttler include"
       fi ;;
     check)
       if [[ -z "$have" ]]; then
-        (( SC_FILES_CHANGED++ )); sc_warn "$shown: the scuttlarr include is missing"
+        (( SC_FILES_CHANGED++ )); sc_warn "$shown: the scuttler include is missing"
       elif (( ! same )); then
-        (( SC_FILES_CHANGED++ )); sc_warn "$shown: the scuttlarr include differs from base"
+        (( SC_FILES_CHANGED++ )); sc_warn "$shown: the scuttler include differs from base"
       fi ;;
     apply)
       if (( same && owned )); then return 0; fi
@@ -183,7 +203,7 @@ sc_file_touched() {
       } | sc_write_atomic "$target"
       sc_manifest_add touched "$target" "$(print -r -- "$block" | shasum -a 256 | cut -d' ' -f1)" "$layer"
       (( SC_FILES_CHANGED++ ))
-      sc_ok "$shown: scuttlarr include in place" ;;
+      sc_ok "$shown: scuttler include in place" ;;
     *) sc_die "SC_MODE must be plan, apply or check (got '$mode')" ;;
   esac
   return 0

@@ -1,6 +1,6 @@
-import { BarUsageCell, type UsageReport } from '@scuttlarr/tui'
-import { foldUsageBarState } from '@scuttlarr/tui/bar'
-import type { PluginCellProps } from '@scuttlarr/tui/plugins'
+import { BarUsageCell, type UsageReport } from '@scuttler/tui'
+import { foldUsageBarState } from '@scuttler/tui/bar'
+import type { PluginCellProps } from '@scuttler/tui/plugins'
 
 /**
  * The usage cell: the tiny meter, tinted by pace across every account.

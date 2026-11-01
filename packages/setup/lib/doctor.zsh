@@ -9,17 +9,17 @@ sc_doctor() {
   emulate -L zsh
   local -i problems=0
 
-  sc_head "scuttlarr"
-  sc_log "base    $(sc_tilde "$SCUTTLARR_BASE")"
-  if [[ -d "$SCUTTLARR_OVERLAY" ]]; then
-    sc_log "overlay $(sc_tilde "$SCUTTLARR_OVERLAY")"
+  sc_head "scuttler"
+  sc_log "base    $(sc_tilde "$SCUTTLER_BASE")"
+  if [[ -d "$SCUTTLER_OVERLAY" ]]; then
+    sc_log "overlay $(sc_tilde "$SCUTTLER_OVERLAY")"
   else
-    sc_log "overlay $(sc_tilde "$SCUTTLARR_OVERLAY") (none — that's fine)"
+    sc_log "overlay $(sc_tilde "$SCUTTLER_OVERLAY") (none — that's fine)"
   fi
   if [[ -f "$(sc_manifest_path)" ]]; then
-    sc_log "state   $(sc_tilde "$SCUTTLARR_STATE") ($(sc_manifest_list | wc -l | tr -d ' ') owned paths)"
+    sc_log "state   $(sc_tilde "$SCUTTLER_STATE") ($(sc_manifest_list | wc -l | tr -d ' ') owned paths)"
   else
-    sc_log "state   $(sc_tilde "$SCUTTLARR_STATE") (nothing applied yet)"
+    sc_log "state   $(sc_tilde "$SCUTTLER_STATE") (nothing applied yet)"
   fi
 
   # Defaults: every key in base + overlay, checked.
@@ -27,7 +27,7 @@ sc_doctor() {
   if (( SC_DEFAULTS_CHANGED == 0 )); then
     sc_ok "defaults: ${SC_DEFAULTS_SEEN} keys as declared"
   else
-    sc_warn "defaults: ${SC_DEFAULTS_CHANGED} of ${SC_DEFAULTS_SEEN} keys differ — \`scuttlarr defaults\` shows the plan, \`--apply\` fixes"
+    sc_warn "defaults: ${SC_DEFAULTS_CHANGED} of ${SC_DEFAULTS_SEEN} keys differ — \`scuttler defaults\` shows the plan, \`--apply\` fixes"
     (( problems += SC_DEFAULTS_CHANGED ))
   fi
 
@@ -37,7 +37,7 @@ sc_doctor() {
     sc_ok "shell: ${SC_SHELL_SEEN} files as rendered"
   else
     local plugins=''; (( SC_SHELL_PLUGINS )) && plugins=", ${SC_SHELL_PLUGINS} plugin(s) not cloned"
-    sc_warn "shell: $(( SC_SHELL_CHANGED - SC_SHELL_PLUGINS )) of ${SC_SHELL_SEEN} files differ${plugins} — \`scuttlarr shell\` shows the plan, \`--apply\` fixes"
+    sc_warn "shell: $(( SC_SHELL_CHANGED - SC_SHELL_PLUGINS )) of ${SC_SHELL_SEEN} files differ${plugins} — \`scuttler shell\` shows the plan, \`--apply\` fixes"
     (( problems += SC_SHELL_CHANGED ))
   fi
 
@@ -61,7 +61,7 @@ sc_doctor() {
         if [[ ! -f "$target" ]]; then
           sc_warn "$(sc_tilde "$target"): missing (generated)"; (( problems++ ))
         elif [[ "$(sc_hash "$target")" != "$source" ]]; then
-          sc_warn "$(sc_tilde "$target"): edited since scuttlarr wrote it"; (( problems++ ))
+          sc_warn "$(sc_tilde "$target"): edited since scuttler wrote it"; (( problems++ ))
         fi ;;
       adopted)
         if [[ ! -e "$source" ]]; then
@@ -69,15 +69,15 @@ sc_doctor() {
         fi ;;
       touched)
         if ! block="$(sc_touched_block "$target")"; then
-          sc_warn "$(sc_tilde "$target"): the scuttlarr include is gone"; (( problems++ ))
+          sc_warn "$(sc_tilde "$target"): the scuttler include is gone"; (( problems++ ))
         elif [[ "$(print -r -- "$block" | shasum -a 256 | cut -d' ' -f1)" != "$source" ]]; then
-          sc_warn "$(sc_tilde "$target"): the scuttlarr include was edited"; (( problems++ ))
+          sc_warn "$(sc_tilde "$target"): the scuttler include was edited"; (( problems++ ))
         fi ;;
       root)
         if [[ ! -f "$target" ]]; then
-          sc_warn "$target: missing — \`scuttlarr sudoers on\` puts it back"; (( problems++ ))
+          sc_warn "$target: missing — \`scuttler sudoers on\` puts it back"; (( problems++ ))
         elif [[ "$(sc_hash "$target")" != "$source" ]]; then
-          sc_warn "$target: edited since scuttlarr wrote it"; (( problems++ ))
+          sc_warn "$target: edited since scuttler wrote it"; (( problems++ ))
         fi ;;
       *) sc_warn "$(sc_tilde "$target"): unknown manifest mode '$mode'"; (( problems++ )) ;;
     esac
@@ -87,7 +87,7 @@ sc_doctor() {
 
   # Desktop layer.
   sc_head "desktop layer"
-  if [[ -d /Applications/scuttlarr.app ]]; then sc_ok "scuttlarr installed"; else sc_log "scuttlarr not installed (the install step will add it)"; fi
+  if [[ -d /Applications/scuttler.app ]]; then sc_ok "scuttler installed"; else sc_log "scuttler not installed (the install step will add it)"; fi
   if command -v aerospace >/dev/null 2>&1; then sc_ok "aerospace on PATH"; else sc_log "aerospace not found"; fi
 
   print >&2

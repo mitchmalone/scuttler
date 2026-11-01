@@ -1,4 +1,4 @@
-# AGENTS.md — scuttlarr
+# AGENTS.md — scuttler
 
 > _Scuttle the ship. Sail the wreck._ Always lowercase.
 
@@ -12,8 +12,10 @@ summon instantly) and **hackable** (extending it feels like scripting). When a f
 the weight budget conflict, the feature loses.
 
 History: launcharr (the launcher) and scuttlarr (the distro) were two repos until
-2026-09-11 (DECISIONS); this repo is the fold, renamed. Names, ids, and paths are
-scuttlarr's; `rename.rs` migrates old homes.
+2026-09-11 (DECISIONS); this repo is the fold, renamed twice — scuttlarr (2026-09-11),
+then scuttler (2026-11-01, v0.8.1). Names and paths are scuttler's; the bundle id stays
+`com.mitchmalone.scuttlarr` on purpose (DECISIONS 2026-11-01); `rename.rs` migrates old
+homes across both hops.
 
 ## Standard
 
@@ -40,14 +42,14 @@ pnpm monorepo:
 | Path             | What it is                                                                                                                                                                            |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `apps/desktop`   | The macOS app — Tauri 2 shell (Rust) + React panel UI (WKWebView)                                                                                                                     |
-| `apps/www`       | scuttlarr.com — static-export Next.js marketing site (Vercel)                                                                                                                         |
+| `apps/www`       | www.scuttler.app — static-export Next.js marketing site (Vercel)                                                                                                                      |
 | `packages/core`  | The shared engine: grammar, fuzzy matcher, ranking, rows — pure TypeScript                                                                                                            |
 | `packages/tui`   | The UI kit both apps render: components, bar, theme tokens (generated from `packages/theme`)                                                                                          |
 | `packages/theme` | Omarchy model: `themes/<name>/colors.toml`, templates, pure renderer, generated token files (stale-checked)                                                                           |
 | `packages/setup` | The Machine rung's zsh CLI, shipped in the bundle: `doctor`, `defaults`, `shell`, `link`, `migrate`, `sudoers`, `remove`; manifest, snapshot, adopt-never-overwrite — `docs/SETUP.md` |
 
-The only external repo is the generated satellite `mitchmalone/homebrew-tap` (shared tap; `Casks/scuttlarr.rb`, generated whole from `.github/cask/scuttlarr.rb`;
-`launcharr.rb` stays at 0.6.0 as a deprecated alias), written by the release pipeline —
+The only external repo is the generated satellite `mitchmalone/homebrew-tap` (shared tap; `Casks/scuttler.rb`, generated whole from `.github/cask/scuttler.rb`;
+`scuttlarr.rb` at 0.8.0 and `launcharr.rb` at 0.6.0 stay as deprecated aliases), written by the release pipeline —
 fix the generator, not the output.
 
 **Rust owns the OS, TypeScript owns the experience.** Anything touching AppKit, the
@@ -79,11 +81,11 @@ it in `docs/DECISIONS.md`.
    Settings: "Also reload Ghostty's config" (`appearance.ghostty`, Automation for
    Ghostty; the always-on terminal retint is OSC into the user's own ptys and asks
    nothing).
-   One opt-in, off by default: Settings → General → "Use the scuttlarr loupe" makes
+   One opt-in, off by default: Settings → General → "Use the scuttler loupe" makes
    `colorpicker` ask for **Screen Recording** once (2× magnifier, DECISIONS 2026-08-17);
    off — and until granted — it's Apple's `NSColorSampler`, which needs nothing. Nothing
    ever prompts unless that toggle is flipped.
-   Root, once, by the user's own hand: `scuttlarr sudoers on` (terminal, one password)
+   Root, once, by the user's own hand: `scuttler sudoers on` (terminal, one password)
    installs a rule allowing exactly `pmset -a disablesleep 0|1`, so `awake` can switch
    macOS sleep off while a hold is armed. The app only runs `sudo -n` — it never asks
    (DECISIONS 2026-10-01).
@@ -93,7 +95,7 @@ it in `docs/DECISIONS.md`.
    banned: analytics, crash reporting, update pings, any request that exists to tell
    someone about the user rather than to serve them. Credentials the app uses are the
    user's own (the CLIs' stores, the Keychain), read with consent where a provider's
-   settings say so, never written or refreshed by scuttlarr.
+   settings say so, never written or refreshed by scuttler.
 3. **A deliberate IPC surface.** Every Tauri command is thin, typed, and recorded in
    DECISIONS when added; the count is a liability to be justified, not a handful — a
    command that could be an event, a field on an existing snapshot, or a plugin
@@ -107,7 +109,7 @@ it in `docs/DECISIONS.md`.
 7. **The site is fully static.** `output: 'export'` in `apps/www` — no API routes, no
    middleware, no server runtime.
 8. **Design tokens only** in `apps/www`: page colors are the CSS vars on `<html>`, every
-   one derived from the picked app theme (`@scuttlarr/tui/themes`) by
+   one derived from the picked app theme (`@scuttler/tui/themes`) by
    `src/lib/page-theme.ts` — never hand-typed — and shadcn/ui's semantic tokens are
    _mapped onto_ those vars in `globals.css`, never imported (DECISIONS 2026-08-16,
    2026-10-20). The site picker, the demo's dropdown and the hero field share one store,
@@ -120,7 +122,7 @@ it in `docs/DECISIONS.md`.
 9. **Release facts are generated, not authored.** `apps/www/src/lib/release.json` is written
    by `scripts/release.sh` — never hand-edit it. `site.ts` derives version, artifact URLs,
    and install methods from it; site copy is free, release data is not.
-10. **The website never holds a second copy of scuttlarr UI.** Every pixel `apps/www`
+10. **The website never holds a second copy of scuttler UI.** Every pixel `apps/www`
     renders of the app — panels, rows, the bar, agent cells, cards, themes, keyboard
     behaviour — is **imported from a shared package** (`packages/tui`, `packages/core`).
     Not ported, not mirrored, not "kept in sync": imported. If a surface the site needs
@@ -155,19 +157,19 @@ it in `docs/DECISIONS.md`.
 14. **No emoji.** Never as a glyph in the app, the bar, plugins or the site — a glyph is
     a lucide icon (or a `packages/tui` icon) sized with `ICON_PROPS`, coloured by theme
     tokens. Never in docs, comments, commit messages or copy either. The only emoji
-    scuttlarr shows are the user's own content: the emoji picker's results
+    scuttler shows are the user's own content: the emoji picker's results
     (DECISIONS 2026-10-01).
 
 ## Performance budgets (requirements, not aspirations)
 
-| Metric                                     | Budget                     |
-| ------------------------------------------ | -------------------------- |
-| Hotkey → panel visible and accepting input | **< 100 ms** (target 50)   |
-| Keystroke → updated results on screen      | **< 16 ms** (one frame)    |
-| Enter → launch initiated + panel dismissed | **< 50 ms** scuttlarr-side |
-| Idle memory (the receipt, panel hidden)    | **< 120 MB** ceiling       |
-| Cold start → hotkey registered             | **< 1 s**                  |
-| Full index rebuild (~300 apps)             | **< 500 ms**               |
+| Metric                                     | Budget                    |
+| ------------------------------------------ | ------------------------- |
+| Hotkey → panel visible and accepting input | **< 100 ms** (target 50)  |
+| Keystroke → updated results on screen      | **< 16 ms** (one frame)   |
+| Enter → launch initiated + panel dismissed | **< 50 ms** scuttler-side |
+| Idle memory (the receipt, panel hidden)    | **< 120 MB** ceiling      |
+| Cold start → hotkey registered             | **< 1 s**                 |
+| Full index rebuild (~300 apps)             | **< 500 ms**              |
 
 A budget miss cuts or flags the offending feature. Changes touching summon, matching, or
 launch paths must not regress these — measure before claiming; record numbers in the plan
@@ -205,15 +207,15 @@ Same spirit as the TypeScript rules: strict, minimal, boring.
 
 ## Commands
 
-| Command                                      | What                                                                                    |
-| -------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `pnpm dev`                                   | All apps in parallel (desktop panel needs `pnpm --filter @scuttlarr/desktop tauri dev`) |
-| `pnpm --filter @scuttlarr/desktop tauri dev` | The app, for real (Tauri shell + panel)                                                 |
-| `pnpm --filter @scuttlarr/www dev`           | The site                                                                                |
-| `pnpm verify`                                | The gate: typecheck + lint + format + test + site build + cargo test + clippy           |
-| `scripts/dev-install.sh [--build]`           | Run a working-tree build: swap into `/Applications` and relaunch, quietly (no Finder)   |
-| `scripts/release.sh X.Y.Z`                   | The only way to release (see `docs/RELEASING.md`)                                       |
-| `scripts/mem.sh [--watch\|--receipt]`        | Resident memory of the app and its helpers; `--receipt` is the budget number            |
+| Command                                     | What                                                                                   |
+| ------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `pnpm dev`                                  | All apps in parallel (desktop panel needs `pnpm --filter @scuttler/desktop tauri dev`) |
+| `pnpm --filter @scuttler/desktop tauri dev` | The app, for real (Tauri shell + panel)                                                |
+| `pnpm --filter @scuttler/www dev`           | The site                                                                               |
+| `pnpm verify`                               | The gate: typecheck + lint + format + test + site build + cargo test + clippy          |
+| `scripts/dev-install.sh [--build]`          | Run a working-tree build: swap into `/Applications` and relaunch, quietly (no Finder)  |
+| `scripts/release.sh X.Y.Z`                  | The only way to release (see `docs/RELEASING.md`)                                      |
+| `scripts/mem.sh [--watch\|--receipt]`       | Resident memory of the app and its helpers; `--receipt` is the budget number           |
 
 ## Definition of done
 

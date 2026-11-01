@@ -32,7 +32,21 @@ pub fn open(db_path: &Path) -> CmdResult<Connection> {
         );
         CREATE INDEX IF NOT EXISTS idx_launches_item ON launches(item);",
     )?;
+    rename_builtin_ids(&conn)?;
     Ok(conn)
+}
+
+/// The built-in rows are keyed by the app's name (`<name>:settings`, …), so a
+/// rename would otherwise cost the user their history for them. Rewrite the
+/// previous name's keys once; a no-op on a fresh or already-migrated database
+/// (rename.rs, DECISIONS 2026-11-01).
+fn rename_builtin_ids(conn: &Connection) -> CmdResult<usize> {
+    let old = format!("{}:", crate::rename::PREVIOUS);
+    let n = conn.execute(
+        "UPDATE launches SET item = 'scuttler:' || substr(item, ?1) WHERE item LIKE ?2",
+        rusqlite::params![old.len() as i64 + 1, format!("{old}%")],
+    )?;
+    Ok(n)
 }
 
 pub fn now_secs() -> i64 {
@@ -76,6 +90,21 @@ mod tests {
         )
         .unwrap();
         conn
+    }
+
+    #[test]
+    fn built_in_ids_from_the_previous_name_carry_their_history_forward() {
+        let conn = mem_db();
+        record(&conn, "scuttlarr:theme", "th", 1).unwrap();
+        record(&conn, "scuttlarr:quit", "q", 2).unwrap();
+        record(&conn, "app:scuttlarr-fan", "s", 3).unwrap();
+        assert_eq!(rename_builtin_ids(&conn).unwrap(), 2);
+        let scores = scores(&conn, 10).unwrap();
+        assert!(scores.contains_key("scuttler:theme"));
+        assert!(scores.contains_key("scuttler:quit"));
+        assert!(scores.contains_key("app:scuttlarr-fan"));
+        assert!(!scores.keys().any(|k| k.starts_with("scuttlarr:")));
+        assert_eq!(rename_builtin_ids(&conn).unwrap(), 0);
     }
 
     #[test]

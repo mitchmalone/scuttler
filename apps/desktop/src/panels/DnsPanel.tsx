@@ -1,9 +1,9 @@
 /**
  * DNS / network-info panel, presentational half (`dns ⏎`). Pure props +
- * @scuttlarr/tui — storied in the workbench; the container owns invokes.
+ * @scuttler/tui — storied in the workbench; the container owns invokes.
  * Shares the WifiStatus shape (same backing command).
  */
-import { KeyHints, ListRow, Panel, SectionHeader } from '@scuttlarr/tui'
+import { KeyHints, ListRow, Panel, SectionHeader } from '@scuttler/tui'
 import { Globe } from 'lucide-react'
 
 import type { WifiStatus } from './WifiPanel'

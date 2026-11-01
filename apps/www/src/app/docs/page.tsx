@@ -1,4 +1,4 @@
-import { DEFAULT_BAR_LAYOUT } from '@scuttlarr/tui/bar/layout'
+import { DEFAULT_BAR_LAYOUT } from '@scuttler/tui/bar/layout'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
@@ -7,9 +7,9 @@ import { PANEL_INFO } from '@/lib/demo-data'
 import { DOCS_URL, README_URL, VERSION } from '@/lib/site'
 
 export const metadata: Metadata = {
-  title: 'scuttlarr docs — scripts, plugins, config, panels',
+  title: 'scuttler docs — scripts, plugins, config, panels',
   description:
-    'Where scuttlarr is documented: the scripts, widget and plugin contracts, config.json, the panel triggers, themes, the Machine rung, and how to uninstall. The repo holds the text; this page is the map.',
+    'Where scuttler is documented: the scripts, widget and plugin contracts, config.json, the panel triggers, themes, the Machine rung, and how to uninstall. The repo holds the text; this page is the map.',
   alternates: { canonical: '/docs' },
 }
 
@@ -93,7 +93,7 @@ export default function Docs() {
         </h1>
         <p className={`m-0 mb-8 max-w-[70ch] ${PROSE}`}>
           Drop a TypeScript file (or any executable) into{' '}
-          <code className={CODE}>~/.config/scuttlarr/scripts/</code> and its
+          <code className={CODE}>~/.config/scuttler/scripts/</code> and its
           trigger word joins the launcher grammar — no build, no restart, no
           store. <code className={CODE}>.ts</code> runs under Bun. The bundled
           scripts (<code className={CODE}>json</code>,{' '}
@@ -123,14 +123,14 @@ export default function Docs() {
         <div className="mt-7 grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-px overflow-hidden rounded-xl border border-(--hair) bg-(--hair)">
           <Note title="widgets">
             One <code className={CODE}>.ts</code> file in{' '}
-            <code className={CODE}>~/.config/scuttlarr/widgets/</code> owns a
+            <code className={CODE}>~/.config/scuttler/widgets/</code> owns a
             cell in the bar — a glyph, a tone, a hover card of rows — on the
             same manifest / tick shape.{' '}
             <Doc file="WIDGETS.md">docs/WIDGETS.md</Doc>
           </Note>
           <Note title="plugins">
             A directory with a Bun service and React cells and panels on the
-            scuttlarr kit, with declared settings and permissions. The bundled
+            scuttler kit, with declared settings and permissions. The bundled
             usage, calendar and updates plugins are written to the same
             contract. <Doc file="PLUGINS.md">docs/PLUGINS.md</Doc>
           </Note>
@@ -141,7 +141,7 @@ export default function Docs() {
             <Doc file="THEMES.md">docs/THEMES.md</Doc>
           </Note>
           <Note title="the machine">
-            The <code className={CODE}>scuttlarr</code> CLI shipped in the app:
+            The <code className={CODE}>scuttler</code> CLI shipped in the app:
             de-shined macOS defaults, the shell base, a manifest of every file
             it writes, <code className={CODE}>doctor</code> and{' '}
             <code className={CODE}>remove</code>.{' '}
@@ -156,7 +156,7 @@ export default function Docs() {
           <h2 className={H2}>Config</h2>
           <p className={`m-0 mb-6 max-w-[70ch] ${PROSE}`}>
             Everything lives in{' '}
-            <code className={CODE}>~/.config/scuttlarr/config.json</code> —
+            <code className={CODE}>~/.config/scuttler/config.json</code> —
             watched and hot-applied, in sync with the settings window both ways.
             Every key and what a fresh install has on is the{' '}
             <a href={README_URL}>README&rsquo;s Defaults table</a>; the bar
@@ -213,11 +213,11 @@ export default function Docs() {
         <div className={`${SECTION} py-20`}>
           <h2 className={H2}>Uninstall</h2>
           <p className={`m-0 max-w-[70ch] ${PROSE}`}>
-            <code className={CODE}>scuttlarr remove</code> first if you turned
+            <code className={CODE}>scuttler remove</code> first if you turned
             the Machine rung on (it restores every default and file it touched,
             and asks before doing so). Then{' '}
-            <code className={CODE}>brew uninstall --cask scuttlarr</code> and
-            the five paths listed in the{' '}
+            <code className={CODE}>brew uninstall --cask scuttler</code> and the
+            five paths listed in the{' '}
             <a href={`${README_URL}`}>README&rsquo;s Uninstall section</a>. No
             daemons left behind; AeroSpace and JankyBorders stay until you
             uninstall them too.
@@ -230,8 +230,8 @@ export default function Docs() {
           className={`${SECTION} flex flex-wrap items-center justify-between gap-6 py-10 text-[13px] text-(--dim2)`}
         >
           <span>
-            scuttlarr {VERSION} — because the apps won&rsquo;t launch
-            themselves. Yarr.
+            scuttler {VERSION} — because the apps won&rsquo;t launch themselves.
+            Yarr.
           </span>
           <Link href="/" className="text-(--dim) hover:text-(--fg)">
             ← back to the site

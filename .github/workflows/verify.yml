@@ -18,7 +18,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # verify:node runs shellcheck, preinstalled on ubuntu-latest.
       - run: pnpm verify:node
-      - run: pnpm --filter @scuttlarr/www build
+      - run: pnpm --filter @scuttler/www build
 
   rust:
     runs-on: macos-latest
@@ -43,7 +43,7 @@ jobs:
       # they run where zsh ships — here, on macOS — not in the Linux node job.
       - run: pnpm verify:shell
       # generate_context! embeds frontendDist at compile time — build the panel first.
-      - run: pnpm --filter @scuttlarr/desktop build
+      - run: pnpm --filter @scuttler/desktop build
       - run: pnpm verify:rust
 
   commitlint:

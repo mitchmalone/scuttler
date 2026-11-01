@@ -1,5 +1,5 @@
 {
-  "//": "Resolution config for dependency-cruiser only (never typechecked): apps/www's @/* alias. @scuttlarr/* resolves via workspace package exports.",
+  "//": "Resolution config for dependency-cruiser only (never typechecked): apps/www's @/* alias. @scuttler/* resolves via workspace package exports.",
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "baseUrl": ".",

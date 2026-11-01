@@ -1,8 +1,8 @@
 {
-  "name": "@scuttlarr/tui",
+  "name": "@scuttler/tui",
   "private": true,
   "type": "module",
-  "description": "The scuttlarr TUI kit \u2014 Omarchy-inspired terminal-styled React components: panels, menus, hotkey rows, controls, calendar, and the menubar bar. Pure presentation + pure nav logic.",
+  "description": "The scuttler TUI kit \u2014 Omarchy-inspired terminal-styled React components: panels, menus, hotkey rows, controls, calendar, and the menubar bar. Pure presentation + pure nav logic.",
   "//exports": "Entry points below '.' exist so React Server Components (apps/www) can import pure modules without pulling the React barrel, which re-exports hook-using components. Don't fold './themes', './bar' or './icons' back into '.'. './plugins' is the plugin contract (types only) \u2014 see docs/PLUGINS.md.",
   "exports": {
     ".": "./src/index.ts",
@@ -23,14 +23,14 @@
     "workbench": "vite --open"
   },
   "dependencies": {
-    "@scuttlarr/core": "workspace:*",
+    "@scuttler/core": "workspace:*",
     "lucide-react": "^1.30.0"
   },
   "peerDependencies": {
     "react": "^19.1.0"
   },
   "devDependencies": {
-    "@scuttlarr/theme": "workspace:*",
+    "@scuttler/theme": "workspace:*",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",

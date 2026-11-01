@@ -155,7 +155,7 @@
 }
 
 /* --- ? mode: conversation layout. The transcript + follow-up input come from
- * @scuttlarr/tui (AskPinned/AskSurface); this file only arranges them. Once a
+ * @scuttler/tui (AskPinned/AskSurface); this file only arranges them. Once a
  * conversation starts the pinned question takes the header slot and the prompt
  * row moves to the bottom via flex `order` — the <input> never re-mounts, so it
  * keeps keyboard focus between turns. --- */

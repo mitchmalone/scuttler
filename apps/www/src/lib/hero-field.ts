@@ -1,4 +1,4 @@
-import type { ThemeTokens } from '@scuttlarr/tui/themes'
+import type { ThemeTokens } from '@scuttler/tui/themes'
 
 /**
  * The hero's pixel field (design 2c, "Keys"): a dithered field, calm in the middle and

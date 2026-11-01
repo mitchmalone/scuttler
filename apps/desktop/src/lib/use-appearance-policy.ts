@@ -2,7 +2,7 @@ import {
   type PolicyInputs,
   minutesToNextBoundary,
   toggleMode,
-} from '@scuttlarr/core/appearance'
+} from '@scuttler/core/appearance'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { useEffect, useRef } from 'react'
@@ -66,10 +66,10 @@ export function useAppearancePolicy(config: Config, loaded: boolean): void {
       const policy = appearanceOf(cfg)
       if (res.theme !== cfg.theme) {
         console.warn(
-          `[scuttlarr appearance] ${cfg.theme} → ${res.theme} (${res.via}, ${res.by})`,
+          `[scuttler appearance] ${cfg.theme} → ${res.theme} (${res.via}, ${res.by})`,
         )
         updateConfig((c) => ({ ...c, theme: res.theme })).catch((e) =>
-          console.error('[scuttlarr appearance] write failed:', e),
+          console.error('[scuttler appearance] write failed:', e),
         )
       }
       // Re-check at the next schedule boundary (plus a few seconds of slack).
@@ -87,7 +87,7 @@ export function useAppearancePolicy(config: Config, loaded: boolean): void {
         inputs.current = i
         settle()
       })
-      .catch((e) => console.error('[scuttlarr appearance] inputs failed:', e))
+      .catch((e) => console.error('[scuttler appearance] inputs failed:', e))
     const un = listen<AppearanceInputs>('appearance-input', (e) => {
       inputs.current = e.payload
       settle()
@@ -108,9 +108,7 @@ export function useAppearancePolicy(config: Config, loaded: boolean): void {
       updateConfig((c) => ({
         ...c,
         appearance: { ...appearanceOf(c), ...next },
-      })).catch((e) =>
-        console.error('[scuttlarr appearance] toggle failed:', e),
-      )
+      })).catch((e) => console.error('[scuttler appearance] toggle failed:', e))
     })
     return () => {
       disposed = true

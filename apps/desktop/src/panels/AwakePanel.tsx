@@ -1,11 +1,11 @@
 /**
- * Awake panel, presentational half: pure props + @scuttlarr/tui, no tauri
+ * Awake panel, presentational half: pure props + @scuttler/tui, no tauri
  * imports. The copy is the feature (plans/done/awake.md): every string says
  * what the user observes, states how it ends, and carries its limitation
- * inline. The words themselves live in @scuttlarr/core/awake where they're
+ * inline. The words themselves live in @scuttler/core/awake where they're
  * shared with the grammar rows and the bar card.
  */
-import type { AwakeSpec, AwakeStatus, AwakeUntil } from '@scuttlarr/core/awake'
+import type { AwakeSpec, AwakeStatus, AwakeUntil } from '@scuttler/core/awake'
 import {
   DEFAULT_FLOOR,
   awayNote,
@@ -15,8 +15,8 @@ import {
   formatSeconds,
   holdLabel,
   parseSpec,
-} from '@scuttlarr/core/awake'
-import { KeyHints, ListRow, Panel, SectionHeader } from '@scuttlarr/tui'
+} from '@scuttler/core/awake'
+import { KeyHints, ListRow, Panel, SectionHeader } from '@scuttler/tui'
 import { Coffee } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
@@ -151,7 +151,7 @@ function ArmedView({ status, onRelease, onClose }: AwakePanelProps) {
         label={
           s.sleepOff
             ? 'macOS sleep is off: the lid can close, on battery too, and a crash leaves no gap.'
-            : 'Lid closed on battery still sleeps. Run `scuttlarr sudoers on` once to cover it.'
+            : 'Lid closed on battery still sleeps. Run `scuttler sudoers on` once to cover it.'
         }
       />
       <OthersList status={status} />
@@ -491,7 +491,7 @@ function FormView({
         <ListRow
           dim
           label="Lid closed, on battery too"
-          sub="Plugged in, lid closed already works. For battery, and for no gap if scuttlarr crashes, run `scuttlarr sudoers on` once (one admin password): every hold then switches macOS sleep off until it ends."
+          sub="Plugged in, lid closed already works. For battery, and for no gap if scuttler crashes, run `scuttler sudoers on` once (one admin password): every hold then switches macOS sleep off until it ends."
         />
         <OthersList status={status} />
       </div>

@@ -2,17 +2,17 @@ import {
   type AwakeStatus,
   needsWatching,
   parseSpec,
-} from '@scuttlarr/core/awake'
+} from '@scuttler/core/awake'
 import {
   Bar,
   type BarSnapshot,
   type BatteryDetail,
   type WidgetAction,
   type WifiDetail,
-} from '@scuttlarr/tui'
-import '@scuttlarr/tui/bar.css'
+} from '@scuttler/tui'
+import '@scuttler/tui/bar.css'
 // Kit controls inside plugin cards (BarCardControls) — every rule is scoped to `.tui`.
-import '@scuttlarr/tui/styles.css'
+import '@scuttler/tui/styles.css'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { useEffect, useRef, useState } from 'react'
@@ -29,10 +29,10 @@ import { barZoneNodes } from './modules'
 const EMPTY_THEMES = { themes: {} }
 
 /**
- * The bar window: a thin container around `@scuttlarr/tui`'s bar components.
+ * The bar window: a thin container around `@scuttler/tui`'s bar components.
  *
  * Everything visual — the strip, cells, cards, CSS — lives in the kit, because
- * scuttlarr.com renders the same bar and the website may never hold a second
+ * www.scuttler.app renders the same bar and the website may never hold a second
  * copy (AGENTS invariant 10). What stays here is everything the kit must not
  * know about: Rust snapshot delivery, `invoke` calls and `window.__notched`.
  * Config-driven zone resolution and the module → cell mapping are in

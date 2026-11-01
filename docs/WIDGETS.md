@@ -1,4 +1,4 @@
-# scuttlarr widgets
+# scuttler widgets
 
 > **A widget is the single-file form of a plugin.** A plugin (`docs/PLUGINS.md`) is a
 > directory that may add its own `cell.tsx` / `panel.tsx`; a widget is one `.ts` file
@@ -10,7 +10,7 @@
 > then becomes a section of PLUGINS.md.
 
 Widgets are the bar's scripts: drop a **TypeScript file** into
-`~/.config/scuttlarr/widgets/` and it owns a cell in the menubar — a glyph, an optional
+`~/.config/scuttler/widgets/` and it owns a cell in the menubar — a glyph, an optional
 short label, a tone, a click, and a hover card of rows. No build, no shebang, no chmod,
 no restart: `.ts` runs under **Bun** (or Node when Bun is absent — DECISIONS 2026-08-19).
 Any other executable in any language works too. The reference widgets in
@@ -18,8 +18,8 @@ Any other executable in any language works too. The reference widgets in
 yours to copy and edit; the shape is deliberately the same as `docs/SCRIPTS.md`.
 
 ```ts
-// ~/.config/scuttlarr/widgets/hello.ts
-import type { WidgetView } from '@scuttlarr/tui/bar/types'
+// ~/.config/scuttler/widgets/hello.ts
+import type { WidgetView } from '@scuttler/tui/bar/types'
 
 // erased at run time
 
@@ -37,10 +37,10 @@ if (process.argv[2] === 'manifest') {
 }
 ```
 
-**Widgets are data, never code.** A widget prints JSON; scuttlarr renders it with one
+**Widgets are data, never code.** A widget prints JSON; scuttler renders it with one
 generic cell and card, in the theme, on every display. Nothing a widget says can put
 markup or script in the bar — which is also why the same widget renders identically on
-scuttlarr.com's demo.
+www.scuttler.app's demo.
 
 ## The contract
 
@@ -118,7 +118,7 @@ missing. `vercel.ts` reads `VERCEL_TOKEN`, else the Vercel CLI's store;
 
 ## Refresh, failure, and the rules of the road
 
-- **On demand:** `touch ~/.config/scuttlarr/triggers/widget.<id>` ticks a widget now —
+- **On demand:** `touch ~/.config/scuttler/triggers/widget.<id>` ticks a widget now —
   wire it to a git hook, a cron, a keybinding, anything.
 - **Live:** the dir is watched. Drop a widget in and its cell appears within a second;
   edit it and it re-ticks; delete it and the cell goes.
@@ -131,7 +131,7 @@ missing. `vercel.ts` reads `VERCEL_TOKEN`, else the Vercel CLI's store;
 - **Network is the widget's business.** What your widget fetches, and with which
   credential, is yours (DECISIONS 2026-08-15). Credentials come
   from declared **settings** (above) or wherever you like (env, the CLI's own store,
-  `secret`); scuttlarr stores only what a manifest declares, and never calls a provider.
+  `secret`); scuttler stores only what a manifest declares, and never calls a provider.
 - **Layout:** the widget appears in `bar.layout` as `widget:<id>`; toggle or move it in
   Settings → Menubar. Removed widgets keep their slot in the layout, so a re-install lands
   where you left it.
@@ -160,5 +160,5 @@ missing. `vercel.ts` reads `VERCEL_TOKEN`, else the Vercel CLI's store;
 | `vercel.ts`         | Vercel API `/v9/projects`       | 2 min   | The Vercel CLI's own login or a pasted `VERCEL_TOKEN` (Keychain); latest production deployment per project; dim + the fix when signed out or stale.                                           |
 | `trmnl.ts`          | TRMNL `/api/devices`            | 5 min   | Key via `TRMNL_API_KEY` or `secret shared/trmnl/api_key`; hidden without one.                                                                                                                 |
 
-Install one: `cp apps/desktop/widgets/uptime.ts ~/.config/scuttlarr/widgets/` (or
+Install one: `cp apps/desktop/widgets/uptime.ts ~/.config/scuttler/widgets/` (or
 Settings → Menubar → Custom widgets → add file) — then it's yours to edit in place.

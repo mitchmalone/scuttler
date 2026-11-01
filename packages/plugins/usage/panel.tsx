@@ -5,8 +5,8 @@ import {
   USAGE_ALL,
   UsagePanel,
   type UsageReport,
-} from '@scuttlarr/tui'
-import type { PluginPanelProps } from '@scuttlarr/tui/plugins'
+} from '@scuttler/tui'
+import type { PluginPanelProps } from '@scuttler/tui/plugins'
 import { Gauge } from 'lucide-react'
 import { useEffect, useState } from 'react'
 

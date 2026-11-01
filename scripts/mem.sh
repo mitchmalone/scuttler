@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Resident memory of the running scuttlarr and everything it spawned — the number
+# Resident memory of the running scuttler and everything it spawned — the number
 # the definition of done asks for (AGENTS.md, DECISIONS 2026-11-01 "the receipt").
 #
 #   scripts/mem.sh            one raw reading: the app and each helper, plus the total
@@ -14,7 +14,7 @@
 # are running: they're ours. Reads `ps`, needs nothing.
 set -euo pipefail
 
-root_pid() { pgrep -x scuttlarr | head -1 || true; }
+root_pid() { pgrep -x scuttler | head -1 || true; }
 
 # Every descendant of the app: plugin services and their helpers.
 descendants() {
@@ -42,7 +42,7 @@ reading() {
   local root
   root=$(root_pid)
   if [[ -z "$root" ]]; then
-    echo "scuttlarr is not running"
+    echo "scuttler is not running"
     return 1
   fi
   local total=0 rss cmd
@@ -61,12 +61,12 @@ receipt() {
   local root
   root=$(root_pid)
   if [[ -z "$root" ]]; then
-    echo "scuttlarr is not running"
+    echo "scuttler is not running"
     return 1
   fi
   local helpers config
   helpers=$(descendants "$root" | wc -l | tr -d ' ')
-  config=$HOME/.config/scuttlarr/config.json
+  config=$HOME/.config/scuttler/config.json
   local monitor="unknown"
   if [[ -f "$config" ]]; then
     # The reference config has agents.monitor off; a plain-text probe is enough here.

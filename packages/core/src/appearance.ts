@@ -29,7 +29,7 @@ export type AppearancePolicy = {
 export const DEFAULT_POLICY: AppearancePolicy = {
   mode: 'system',
   schedule: { light: '07:00', dark: '19:00' },
-  pair: { light: 'solarized-light', dark: 'scuttlarr' },
+  pair: { light: 'solarized-light', dark: 'scuttler' },
   focus: {},
 }
 

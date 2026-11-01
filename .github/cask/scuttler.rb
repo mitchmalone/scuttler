@@ -1,14 +1,14 @@
-# Template for Casks/scuttlarr.rb in mitchmalone/homebrew-tap. The release workflow
+# Template for Casks/scuttler.rb in mitchmalone/homebrew-tap. The release workflow
 # fills in the version and zip sha256 and writes the whole file on every v* tag —
 # edit here, never in the tap (docs/RELEASING.md).
-cask "scuttlarr" do
+cask "scuttler" do
   version "@VERSION@"
   sha256 "@SHA256@"
 
-  url "https://github.com/mitchmalone/scuttlarr/releases/download/v#{version}/scuttlarr-#{version}.zip"
-  name "scuttlarr"
+  url "https://github.com/mitchmalone/scuttler/releases/download/v#{version}/scuttler-#{version}.zip"
+  name "scuttler"
   desc "Opinionated desktop for developers who live in the terminal"
-  homepage "https://scuttlarr.com/"
+  homepage "https://www.scuttler.app/"
 
   # The app updates itself (selfupdate.rs); brew must not fight it.
   auto_updates true
@@ -18,12 +18,12 @@ cask "scuttlarr" do
   depends_on cask: "nikitabobko/tap/aerospace"
   depends_on macos: :sonoma
 
-  app "scuttlarr.app"
+  app "scuttler.app"
 
   zap trash: [
-    "~/.config/scuttlarr",
-    "~/.local/state/scuttlarr",
+    "~/.config/scuttler",
+    "~/.local/state/scuttler",
     "~/Library/Application Support/com.mitchmalone.scuttlarr",
-    "~/Library/LaunchAgents/scuttlarr.plist",
+    "~/Library/LaunchAgents/scuttler.plist",
   ]
 end

@@ -3,9 +3,9 @@
 //! Assertions cover idle sleep and, on AC, lid close. They can't cover lid close
 //! on battery, and they die with the process, leaving a gap until the login
 //! item relaunches a crash. `pmset -a disablesleep 1` covers both — and is root.
-//! scuttlarr never asks for a password: it runs `sudo -n`, which only succeeds
+//! scuttler never asks for a password: it runs `sudo -n`, which only succeeds
 //! when a sudoers rule allows exactly that command without one (installed once
-//! by `scuttlarr sudoers on`, DECISIONS 2026-10-01). No rule, no override: the
+//! by `scuttler sudoers on`, DECISIONS 2026-10-01). No rule, no override: the
 //! attempt fails quietly and the hold runs on assertions alone.
 //!
 //! Ownership is a marker file beside `awake.json`: written when we switch sleep
@@ -127,7 +127,7 @@ mod tests {
     #[test]
     fn nothing_to_undo_without_the_marker() {
         // No marker, nothing wanted: no command runs, nothing engaged.
-        let dir = std::env::temp_dir().join(format!("scuttlarr-override-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("scuttler-override-{}", std::process::id()));
         reconcile(&dir, false);
         assert!(!engaged());
         assert!(!marker(&dir).exists());

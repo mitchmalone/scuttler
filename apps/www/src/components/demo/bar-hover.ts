@@ -1,7 +1,7 @@
 'use client'
 
-import type { BarHoverApi } from '@scuttlarr/tui'
-import { BAR_HOVER_CLOSE_MS } from '@scuttlarr/tui/bar'
+import type { BarHoverApi } from '@scuttler/tui'
+import { BAR_HOVER_CLOSE_MS } from '@scuttler/tui/bar'
 import { useEffect, useRef, useState } from 'react'
 
 /**

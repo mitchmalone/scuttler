@@ -1,5 +1,5 @@
 {
-  "name": "@scuttlarr/desktop",
+  "name": "@scuttler/desktop",
   "private": true,
   "version": "0.8.0",
   "type": "module",
@@ -12,10 +12,10 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@scuttlarr/core": "workspace:*",
-    "@scuttlarr/plugins": "workspace:*",
-    "@scuttlarr/theme": "workspace:*",
-    "@scuttlarr/tui": "workspace:*",
+    "@scuttler/core": "workspace:*",
+    "@scuttler/plugins": "workspace:*",
+    "@scuttler/theme": "workspace:*",
+    "@scuttler/tui": "workspace:*",
     "@tauri-apps/api": "^2",
     "lucide-react": "^1.30.0",
     "react": "^19.1.0",

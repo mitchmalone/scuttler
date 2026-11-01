@@ -1,8 +1,8 @@
-# @scuttlarr/theme
+# @scuttler/theme
 
 The theme model: Omarchy's `colors.toml` palettes, the derivation that fills in what a
 palette leaves out, `{{ … }}` template rendering, and the generator that bakes
-`@scuttlarr/tui`'s built-in tokens. Pure TypeScript, no runtime dependencies; the tui
+`@scuttler/tui`'s built-in tokens. Pure TypeScript, no runtime dependencies; the tui
 never parses TOML — it imports the generated module.
 
 ## Format
@@ -71,7 +71,7 @@ pin both when they should move together.
 
 1. `mkdir themes/<name>` and write `colors.toml` (copy Omarchy's if it ships one).
 2. Add a `[launcher]` table only where the defaults read wrong in the app.
-3. `pnpm --filter @scuttlarr/theme build` regenerates
+3. `pnpm --filter @scuttler/theme build` regenerates
    `packages/tui/src/themes.generated.ts` and `src/builtin.generated.ts`; commit all
    three (`pnpm verify:themes` fails on a stale module).
 4. If the theme must match a fixed set of tokens, add them to
@@ -94,7 +94,7 @@ terminal's own 16 colours, so it follows the palette in either mode with no mapp
 ## Generation
 
 `bin/generate.ts` (run by Node directly — type stripping, no build step) reads every
-`themes/*/colors.toml`, orders them (scuttlarr, dracula, terminal, amber, then a-z — the
+`themes/*/colors.toml`, orders them (scuttler, dracula, terminal, amber, then a-z — the
 picker's order), and writes the module. It also writes `src/builtin.generated.ts` —
 `BUILTIN_THEME_SOURCES` (name → raw colors.toml) and `TEMPLATES` (file → text) — so the
 app renders built-ins with no filesystem; `src/index.ts` and everything it reaches is

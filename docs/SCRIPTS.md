@@ -1,7 +1,7 @@
-# scuttlarr scripts
+# scuttler scripts
 
 Scripts are first-class citizens: drop a **TypeScript file** (or any executable) into
-`~/.config/scuttlarr/scripts/` and its trigger word joins the launcher grammar — no
+`~/.config/scuttler/scripts/` and its trigger word joins the launcher grammar — no
 build, no chmod, no restart, no store, no manifest file. `.ts` runs under Bun (or Node —
 DECISIONS 2026-08-19). The bundled scripts (`json-format.ts`, `ip.ts`) are reference
 implementations and yours to edit; `lorem` is a built-in.
@@ -58,7 +58,7 @@ Called on every keystroke (debounced ~120ms). Print results to stdout and exit 0
 - **Network is your business** for scripts: fetch what you like, mind the timeouts.
 - **TypeScript:** guard the entry point with `if (import.meta.main)` (see the bundled
   scripts) so the file also imports cleanly into a test; type-only imports from
-  `@scuttlarr/core/types` are erased at run time. No Bun or Node on the machine → the
+  `@scuttler/core/types` are erased at run time. No Bun or Node on the machine → the
   script is skipped with a log line (`needs bun — brew install oven-sh/bun/bun`).
 - **Other languages:** any executable works. Python's one trap: the scripts dir is
   `sys.path[0]`, so a script named after a stdlib module shadows it (the pre-v0.6 bundled

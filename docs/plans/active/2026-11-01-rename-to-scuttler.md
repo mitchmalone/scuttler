@@ -1,6 +1,6 @@
 ---
 title: Rename scuttlarr to scuttler, everywhere, at www.scuttler.app
-status: planned # becomes active when 2026-11-01-docs-sweep.md closes; v0.8.0 is tagged
+status: active # phases 0–2 and 4 done 2026-11-01; phase 3 (the release) is Mitch's hands
 created: 2026-11-01
 updated: 2026-11-01
 links:
@@ -76,7 +76,15 @@ ship. Sail the wreck._
 
 ## Approach
 
-Ship it as **v0.9.0**, one release whose only breaking change is the name, with the
+**Changed on the day (Mitch, 2026-11-01): v0.8.1, not v0.9.0** — a docs-and-rename
+release carries no feature. **And the bundle id stays `com.mitchmalone.scuttlarr`**:
+`selfupdate.rs` refuses a downloaded bundle whose id differs from the running one, so a
+new id would have broken the single upgrade path this release depends on, and it would
+have reset every TCC grant for nothing the user can see. The id is opaque; the
+Application Support dir stays put (only `scuttlarr.db` inside it renames). Recorded in
+DECISIONS 2026-11-01.
+
+Ship it as **v0.8.1**, one release whose only breaking change is the name, with the
 migration doing all the work. Mechanical rename first (one commit, sed over the tree plus
 the five path moves, verify green), then the migration and compatibility shims, then the
 external moves in the release itself, then the few things the sweep left for the new name.
@@ -133,40 +141,49 @@ External moves, in this order, inside `release.sh 0.9.0`'s window:
 
 Phase 0 — gate
 
-- [ ] v0.8.0 released and STATUS says so. Nothing below starts before.
-- [ ] This file moves to `docs/plans/active/2026-11-01-rename-to-scuttler.md`; DECISIONS
-      entry (name, domain, symlink-for-state-only, alias policy, what is left behind).
+- [x] v0.8.0 released and STATUS says so. Nothing below starts before.
+- [x] This file moves to `docs/plans/active/2026-11-01-rename-to-scuttler.md`; DECISIONS
+      entry (name, domain, version, bundle id kept, symlink-for-state-only, alias policy,
+      what is left behind).
 
 Phase 1 — mechanical rename (one commit, `pnpm verify` green)
 
-- [ ] `git mv` the five named paths; sed `scuttlarr` → `scuttler` and `SCUTTLARR_` →
+- [x] `git mv` the five named paths; sed `scuttlarr` → `scuttler` and `SCUTTLARR_` →
       `SCUTTLER_` across tracked files **except** `docs/DECISIONS.md`, `docs/JOURNAL.md`,
       `docs/releases/*`, `docs/plans/done/*` (history keeps the old name), and the
       compatibility constants introduced in phase 2.
-- [ ] Bundle id `com.mitchmalone.scuttler`; package scopes `@scuttler/*`; Rust crate;
-      `bin/scuttler`; perf/log prefixes `[scuttler …]`; the built-in theme `scuttler`.
-- [ ] Workbench story titles unchanged (grep proves it).
-- [ ] `pnpm verify`; `scripts/dev-install.sh --build` on the primary Mac; the app runs
-      with a fresh profile.
+- [x] ~~Bundle id `com.mitchmalone.scuttler`~~ (kept, see Approach); package scopes
+      `@scuttler/*`; Rust crate; `bin/scuttler`; perf/log prefixes `[scuttler …]`; the
+      built-in theme `scuttler`.
+- [x] Workbench story titles unchanged; grep proves it. The one title carrying the name,
+      `Grow scuttlarr into an Omarchy-style bar`, is kept.
+- [x] `pnpm verify`. — [ ] `scripts/dev-install.sh --build` on the primary Mac; the app
+      runs with a fresh profile (Mitch: the agent cannot relaunch the running app).
 
 Phase 2 — migration and shims (TDD in `rename.rs`, `hooks.rs`, `widget_secrets.rs`,
 `config.rs`, setup `lib/`)
 
-- [ ] `rename.rs`: second hop (dirs, plist, Application Support), state-dir symlink,
-      config name rewrite; tests mirror the launcharr ones.
-- [ ] Keychain fallback + copy-forward; sudoers either-path read + Settings copy;
-      hook path rewrite in `~/.claude*/settings.json`.
-- [ ] Plugin bundler aliases `@scuttlarr/*` → `@scuttler/*`; `@launcharr/*` retired.
-- [ ] Setup CLI: `SCUTTLARR_*` fallback; a migration that re-renders generated files to
-      the new state path and removes the symlink when the manifest is clean.
-- [ ] Dev-install on the primary Mac over the live 0.8.0 profile: bar, launcher, theme
+- [x] `rename.rs`: second hop (dirs, plist, `scuttlarr.db`), state-dir symlink, config
+      name rewrite (theme, pair, focus, `themes` key, shortcuts by row name), bundle
+      folder rename + relaunch on first launch; frecency `scuttlarr:*` ids rewritten in
+      `frecency::open`; tests mirror the launcharr ones.
+- [x] Keychain fallback + copy-forward; sudoers: `status` reports the pre-rename file as
+      on, `on` and `off` remove it (the rule itself grants by content, not filename, so
+      no Settings copy was needed); hook path rewrite was already `hooks::boot`'s stale-
+      path mend — test now proves it against the old config path.
+- [x] Plugin bundler alias `@scuttlarr/tui` → the kit; `@launcharr/tui` retired.
+- [x] Setup CLI: `SCUTTLARR_STATE/OVERLAY/NO_NETWORK` fallback; previous-name touched
+      markers still recognised; `migrations/2026-11-01-rename-to-scuttler.zsh` re-renders
+      the shell base, retires `scuttlarr.gitconfig`, removes the symlink when no owned
+      file still imports the old path (`test/rename.test.zsh`).
+- [ ] (Mitch) Dev-install on the primary Mac over the live 0.8.0 profile: bar, launcher, theme
       rung, agents, usage, updates, awake, lights plugin all up; terminals still themed
       (symlink); `scuttler shell --apply` then `doctor` clean; symlink gone after the
       setup migration.
 
-Phase 3 — release v0.9.0
+Phase 3 — release v0.8.1
 
-- [ ] `releases/v0.9.0.md`: breaking change is the name; what migrates by itself, what
+- [x] `releases/v0.8.1.md`: breaking change is the name; what migrates by itself, what
       is a one-time pick again (`custom:scuttler`, `scuttler sudoers on`), what is left
       behind on purpose. Perf receipts per the memory-receipt definition (docs sweep
       finding 1, decided before this release).
@@ -184,21 +201,23 @@ Phase 3 — release v0.9.0
 
 Phase 4 — what the sweep left for the new name
 
-- [ ] Brand assets: `public/og.png` and `public/menubar-icon.png` redrawn as scuttler;
-      www `package.json` description; the Claude Design project title if it is renamed.
-- [ ] `localStorage` key `scuttlarr-theme` read as a fallback for one release.
-- [ ] Current-state docs re-read once on the new name (README, AGENTS, SETUP, THEMES,
+- [ ] Brand assets: `public/og.png` and `public/menubar-icon.png` redrawn as scuttler
+      (Mitch, through Claude Design — the agent draws no pixels); the Claude Design
+      project title if it is renamed. — [x] www `package.json` description.
+- [x] `localStorage` key `scuttlarr-theme` read as a fallback for one release.
+- [x] Current-state docs re-read once on the new name (README, AGENTS, SETUP, THEMES,
       PLUGINS, WIDGETS, SCRIPTS, RELEASING, STATUS, ROADMAP, PRD): the sed is mechanical,
       the sentences around it may not be ("the first release as scuttlarr", "upgrading
       from launcharr" becomes a two-hop note).
-- [ ] History files untouched (DECISIONS, JOURNAL, `releases/*`, `plans/done/*`), the
+- [x] History files untouched (DECISIONS, JOURNAL, `releases/*`, `plans/done/*`), the
       keep-list honoured (`rename.rs` constants, both deprecated casks, `launcharr-notary`,
       `.bak-*` names, legacy ownership prefixes, `@launcharr/tui` → retired,
       `@scuttlarr/tui` alias).
 
 Close
 
-- [ ] Memory notes (agent memory dir) updated: repo path, product name.
+- [x] Memory notes (agent memory dir) updated: product name (the repo path follows the
+      GitHub rename, Mitch's step).
 - [ ] Mitch: dotfiles `~/.config/scuttler/`, aerospace triggers commit.
 - [ ] STATUS, plan → done, same commit.
 
@@ -223,7 +242,7 @@ Close
 - Moving `~/Library/Logs/scuttlarr.log` or `.bak-scuttlarr` files (history, cheap to
   leave; same call as the first rename).
 - Rewriting history docs (DECISIONS, JOURNAL, release notes, done plans) to the new name.
-- Any product change. v0.9.0 is the name and the docs, nothing else.
+- Any product change. v0.8.1 is the name and the docs, nothing else.
 
 ## Risks / open questions
 

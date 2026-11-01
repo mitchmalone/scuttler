@@ -1,4 +1,4 @@
-import { type CustomThemes, resolveTheme, themeNames } from '@scuttlarr/tui'
+import { type CustomThemes, resolveTheme, themeNames } from '@scuttler/tui'
 import { type KeyboardEvent, type Ref, useEffect, useMemo, useRef } from 'react'
 
 import { acceleratorFromEvent } from '../lib/accelerator'
@@ -324,7 +324,7 @@ function Step(p: OnboardingPanelProps & { names: string[] }) {
             </span>
           ) : p.hotkeyTried ? (
             <span className="ob-plate ob-ok">
-              That&apos;s the one. scuttlarr hid and came back.
+              That&apos;s the one. scuttler hid and came back.
             </span>
           ) : (
             <button
@@ -332,7 +332,7 @@ function Step(p: OnboardingPanelProps & { names: string[] }) {
               className="ob-plate ob-note"
               onClick={p.onTryHotkey}
             >
-              Press it now: once to hide scuttlarr, once to bring it back.
+              Press it now: once to hide scuttler, once to bring it back.
             </button>
           )}
           <div className="ob-plate ob-h">Summon it from anywhere.</div>
@@ -353,7 +353,7 @@ function Step(p: OnboardingPanelProps & { names: string[] }) {
           <div className="ob-choices">
             <Choice
               on={choices.bar}
-              title="Use the scuttlarr bar"
+              title="Use the scuttler bar"
               sub="recommended"
               onPick={() => onChoose({ bar: true })}
             />

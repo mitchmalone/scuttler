@@ -8,28 +8,28 @@ use crate::error::{CmdError, CmdResult};
 pub const PANEL_WIDTH: f64 = 640.0;
 
 tauri_panel! {
-    panel!(ScuttlarrPanel {
+    panel!(ScuttlerPanel {
         config: {
             can_become_key_window: true,
             is_floating_panel: true
         }
     })
 
-    panel_event!(ScuttlarrPanelEvents {
+    panel_event!(ScuttlerPanelEvents {
         window_did_resign_key(notification: &NSNotification) -> ()
     })
 }
 
 /// Convert the main window into the non-activating floating panel. The whole product hangs
 /// on this dance: the panel takes key status (so typing lands in it) without ever activating
-/// scuttlarr, so dismissing it hands focus straight back to whatever was frontmost.
+/// scuttler, so dismissing it hands focus straight back to whatever was frontmost.
 pub fn init(app: &AppHandle) -> CmdResult<()> {
     let window = app
         .get_webview_window("main")
         .ok_or_else(|| CmdError::Internal("main window missing".into()))?;
 
     let panel = window
-        .to_panel::<ScuttlarrPanel>()
+        .to_panel::<ScuttlerPanel>()
         .map_err(|e| CmdError::Internal(format!("to_panel failed: {e}")))?;
 
     panel.set_level(PanelLevel::Status.value());
@@ -43,7 +43,7 @@ pub fn init(app: &AppHandle) -> CmdResult<()> {
     panel.set_hides_on_deactivate(false);
 
     // Click-outside dismiss: losing key status hides the panel.
-    let events = ScuttlarrPanelEvents::new();
+    let events = ScuttlerPanelEvents::new();
     let handle = app.clone();
     events.window_did_resign_key(move |_notification| {
         if let Ok(panel) = handle.get_webview_panel("main") {
@@ -81,10 +81,7 @@ pub fn show(app: &AppHandle) {
     let _ = app.emit("panel-shown", ());
     panel.show_and_make_key();
     // §7 budget: hotkey → visible < 100ms. This measures the native side of that path.
-    eprintln!(
-        "[scuttlarr perf] summon {}µs",
-        started.elapsed().as_micros()
-    );
+    eprintln!("[scuttler perf] summon {}µs", started.elapsed().as_micros());
 }
 
 /// Flash a one-line confirmation ("Copied #FF6B8C to clipboard") without taking key

@@ -3,8 +3,8 @@ import {
   parseThemeFile,
   resolve,
   toTokens,
-} from '@scuttlarr/theme'
-import type { CustomThemes } from '@scuttlarr/tui'
+} from '@scuttler/theme'
+import type { CustomThemes } from '@scuttler/tui'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { useEffect, useMemo, useState } from 'react'
@@ -42,7 +42,7 @@ export function tokensOf(theme: UserTheme): ThemeTokens | null {
     const { palette, launcher } = parseThemeFile(theme.text)
     return toTokens(resolve(palette), launcher)
   } catch (e) {
-    console.warn(`[scuttlarr themes] ${theme.name}: ${String(e)}`)
+    console.warn(`[scuttler themes] ${theme.name}: ${String(e)}`)
     return null
   }
 }
@@ -66,7 +66,7 @@ export function mergeThemes(
 }
 
 /** Live list of user themes: one fetch, then `user-themes-changed` from the
- * Rust watcher on `~/.config/scuttlarr/themes/`. */
+ * Rust watcher on `~/.config/scuttler/themes/`. */
 export function useUserThemes(): UserTheme[] {
   const [themes, setThemes] = useState<UserTheme[]>([])
   useEffect(() => {
@@ -76,7 +76,7 @@ export function useUserThemes(): UserTheme[] {
         .then((t) => {
           if (live) setThemes(t)
         })
-        .catch((e) => console.error('[scuttlarr themes] list failed:', e))
+        .catch((e) => console.error('[scuttler themes] list failed:', e))
     load()
     const un = listen('user-themes-changed', load)
     return () => {

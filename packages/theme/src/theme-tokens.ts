@@ -1,7 +1,7 @@
 /**
- * The launcher's flat token map — what both scuttlarr windows, the bar, and the site
- * demo style with. Import-free on purpose: `@scuttlarr/tui` reaches this type through
- * `@scuttlarr/theme/tokens` without its typecheck following the rest of the package.
+ * The launcher's flat token map — what both scuttler windows, the bar, and the site
+ * demo style with. Import-free on purpose: `@scuttler/tui` reaches this type through
+ * `@scuttler/theme/tokens` without its typecheck following the rest of the package.
  */
 export type ThemeTokens = {
   /** Opaque window background (settings). */

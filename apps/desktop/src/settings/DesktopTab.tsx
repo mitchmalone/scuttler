@@ -5,7 +5,7 @@ import {
   MODIFIERS,
   type Modifier,
   clampCornerRadius,
-} from '@scuttlarr/core/desktop'
+} from '@scuttler/core/desktop'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -24,7 +24,7 @@ import SubTabs from './SubTabs'
 
 /**
  * Settings → Desktop (v0.4, plans/done/v0.4-desktop-aerospace-borders.md): the
- * few knobs scuttlarr exposes over AeroSpace + JankyBorders, the install rows for
+ * few knobs scuttler exposes over AeroSpace + JankyBorders, the install rows for
  * either tool when it is missing, the adopt-or-leave choice for a hand-written
  * aerospace.toml, and the system corner-radius slider. Everything else about
  * tiling is opinion; `managed` off hands the file back to a text editor.
@@ -135,9 +135,9 @@ export default function DesktopTab({
       {sub === 'tiling' && (
         <>
           <p className="hint lead">
-            scuttlarr sets up window tiling (AeroSpace) and, if you want them,
+            scuttler sets up window tiling (AeroSpace) and, if you want them,
             window borders (JankyBorders) — preconfigured, a few knobs here, the
-            whole file yours the moment you stop letting scuttlarr manage it.
+            whole file yours the moment you stop letting scuttler manage it.
           </p>
 
           <Row label="Tiling">
@@ -175,7 +175,7 @@ export default function DesktopTab({
               <Row label="Existing config">
                 <p className="hint" style={{ marginTop: 0 }}>
                   You already have a hand-written <code>{status.tomlPath}</code>
-                  . scuttlarr won&apos;t touch it until you choose:
+                  . scuttler won&apos;t touch it until you choose:
                 </p>
                 <div className="buttonrow">
                   <button
@@ -187,7 +187,7 @@ export default function DesktopTab({
                         .catch((e) => setInstallError(String(e?.detail ?? e)))
                     }
                   >
-                    use scuttlarr&apos;s (backs yours up)
+                    use scuttler&apos;s (backs yours up)
                   </button>
                   <button
                     className="ghost"
@@ -208,7 +208,7 @@ export default function DesktopTab({
                     checked={desktop.tiling.managed}
                     onChange={(e) => setTiling({ managed: e.target.checked })}
                   />
-                  Let scuttlarr manage AeroSpace
+                  Let scuttler manage AeroSpace
                 </label>
               </Row>
               {!desktop.tiling.managed && (
@@ -254,8 +254,8 @@ export default function DesktopTab({
                     px
                     <p className="hint">
                       The gap you see — between windows, at the screen edges,
-                      and below whichever bar is showing (native, scuttlarr's,
-                      or neither). Border width is factored in automatically.
+                      and below whichever bar is showing (native, scuttler's, or
+                      neither). Border width is factored in automatically.
                     </p>
                   </Row>
                   <Row label="Workspaces">
@@ -419,7 +419,7 @@ export default function DesktopTab({
 /**
  * Unmanaged: the file is yours. Show what's at the canonical path and offer the
  * two hand-offs — point it at a toml you already keep (symlink), or save
- * scuttlarr's config somewhere as a starting point (then it's yours).
+ * scuttler's config somewhere as a starting point (then it's yours).
  */
 function TomlRow({
   status,
@@ -453,12 +453,12 @@ function TomlRow({
         )}
         {state === 'foreign' && (
           <>
-            <code>{path}</code> is yours; scuttlarr won&apos;t touch it.
+            <code>{path}</code> is yours; scuttler won&apos;t touch it.
           </>
         )}
         {state === 'managed' && (
           <>
-            <code>{path}</code> is the last file scuttlarr wrote — yours now.
+            <code>{path}</code> is the last file scuttler wrote — yours now.
           </>
         )}
       </p>
@@ -505,9 +505,8 @@ function TomlRow({
       <p className="hint">
         &ldquo;Use my own config&rdquo; symlinks <code>{path}</code> to the file
         you pick (dotfiles-friendly; anything already there is backed up).
-        &ldquo;Save a copy&rdquo; writes scuttlarr&apos;s config where you
-        choose and links to it — a starting point that&apos;s yours from then
-        on.
+        &ldquo;Save a copy&rdquo; writes scuttler&apos;s config where you choose
+        and links to it — a starting point that&apos;s yours from then on.
       </p>
     </Row>
   )

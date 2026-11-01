@@ -1,6 +1,6 @@
 /**
  * Agents panel, presentational half: live coding-agent sessions from the
- * monitor (agents.rs). Pure props + @scuttlarr/tui — the container
+ * monitor (agents.rs). Pure props + @scuttler/tui — the container
  * (AgentsPanelContainer) owns invokes and refresh.
  */
 import {
@@ -10,7 +10,7 @@ import {
   ListRow,
   Panel,
   useListNav,
-} from '@scuttlarr/tui'
+} from '@scuttler/tui'
 import type { KeyboardEvent } from 'react'
 
 /** The kit's type, re-exported so the container and stories have one import. */

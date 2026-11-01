@@ -1,10 +1,10 @@
 {
   "$schema": "https://zed.dev/schema/themes/v0.2.0.json",
-  "name": "scuttlarr",
-  "author": "scuttlarr — rendered from theme {{ name }}, do not edit",
+  "name": "scuttler",
+  "author": "scuttler — rendered from theme {{ name }}, do not edit",
   "themes": [
     {
-      "name": "scuttlarr",
+      "name": "scuttler",
       "appearance": "{{ mode }}",
       "style": {
         "background": "{{ background }}",

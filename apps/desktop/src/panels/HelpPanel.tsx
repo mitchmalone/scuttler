@@ -1,16 +1,16 @@
 /**
  * Help panel, presentational half: the command reference (Omarchy keybindings
  * screen). Sections of `left → right` rows, live-filtered by a prompt. Pure
- * props + @scuttlarr/tui + the pure core matcher — no tauri imports.
+ * props + @scuttler/tui + the pure core matcher — no tauri imports.
  */
-import { fuzzyMatch } from '@scuttlarr/core/matcher'
+import { fuzzyMatch } from '@scuttler/core/matcher'
 import {
   HotkeyRow,
   Panel,
   SectionHeader,
   TextPrompt,
   useListNav,
-} from '@scuttlarr/tui'
+} from '@scuttler/tui'
 import { CircleHelp } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
@@ -57,7 +57,7 @@ export function HelpPanel({ sections, onClose }: HelpPanelProps) {
     <Panel
       icon={<CircleHelp size={17} strokeWidth={2} aria-hidden />}
       title="Help"
-      subtitle="everything scuttlarr answers to"
+      subtitle="everything scuttler answers to"
     >
       <TextPrompt
         autoFocus

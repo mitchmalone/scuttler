@@ -1,16 +1,16 @@
 import {
   type AppearancePolicy,
   DEFAULT_POLICY,
-} from '@scuttlarr/core/appearance'
-import type { DesktopConfig } from '@scuttlarr/core/desktop'
-import type { Link } from '@scuttlarr/core/types'
-import type { BarZones } from '@scuttlarr/tui'
+} from '@scuttler/core/appearance'
+import type { DesktopConfig } from '@scuttler/core/desktop'
+import type { Link } from '@scuttler/core/types'
+import type { BarZones } from '@scuttler/tui'
 
 import type { ThemeTokens } from './themes'
 
 /**
  * App configuration. Desktop-only: it references ThemeTokens and app concerns (hotkey,
- * terminal hand-off), so it lives beside the app rather than in @scuttlarr/core.
+ * terminal hand-off), so it lives beside the app rather than in @scuttler/core.
  */
 export type Config = {
   /** Defaults generation (config.rs `DEFAULTS_VERSION`); Rust owns it, a write without
@@ -29,7 +29,7 @@ export type Config = {
   /** Alfred-style dead-end fallback, {query} placeholder. */
   searchFallback: string
   indexBookmarks: boolean
-  /** Active theme name: built-in (scuttlarr, dracula, terminal) or a `themes` key. */
+  /** Active theme name: built-in (scuttler, dracula, terminal) or a `themes` key. */
   theme: string
   /** User-defined themes: name → partial token overrides (see lib/themes.ts). */
   themes: Record<string, Partial<ThemeTokens>>
@@ -45,7 +45,7 @@ export type Config = {
   /** The theme rung: render the theme beyond the app (Ghostty, tmux, prompt, delta,
    * Claude Code) and follow it with macOS light/dark. */
   appearance: AppearanceConfig | undefined
-  /** `colorpicker` opens the scuttlarr loupe (2×) — needs Screen Recording, so it is
+  /** `colorpicker` opens the scuttler loupe (2×) — needs Screen Recording, so it is
    * opt-in and the toggle is what triggers the prompt; off = Apple's sampler. */
   colorLoupe: boolean
   /** Loupe magnification, 2–8 (default 8). */
@@ -58,7 +58,7 @@ export type Config = {
   widgets: Record<string, Record<string, string>>
   /** Plugins (docs/PLUGINS.md): which are switched off. */
   plugins: { disabled: string[] }
-  /** scuttlarr's own updates: check GitHub Releases and offer the newest in `updates ⏎`. */
+  /** scuttler's own updates: check GitHub Releases and offer the newest in `updates ⏎`. */
   updates: UpdatesConfig | undefined
 }
 
@@ -67,7 +67,7 @@ export type UpdatesConfig = { checkSelf: boolean }
 export type MachineConfig = { enabled: boolean }
 
 /** `everywhere`/`macos` are the rung; the rest is the policy
- * (`@scuttlarr/core/appearance`), stored flat in the same object. */
+ * (`@scuttler/core/appearance`), stored flat in the same object. */
 export type AppearanceConfig = {
   everywhere: boolean
   macos: boolean
@@ -95,10 +95,10 @@ export type BarConfig = {
 }
 
 /* Shape and default arrangement live in the kit — the bar renders from them in
- * both the app and on scuttlarr.com, so there is one definition and one
+ * both the app and on www.scuttler.app, so there is one definition and one
  * normalization (invariant 10; DECISIONS 2026-11-01). Re-exported here so the
  * app's config consumers keep one import. */
-export type { BarModule, BarZones } from '@scuttlarr/tui'
+export type { BarModule, BarZones } from '@scuttler/tui'
 export {
   BAR_MODULE_IDS,
   DEFAULT_BAR_LAYOUT,
@@ -109,14 +109,14 @@ export {
   normalizeBarZones,
   notchedZones,
   widgetModuleId,
-} from '@scuttlarr/tui/bar/layout'
+} from '@scuttler/tui/bar/layout'
 
 /** Layout id for a plugin's cell (docs/PLUGINS.md): `plugin:<id>`. */
 export {
   isPluginModuleId,
   pluginIdOf,
   pluginModuleId,
-} from '@scuttlarr/tui/plugins'
+} from '@scuttler/tui/plugins'
 
 export type AgentsConfig = {
   /** Local agent session monitoring (socket, bar cells, `agents ⏎`). */
@@ -131,7 +131,7 @@ export type AgentsConfig = {
   askMode: boolean
   /** Which CLI answers `?`. */
   askProvider: 'claude' | 'codex'
-  /** Consent capabilities: scuttlarr may read the CLI's stored credentials
+  /** Consent capabilities: scuttler may read the CLI's stored credentials
    * for account-limit fetches; the code owns source selection + fallback. */
   claudeCreds: boolean
   codexCreds: boolean

@@ -1,5 +1,5 @@
-# scuttlarr theme: {{ name }} — rendered, do not edit. The base tmux.conf ends with
-# `source-file -q ~/.local/state/scuttlarr/current/theme/tmux.conf`; `theme set`
+# scuttler theme: {{ name }} — rendered, do not edit. The base tmux.conf ends with
+# `source-file -q ~/.local/state/scuttler/current/theme/tmux.conf`; `theme set`
 # also pushes OSC colours into every running pane, so this only has to style tmux.
 set -g status-style "bg={{ background }},fg={{ foreground }}"
 set -g status-left "#[fg={{ background }},bg={{ accent }},bold] #S #[fg={{ accent }},bg={{ background }}] "

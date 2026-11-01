@@ -1,10 +1,10 @@
-// GENERATED — do not edit; pnpm --filter @scuttlarr/theme build
+// GENERATED — do not edit; pnpm --filter @scuttler/theme build
 // Source: packages/theme/themes/<name>/colors.toml, baked by packages/theme/src/generate.ts.
 // `pnpm verify:themes` fails when this file is stale.
-import type { ThemeTokens } from '@scuttlarr/theme/tokens'
+import type { ThemeTokens } from '@scuttler/theme/tokens'
 
 export const BUILTIN_THEMES: Record<string, ThemeTokens> = {
-  scuttlarr: {
+  scuttler: {
     bg: '#1c1d2a',
     surface: '#262838',
     glass: 'rgba(28, 29, 42, 0.96)',

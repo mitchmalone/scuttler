@@ -1,9 +1,9 @@
 // Leaf imports, not the kit's root: this page is a Server Component and the
 // root re-exports hooks, which Next refuses to load on the server (the site
 // build broke this way 2026-10-28 to 2026-11-01).
-import { agentStateLabel } from '@scuttlarr/tui/bar'
-import { AgentStateIcon } from '@scuttlarr/tui/bar/agent-icons'
-import { GithubIcon, XIcon } from '@scuttlarr/tui/icons'
+import { agentStateLabel } from '@scuttler/tui/bar'
+import { AgentStateIcon } from '@scuttler/tui/bar/agent-icons'
+import { GithubIcon, XIcon } from '@scuttler/tui/icons'
 import {
   AppWindow,
   ArrowUpRight,
@@ -87,7 +87,7 @@ const FEATURES = [
     body: (
       <>
         Drop an executable in{' '}
-        <code className={MONO_CODE}>~/.config/scuttlarr/scripts/</code> — its
+        <code className={MONO_CODE}>~/.config/scuttler/scripts/</code> — its
         trigger word is live before you switch back to the panel.{' '}
         <code className={MONO_CODE}>json</code> and{' '}
         <code className={MONO_CODE}>ip</code> ship bundled.
@@ -201,11 +201,11 @@ const FEATURES = [
     title: 'The desktop layer',
     body: (
       <>
-        Tiling via AeroSpace with a config scuttlarr writes for you — a
-        modifier, gaps, workspaces, done. Off until you turn it on, in setup or
-        Settings → Desktop. Opt-in JankyBorders in your theme&rsquo;s accent,
-        and the pre-Tahoe window corners back if you want them. Flip{' '}
-        <em>manage</em> off and the toml is yours.
+        Tiling via AeroSpace with a config scuttler writes for you — a modifier,
+        gaps, workspaces, done. Off until you turn it on, in setup or Settings →
+        Desktop. Opt-in JankyBorders in your theme&rsquo;s accent, and the
+        pre-Tahoe window corners back if you want them. Flip <em>manage</em> off
+        and the toml is yours.
       </>
     ),
   },
@@ -228,7 +228,7 @@ const FEATURES = [
       <>
         <code className={MONO_CODE}>updates ⏎</code> is a ledger: Homebrew, the
         App Store, pnpm and mise, a count in the bar, each package a click or
-        Enter from upgrading in place with live output. scuttlarr&rsquo;s own
+        Enter from upgrading in place with live output. scuttler&rsquo;s own
         releases arrive the same way, verified against our signature.
       </>
     ),
@@ -290,7 +290,7 @@ const BAR_MODULES = [
 ]
 
 const COMPARISON = {
-  columns: ['scuttlarr', 'Raycast', 'Alfred', 'Sketchybar'],
+  columns: ['scuttler', 'Raycast', 'Alfred', 'Sketchybar'],
   rows: [
     [
       'feels like',
@@ -355,9 +355,9 @@ const ROADMAP = [
     'a ledger across package managers; upgrades in place; self-update',
   ],
   [
-    'wip',
+    'done',
     'The rename',
-    'scuttlarr becomes scuttler, at scuttler.app, as v0.9.0',
+    'scuttlarr became scuttler, at www.scuttler.app, in v0.8.1',
   ],
   [
     'todo',
@@ -522,7 +522,7 @@ export default function Home() {
               If you run coding agents in tmux all day, the bar is their status
               board. Every session is one glyph, grouped by tmux session and
               ordered by tab. Hover a cell for the task and state; click it and
-              scuttlarr drops you into the exact pane.
+              scuttler drops you into the exact pane.
             </p>
             {/* Glyphs, labels and colours all come from the kit — `bar-agent-*`
                 is the same class the real cell wears, so this legend cannot
@@ -581,7 +581,7 @@ export default function Home() {
           </Table>
         </div>
         <p className="mt-3.5 text-[12.5px] text-(--dim2)">
-          All fine tools, and all of them do things scuttlarr doesn&rsquo;t. The
+          All fine tools, and all of them do things scuttler doesn&rsquo;t. The
           launcher and the bar are where they overlap; the rungs above them —
           Desktop, Theme, Machine — are what none of them try. This table is
           about temperament, not superiority.
@@ -603,11 +603,11 @@ export default function Home() {
           (hotkey, bar, agents, theme, tiling). One Enter applies it, Esc puts
           it off, and <code className={MONO_CODE}>setup ⏎</code> runs it again.
           A default config is written to{' '}
-          <code className={MONO_CODE}>~/.config/scuttlarr/config.json</code>,
-          and scuttlarr registers as a login item (toggleable in settings). The
-          bar and the launcher are on by default; tiling and the Theme and
-          Machine rungs stay off until you turn them on. Upgrading keeps the
-          settings you had.
+          <code className={MONO_CODE}>~/.config/scuttler/config.json</code>, and
+          scuttler registers as a login item (toggleable in settings). The bar
+          and the launcher are on by default; tiling and the Theme and Machine
+          rungs stay off until you turn them on. Upgrading keeps the settings
+          you had.
         </p>
       </section>
 
@@ -658,7 +658,7 @@ export default function Home() {
               className="opacity-75 [filter:var(--logo)]"
             />
             <span className="text-[13px] text-(--dim2)">
-              scuttlarr {VERSION} — scuttle the ship, sail the wreck. The apps
+              scuttler {VERSION} — scuttle the ship, sail the wreck. The apps
               still won&rsquo;t launch themselves. Yarr.
             </span>
           </div>

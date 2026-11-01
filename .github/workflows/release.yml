@@ -55,7 +55,7 @@ jobs:
             echo "release not visible yet (attempt $i) — retrying"
             sleep 10
           done
-          for asset in "scuttlarr-$VERSION.zip" "scuttlarr-$VERSION.dmg" "SHA256SUMS"; do
+          for asset in "scuttler-$VERSION.zip" "scuttler-$VERSION.dmg" "SHA256SUMS"; do
             grep -qx "$asset" assets.txt || { echo "::error::release asset missing: $asset"; exit 1; }
           done
 
@@ -84,22 +84,23 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --pattern SHA256SUMS
-          ZIP_SHA=$(awk -v f="scuttlarr-$VERSION.zip" '$2==f{print $1}' SHA256SUMS)
+          ZIP_SHA=$(awk -v f="scuttler-$VERSION.zip" '$2==f{print $1}' SHA256SUMS)
           [ -n "$ZIP_SHA" ] || { echo "::error::zip sha not found in SHA256SUMS"; exit 1; }
           git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/${{ vars.HOMEBREW_TAP_REPO }}.git" tap
           # The cask is generated whole from the template in this repo; the tap is output.
           sed -e "s/@VERSION@/$VERSION/" -e "s/@SHA256@/$ZIP_SHA/" \
-            .github/cask/scuttlarr.rb > tap/Casks/scuttlarr.rb
+            .github/cask/scuttler.rb > tap/Casks/scuttler.rb
           cd tap
-          # launcharr.rb stays at its last release as a deprecated alias pointing here;
-          # added once, never otherwise touched.
-          if [ -f Casks/launcharr.rb ] && ! grep -q 'deprecate!' Casks/launcharr.rb; then
-            sed -i 's|^  depends_on arch: :arm64|  deprecate! date: "2026-10-01", because: "is now scuttlarr", replacement_cask: "scuttlarr"\n\n  depends_on arch: :arm64|' Casks/launcharr.rb
+          # The previous names' casks stay at their last release as deprecated aliases
+          # pointing here; the line is added once, the files never otherwise touched
+          # (launcharr.rb carries its own from 2026-10-01).
+          if [ -f Casks/scuttlarr.rb ] && ! grep -q 'deprecate!' Casks/scuttlarr.rb; then
+            sed -i "s|^  depends_on arch: :arm64|  deprecate! date: \"$(date -u +%F)\", because: \"is now scuttler\", replacement_cask: \"scuttler\"\n\n  depends_on arch: :arm64|" Casks/scuttlarr.rb
           fi
-          git config user.name "scuttlarr release bot"
+          git config user.name "scuttler release bot"
           git config user.email "actions@users.noreply.github.com"
           git add -A
-          git commit -m "scuttlarr v$VERSION"
+          git commit -m "scuttler v$VERSION"
           git push
 
   notion:
@@ -118,7 +119,7 @@ jobs:
             echo "configured=true" >> "$GITHUB_OUTPUT"
           fi
       - if: steps.config.outputs.configured == 'true'
-        name: Set Version on the Scuttlarr row
+        name: Set Version on the Scuttler row
         env:
           NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
         run: |

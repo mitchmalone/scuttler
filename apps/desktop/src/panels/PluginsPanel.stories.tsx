@@ -1,11 +1,11 @@
-import { FIRST_PARTY } from '@scuttlarr/plugins'
+import { FIRST_PARTY } from '@scuttler/plugins'
 import {
   UPDATES_PLUGIN,
   updatesReportAt,
-} from '@scuttlarr/plugins/updates/fixtures'
-import { USAGE_PLUGIN, usageReportAt } from '@scuttlarr/plugins/usage/fixtures'
-import { defineStories } from '@scuttlarr/tui'
-import type { PluginState } from '@scuttlarr/tui/plugins'
+} from '@scuttler/plugins/updates/fixtures'
+import { USAGE_PLUGIN, usageReportAt } from '@scuttler/plugins/usage/fixtures'
+import { defineStories } from '@scuttler/tui'
+import type { PluginState } from '@scuttler/tui/plugins'
 
 import { PluginCellHost } from '../plugins/components'
 import { PluginsPanel } from './PluginsPanel'
@@ -84,7 +84,7 @@ function plugins(): PluginState[] {
       hasCell: true,
       hasPanel: true,
       builtAt: t - 60,
-      buildError: 'cell.tsx:14: Could not resolve "@scuttlarr/tui/bar"',
+      buildError: 'cell.tsx:14: Could not resolve "@scuttler/tui/bar"',
       state: null,
       running: false,
     },

@@ -1,4 +1,4 @@
-import { normalizeDesktop } from '@scuttlarr/core/desktop'
+import { normalizeDesktop } from '@scuttler/core/desktop'
 
 import { prettyAccelerator } from './accelerator'
 import type { Config } from './config'
@@ -201,10 +201,10 @@ export function recapLines(c: SetupChoices): RecapLine[] {
   return [
     {
       on: true,
-      text: `${keys.slice(0, -1).join('')} ${keys.at(-1)} opens scuttlarr`,
+      text: `${keys.slice(0, -1).join('')} ${keys.at(-1)} opens scuttler`,
     },
     c.bar
-      ? { on: true, text: 'The scuttlarr menu bar' }
+      ? { on: true, text: 'The scuttler menu bar' }
       : { on: false, text: 'The macOS menu bar stays' },
     c.agents
       ? {
@@ -216,7 +216,7 @@ export function recapLines(c: SetupChoices): RecapLine[] {
       : { on: false, text: 'Agent tracking off' },
     c.match
       ? { on: true, text: `${c.theme} in Ghostty, tmux and your editors` }
-      : { on: true, text: `${c.theme}, in scuttlarr only` },
+      : { on: true, text: `${c.theme}, in scuttler only` },
     c.tiling
       ? { on: true, text: 'Tiling with AeroSpace' }
       : { on: false, text: 'No tiling' },

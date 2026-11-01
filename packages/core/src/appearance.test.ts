@@ -62,7 +62,7 @@ describe('resolveAppearance', () => {
     expect(
       resolveAppearance(DEFAULT_POLICY, inputs({ systemDark: true })),
     ).toEqual({
-      theme: 'scuttlarr',
+      theme: 'scuttler',
       dark: true,
       via: 'pair',
       by: 'system',
@@ -83,7 +83,7 @@ describe('resolveAppearance', () => {
         { ...DEFAULT_POLICY, mode: 'dark' },
         inputs({ systemDark: false }),
       ).theme,
-    ).toBe('scuttlarr')
+    ).toBe('scuttler')
   })
   it('schedule picks by the clock', () => {
     const p: AppearancePolicy = { ...DEFAULT_POLICY, mode: 'schedule' }

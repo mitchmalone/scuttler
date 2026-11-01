@@ -4,8 +4,8 @@
 > history lives in git, `plans/done/`, `releases/` and `JOURNAL.md`; the backlog with its
 > triggers lives in `ROADMAP.md`.
 >
-> Last updated: 2026-11-01 (docs sweep done — six commits; the site hands-check is the
-> one open item; the rename is next)
+> Last updated: 2026-11-01 (the rename to scuttler is coded and verified; v0.8.1 is one
+> `release.sh` run away, after the GitHub repo rename — Mitch's hands)
 
 ## Where we are
 
@@ -16,9 +16,13 @@
 - **Docs sweep done** (`plans/done/2026-11-01-docs-sweep.md`, six commits): the memory
   receipt, STATUS/ROADMAP/PRD as cursors, SETUP.md true, STANDARDS re-vendored, the
   extension docs split, the logs re-sorted and marked, the site on the kit's own panel
-  registry, bar layout and launcher. **Next:**
-  `plans/active/2026-11-01-rename-to-scuttler.md` — scuttlarr → scuttler at
-  `www.scuttler.app` as v0.9.0 (old domains already redirect there).
+  registry, bar layout and launcher.
+- **The rename is in the tree** (`plans/active/2026-11-01-rename-to-scuttler.md`,
+  DECISIONS 2026-11-01): scuttlarr → scuttler everywhere but history, bundle id kept,
+  `rename.rs` second hop with the state symlink, frecency and config name rewrites, the
+  Keychain/plugin/CLI/site fallbacks, the setup migration, `releases/v0.8.1.md` drafted.
+  `pnpm verify` green. **Not yet done:** the release itself (phase 3) and the brand
+  assets (phase 4) — see Needs Mitch.
 - **Parked:** `plans/done/lights-plugin.md` (built, in daily use; Nanoleaf waits on
   Mitch's Home.app shortcuts, outside the repo); `plans/active/opensource-readiness-review.md`
   (`planned`, rewritten for the current scope; ROADMAP carries its trigger).
@@ -66,8 +70,16 @@ Settings); `setup ⏎` starts from the current config; the hotkey try; Esc on th
 screen restores the old theme; the field stops while hidden (idle CPU); with an awake
 hold armed, five fresh-config launches each open setup on first summon.
 
-Release path: self-update live proof at v0.9.0 (`updates ⏎` offers it, `↵` installs,
-across the rename).
+Release path (phase 3 of the rename plan, in this order): `gh repo rename scuttler` and
+`git remote set-url origin` (the code already points at `mitchmalone/scuttler`, so
+`release.sh` refuses until the repo does); Vercel project renamed with `www.scuttler.app`
+as its production domain; `scripts/release.sh 0.8.1`; fan-out green and the tap holding
+`scuttler.rb` plus a deprecated `scuttlarr.rb`; then the live proof of the one
+cross-rename upgrade — a 0.8.0 install runs `updates ⏎` → `↵`, lands as `scuttler.app`,
+relaunches with its profile migrated; and `brew upgrade` on a scuttlarr install reports
+the deprecation. Before releasing: `scripts/dev-install.sh --build` over the live profile
+(bar, launcher, theme rung, agents, usage, updates, awake, lights all up; terminals still
+themed; `scuttler doctor` clean after the migration ran; the state symlink gone).
 
 Site (docs sweep step 6, not seen in a browser by the agent): home page copy; `/docs`;
 the demo prompt is now the kit's `Launcher` (type `setup`, `theme`, `ss`, `usage`; `?`
@@ -83,8 +95,13 @@ hero.
   shell base's include lines are uncommitted in chezmoi (or the next `apply` fights it).
 - lights plugin: create the `lights/<light>/…` shortcuts, then measure `shortcuts run`
   latency and slider drag in a card.
+- Rename leftovers that need hands or pixels: `public/og.png` and `public/menubar-icon.png`
+  redrawn as scuttler (Claude Design); dotfiles to `~/.config/scuttler/` and the theme
+  import path; `custom:scuttler` in Claude Code; `scuttler sudoers on` once; the Notion
+  release row's name; the old domain's renewal date goes here once known.
 
 ## Next
 
-The rename (`plans/active/2026-11-01-rename-to-scuttler.md`), then whatever ROADMAP's
-triggers fire. The v0.8.0 memory receipt baseline is taken at the next release build.
+Release v0.8.1 (phase 3 above), close the rename plan in the release commit, then
+whatever ROADMAP's triggers fire. The v0.8.0 memory receipt baseline is taken at the
+release build, before the new one replaces it.

@@ -1,5 +1,5 @@
-import { defineStories } from '@scuttlarr/tui'
-import '@scuttlarr/tui/launcher.css'
+import { defineStories } from '@scuttler/tui'
+import '@scuttler/tui/launcher.css'
 import { useState } from 'react'
 
 import {
@@ -18,7 +18,7 @@ const CHOICES: SetupChoices = {
   bar: true,
   agents: true,
   limits: false,
-  theme: 'scuttlarr',
+  theme: 'scuttler',
   match: true,
   tiling: false,
   themePicked: false,

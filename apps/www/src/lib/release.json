@@ -4,11 +4,11 @@
   "signed": true,
   "artifacts": {
     "zip": {
-      "url": "https://github.com/mitchmalone/scuttlarr/releases/download/v0.8.0/scuttlarr-0.8.0.zip",
+      "url": "https://github.com/mitchmalone/scuttler/releases/download/v0.8.0/scuttler-0.8.0.zip",
       "sha256": "95bd89bc7322980a6943383f06f8616a62827379365c3ebf03285f0fb258a516"
     },
     "dmg": {
-      "url": "https://github.com/mitchmalone/scuttlarr/releases/download/v0.8.0/scuttlarr-0.8.0.dmg",
+      "url": "https://github.com/mitchmalone/scuttler/releases/download/v0.8.0/scuttler-0.8.0.dmg",
       "sha256": "57a3174a5fbd810c723aea7ded3b6da2de735497f9b929a2162ef681a658c115"
     }
   }

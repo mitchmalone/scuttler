@@ -78,7 +78,7 @@ module.exports = {
       path: '(^|/)(dist|\\.next|out|target|gen)/|\\.generated\\.ts$',
     },
     tsPreCompilationDeps: true,
-    // Resolution only (apps/www's @/* alias); @scuttlarr/* resolves via workspace exports.
+    // Resolution only (apps/www's @/* alias); @scuttler/* resolves via workspace exports.
     tsConfig: { fileName: 'tsconfig.depcruise.json' },
     enhancedResolveOptions: {
       exportsFields: ['exports'],

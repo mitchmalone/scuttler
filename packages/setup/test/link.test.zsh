@@ -1,8 +1,8 @@
 #!/bin/zsh
 source "${0:A:h}/harness.zsh"
-cli="$SCUTTLARR_BASE/bin/scuttlarr"
-link="$HOME/.local/bin/scuttlarr"
-base_bin="$SCUTTLARR_BASE/bin/scuttlarr"
+cli="$SCUTTLER_BASE/bin/scuttler"
+link="$HOME/.local/bin/scuttler"
+base_bin="$SCUTTLER_BASE/bin/scuttler"
 
 # plan on a fresh home: would create, writes nothing
 sc_link_run plan 2>/dev/null
@@ -16,7 +16,7 @@ assert_ok "link is a symlink" test -L "$link"
 assert_eq "${base_bin:A}" "${link:A}" "points at base"
 assert_eq "symlink	$link	$base_bin	cli" "$(sc_manifest_get "$link")" "manifest line"
 assert_match "hints when ~/.local/bin is off PATH" "$out" "not on PATH"
-assert_eq "$SCUTTLARR_VERSION" "$("$link" version)" "linked cli runs"
+assert_eq "$SCUTTLER_VERSION" "$("$link" version)" "linked cli runs"
 
 # second run: unchanged, one manifest line
 out="$("$cli" link 2>&1)"
@@ -64,7 +64,7 @@ assert_no_file "$(sc_adopted_path "$link")" "nothing to adopt"
 "$cli" unlink 2>/dev/null
 
 # unlink leaves a foreign path alone
-print "theirs" > "$link"
+rm -f "$link"; print "theirs" > "$link"   # rm first: a live symlink here would write through into base
 assert_fails "unlink refuses a foreign file" "$cli" unlink 2>/dev/null
 assert_eq "theirs" "$(cat "$link")" "foreign file untouched"
 

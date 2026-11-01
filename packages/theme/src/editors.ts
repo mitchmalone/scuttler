@@ -22,7 +22,7 @@ export const EDITOR_THEME_KEYS = [
 ] as const satisfies ReadonlyArray<keyof EditorThemes>
 
 /** The rendered VS Code/Zed theme's name — a constant, not per theme. */
-export const RENDERED_EDITOR_THEME = 'scuttlarr'
+export const RENDERED_EDITOR_THEME = 'scuttler'
 
 /** Built-in theme name → { neovim, helix }. Absent → `default`. */
 export const DEFAULT_EDITOR_THEMES: Readonly<

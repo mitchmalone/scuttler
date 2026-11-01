@@ -70,13 +70,13 @@ sc_default NSGlobalDomain com.apple.mouse.tapBehavior int 1 2>/dev/null
 assert_eq 1 "$SC_DEFAULTS_CHANGED" "global copy absent, currentHost fine"
 
 # ---- the runner sources base then overlay ----
-mkdir -p "$SCUTTLARR_OVERLAY"
-print 'sc_default com.apple.dock tilesize int 64' > "$SCUTTLARR_OVERLAY/defaults.sh"
+mkdir -p "$SCUTTLER_OVERLAY"
+print 'sc_default com.apple.dock tilesize int 64' > "$SCUTTLER_OVERLAY/defaults.sh"
 sc_defaults_run plan 2>/dev/null
 assert_ok "base keys counted" test "$SC_DEFAULTS_SEEN" -gt 60
 sc_defaults_run apply 2>/dev/null
 assert_eq 64 "$(t_read read com.apple.dock tilesize)" "overlay wins (last declaration)"
-assert_eq 47 "$(sc_snapshot_get com.apple.dock tilesize -)" "snapshot holds the pre-scuttlarr value"
+assert_eq 47 "$(sc_snapshot_get com.apple.dock tilesize -)" "snapshot holds the pre-scuttler value"
 sc_defaults_run check 2>/dev/null
 assert_eq 0 "$SC_DEFAULTS_CHANGED" "after apply, check is clean"
 

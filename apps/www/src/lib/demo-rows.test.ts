@@ -10,7 +10,7 @@ import { SEED_FRECENCY } from './launch-index'
 
 /**
  * Adapter tests only: engine behavior (matching, ranking, grammar) is tested in
- * @scuttlarr/core — these cover the fake index and the enter → toast reading.
+ * @scuttler/core — these cover the fake index and the enter → toast reading.
  */
 describe('computeDemoRows', () => {
   it('returns no rows for an empty query', () => {

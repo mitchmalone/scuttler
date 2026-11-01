@@ -47,7 +47,7 @@ _sc_remove_paths() {
       generated)
         if [[ -f "$target" && ! -L "$target" ]]; then
           (( SC_REMOVE_PATHS++, SC_REMOVE_CHANGED++ ))
-          note=''; [[ "$(sc_hash "$target")" == "$source" ]] || note=' (edited since scuttlarr wrote it)'
+          note=''; [[ "$(sc_hash "$target")" == "$source" ]] || note=' (edited since scuttler wrote it)'
           if [[ "$mode" == apply ]]; then rm -f "$target"; sc_ok "$shown: removed${note}"; else sc_log "$shown: remove${note}"; fi
         fi ;;
       adopted)
@@ -59,9 +59,9 @@ _sc_remove_paths() {
         if sc_touched_block "$target" >/dev/null; then
           (( SC_REMOVE_PATHS++, SC_REMOVE_CHANGED++ ))
           if [[ "$mode" == apply ]]; then
-            sc_touched_revert "$target" && sc_ok "$shown: scuttlarr include stripped"
+            sc_touched_revert "$target" && sc_ok "$shown: scuttler include stripped"
           else
-            sc_log "$shown: strip the scuttlarr include"
+            sc_log "$shown: strip the scuttler include"
           fi
         elif [[ "$mode" == apply ]]; then
           rm -f "$(sc_touched_copy_path "$target")"
@@ -105,7 +105,7 @@ _sc_remove_defaults() {
     parts=("${(s:	:)line}"); domain="$parts[1]"; key="$parts[2]"; host="$parts[3]"
     value="${parts[4]-}"; value="${value//\\n/$_sc_nl}"
     label="${domain} ${key}"; [[ "$host" == currentHost ]] && label="${label} (currentHost)"
-    cmd=("$SCUTTLARR_DEFAULTS_BIN"); [[ "$host" == currentHost ]] && cmd+=(-currentHost)
+    cmd=("$SCUTTLER_DEFAULTS_BIN"); [[ "$host" == currentHost ]] && cmd+=(-currentHost)
     (( SC_REMOVE_DEFAULTS++, SC_REMOVE_CHANGED++ ))
     if [[ "$value" == "$SC_ABSENT" ]]; then
       if [[ "$mode" == apply ]]; then
@@ -142,7 +142,7 @@ _sc_remove_state() {
   done
   # adopted/ and touched/ are empty once every original is back; drop the trees.
   local d
-  for d in "$SCUTTLARR_STATE/adopted" "$SCUTTLARR_STATE/touched"; do
+  for d in "$SCUTTLER_STATE/adopted" "$SCUTTLER_STATE/touched"; do
     [[ "$mode" == apply && -d "$d" ]] || continue
     find "$d" -type d -empty -delete 2>/dev/null || true
   done

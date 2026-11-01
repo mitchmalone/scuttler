@@ -1,6 +1,6 @@
 'use client'
 
-import { BUILTIN_THEMES, themeVars } from '@scuttlarr/tui/themes'
+import { BUILTIN_THEMES, themeVars } from '@scuttler/tui/themes'
 
 import { useAppTheme } from '@/lib/app-theme'
 
@@ -9,7 +9,7 @@ import { useAppTheme } from '@/lib/app-theme'
  * chose — so the bar still, the agent spotlight and the state legend retint with
  * the rest of the page (AGENTS invariant 8: the whole page wears one app theme).
  *
- * `@scuttlarr/tui/bar.css` styles against unprefixed `--bg` / `--fg` / `--dim`
+ * `@scuttler/tui/bar.css` styles against unprefixed `--bg` / `--fg` / `--dim`
  * / `--accent` / `--sigil` — in the app those are set on :root by `applyTheme`,
  * but on the website those same names are the *page* palette. Setting them here
  * hands the bar its own tokens without touching the rest of the page, using the
@@ -23,7 +23,7 @@ export function BarThemeScope({
   children: React.ReactNode
 }) {
   const [themeName] = useAppTheme()
-  const tokens = BUILTIN_THEMES[themeName] ?? BUILTIN_THEMES.scuttlarr!
+  const tokens = BUILTIN_THEMES[themeName] ?? BUILTIN_THEMES.scuttler!
   return (
     <div
       className={className}

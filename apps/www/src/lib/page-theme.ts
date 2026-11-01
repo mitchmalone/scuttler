@@ -2,7 +2,7 @@ import {
   BUILTIN_THEMES,
   type ThemeTokens,
   isLightColor,
-} from '@scuttlarr/tui/themes'
+} from '@scuttler/tui/themes'
 
 import { mixHex } from './hero-field'
 
@@ -15,14 +15,17 @@ import { mixHex } from './hero-field'
  * `themeBootScript` does the same before first paint for a returning visitor.
  */
 
-export const DEFAULT_THEME = 'scuttlarr'
-export const THEME_STORAGE_KEY = 'scuttlarr-theme'
+export const DEFAULT_THEME = 'scuttler'
+export const THEME_STORAGE_KEY = 'scuttler-theme'
+/** The key the site wrote before the rename (DECISIONS 2026-11-01); read as a fallback
+ * for one release so a returning visitor keeps their picked theme. */
+export const PREVIOUS_THEME_STORAGE_KEY = 'scuttlarr-theme'
 
 export function themeTokens(name: string): ThemeTokens {
   return BUILTIN_THEMES[name] ?? BUILTIN_THEMES[DEFAULT_THEME]!
 }
 
-/** A theme's display name: the slug title-cased (`tokyo-night` → Tokyo Night); scuttlarr stays lowercase. */
+/** A theme's display name: the slug title-cased (`tokyo-night` → Tokyo Night); scuttler stays lowercase. */
 export function themeLabel(name: string): string {
   if (name === DEFAULT_THEME) return name
   return name
@@ -67,12 +70,12 @@ export function pageVars(t: ThemeTokens): Record<string, string> {
 
 /**
  * Inline `<head>` script: applies a stored theme before first paint, so a returning
- * visitor never sees scuttlarr flash first. The vars are precomputed here at build
+ * visitor never sees scuttler flash first. The vars are precomputed here at build
  * time, so the mapping above stays the only copy.
  */
 export function themeBootScript(): string {
   const vars = Object.fromEntries(
     Object.entries(BUILTIN_THEMES).map(([name, t]) => [name, pageVars(t)]),
   )
-  return `(function(){try{var v=${JSON.stringify(vars)},n=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)}),t=n&&v[n];if(!t)return;var d=document.documentElement;for(var k in t)d.style.setProperty(k,t[k]);d.dataset.appTheme=n}catch(e){}})()`
+  return `(function(){try{var v=${JSON.stringify(vars)},n=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)})||localStorage.getItem(${JSON.stringify(PREVIOUS_THEME_STORAGE_KEY)}),t=n&&v[n];if(!t)return;var d=document.documentElement;for(var k in t)d.style.setProperty(k,t[k]);d.dataset.appTheme=n}catch(e){}})()`
 }

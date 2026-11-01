@@ -1,5 +1,5 @@
-import { FIRST_PARTY } from '@scuttlarr/plugins'
-import * as Tui from '@scuttlarr/tui'
+import { FIRST_PARTY } from '@scuttler/plugins'
+import * as Tui from '@scuttler/tui'
 import {
   type BarHoverApi,
   type BarWidget,
@@ -9,14 +9,14 @@ import {
   Panel,
   type WidgetAction,
   type WidgetView,
-} from '@scuttlarr/tui'
+} from '@scuttler/tui'
 import type {
   PluginCellComponent,
   PluginCellProps,
   PluginPanelComponent,
   PluginPanelProps,
   PluginState,
-} from '@scuttlarr/tui/plugins'
+} from '@scuttler/tui/plugins'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import * as Lucide from 'lucide-react'
@@ -41,15 +41,15 @@ import { importPluginModule, registerShared } from './loader'
 // Names match plugins.rs SHARED_MODULES. Lucide is shared because a plugin
 // dir has no node_modules to resolve it from (and the bar already carries
 // lucide's dynamic-icon set for widgets; measured 2026-08-27: no RSS delta).
-// `@launcharr/tui` is the kit's pre-fold name: plugins written before the
+// `@scuttlarr/tui` is the kit's previous name: plugins written before the
 // rename keep importing it, and it must land on the *same* kit instance.
 registerShared({
   react: React,
   'react/jsx-runtime': JsxRuntime,
   'react/jsx-dev-runtime': JsxDevRuntime,
   'react-dom': ReactDOM,
+  '@scuttler/tui': Tui,
   '@scuttlarr/tui': Tui,
-  '@launcharr/tui': Tui,
   'lucide-react': Lucide,
 })
 

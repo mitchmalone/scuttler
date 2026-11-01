@@ -1,5 +1,5 @@
-# scuttlarr theme: {{ name }} — rendered, do not edit. Imported by the base
-# Ghostty config via `config-file = ?~/.local/state/scuttlarr/current/theme/ghostty`.
+# scuttler theme: {{ name }} — rendered, do not edit. Imported by the base
+# Ghostty config via `config-file = ?~/.local/state/scuttler/current/theme/ghostty`.
 background = {{ background }}
 foreground = {{ foreground }}
 cursor-color = {{ bright_foreground }}

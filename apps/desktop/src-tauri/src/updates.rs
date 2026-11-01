@@ -6,8 +6,8 @@
 //! cached read plus a background refresh on a long TTL, so the 1 Hz bar
 //! snapshot never blocks on a shell-out. Every check is the user's own
 //! package manager doing what it already does on `brew outdated` — no
-//! request scuttlarr makes on its own behalf (DECISIONS 2026-09-04) — with one
-//! exception since 2026-09-16: the `scuttlarr` source (selfupdate.rs) reads the
+//! request scuttler makes on its own behalf (DECISIONS 2026-09-04) — with one
+//! exception since 2026-09-16: the `scuttler` source (selfupdate.rs) reads the
 //! public GitHub Releases feed, sending nothing about the user.
 
 use std::collections::{BTreeMap, VecDeque};
@@ -403,13 +403,13 @@ fn start_selfupdate(runner: &mut Runner, job: UpgradeJob) {
         UpgradeRun {
             source: job.source,
             item: None,
-            command: "scuttlarr update".into(),
+            command: "scuttler update".into(),
             started_at: now_secs(),
             ..Default::default()
         },
         None,
     ));
-    crate::logbook::breadcrumb("updates", "upgrade scuttlarr in panel (selfupdate)");
+    crate::logbook::breadcrumb("updates", "upgrade scuttler in panel (selfupdate)");
     std::thread::spawn(|| {
         let push = |line: String| RUNNER.lock().unwrap().push_tail(line);
         let result = crate::selfupdate::install(&push);
@@ -852,7 +852,7 @@ fn scan(prev: Option<&UpdatesReport>, force: bool) -> UpdatesReport {
         })
         .collect();
     let mut sources: Vec<UpdateSource> = Vec::new();
-    // scuttlarr itself first (selfupdate.rs); absent from dev/unsigned builds
+    // scuttler itself first (selfupdate.rs); absent from dev/unsigned builds
     // and when `config.updates.checkSelf` is off — off means no request.
     if crate::selfupdate::eligible() {
         sources.push(keep(crate::selfupdate::SOURCE_ID).unwrap_or_else(crate::selfupdate::check));
@@ -1625,7 +1625,7 @@ mod tests {
     #[test]
     fn dismissals_round_trip_through_the_state_file_and_drop_lapsed_entries() {
         let dir = std::env::temp_dir().join(format!(
-            "scuttlarr-dismissals-{}-{}",
+            "scuttler-dismissals-{}-{}",
             std::process::id(),
             now_secs()
         ));
@@ -1670,7 +1670,7 @@ mod tests {
     #[test]
     fn locate_finds_a_system_binary_and_not_nonsense() {
         assert!(locate("ls").is_some());
-        assert!(locate("definitely-not-a-real-binary-scuttlarr").is_none());
+        assert!(locate("definitely-not-a-real-binary-scuttler").is_none());
     }
 
     #[test]

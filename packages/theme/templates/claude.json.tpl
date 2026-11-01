@@ -1,5 +1,5 @@
 {
-  "name": "scuttlarr — {{ name }}",
+  "name": "scuttler — {{ name }}",
   "base": "{{ mode }}",
   "overrides": {
     "claude": "{{ accent }}",

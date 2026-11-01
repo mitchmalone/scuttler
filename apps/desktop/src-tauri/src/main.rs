@@ -7,10 +7,10 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
     if args.get(1).map(String::as_str) == Some("--extract-icons") {
         if let Some(dir) = args.get(2) {
-            scuttlarr_lib::extract_icons_cli(std::path::Path::new(dir));
+            scuttler_lib::extract_icons_cli(std::path::Path::new(dir));
         }
         return;
     }
 
-    scuttlarr_lib::run()
+    scuttler_lib::run()
 }

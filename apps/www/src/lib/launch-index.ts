@@ -312,9 +312,9 @@ export const INDEX: IndexItem[] = [
     aliases: [],
   },
   {
-    id: 'link:scuttlarr',
+    id: 'link:scuttler',
     kind: 'link',
-    name: 'scuttlarr on GitHub',
+    name: 'scuttler on GitHub',
     hint: 'quicklink',
     aliases: ['repo'],
   },

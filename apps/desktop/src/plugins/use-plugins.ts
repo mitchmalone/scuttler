@@ -1,4 +1,4 @@
-import type { PluginState } from '@scuttlarr/tui/plugins'
+import type { PluginState } from '@scuttler/tui/plugins'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { useEffect, useState } from 'react'

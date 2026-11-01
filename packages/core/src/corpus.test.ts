@@ -7,7 +7,7 @@ import type { FrecencyMap, IndexItem } from './types'
 /**
  * The ranking corpus (DECISIONS 2026-09-16): a dense
  * index shaped like the real payload — the apps on a working Mac, every settings pane,
- * the system commands, links, panel triggers, scuttlarr's own rows — and the queries a
+ * the system commands, links, panel triggers, scuttler's own rows — and the queries a
  * person actually types, each pinned to the row that must come first. **A ranking
  * complaint is a new case here**, never an ad-hoc scorer tweak: change the scorer, run
  * this, and every earlier complaint is re-checked at once.

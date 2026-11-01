@@ -1,18 +1,18 @@
-import { parseInput } from '@scuttlarr/core/grammar'
+import { parseInput } from '@scuttler/core/grammar'
 import {
   type Row,
   emojiRows,
   launchRows,
   panelRows,
   quicklinkRows,
-} from '@scuttlarr/core/rows'
-import type { FrecencyMap, IndexItem } from '@scuttlarr/core/types'
+} from '@scuttler/core/rows'
+import type { FrecencyMap, IndexItem } from '@scuttler/core/types'
 
 import { PANEL_INFO } from './demo-data'
 import { INDEX, QUICKLINKS, TRIGGERS } from './launch-index'
 
 /**
- * Thin adapter between the real engine (@scuttlarr/core) and the demo. All
+ * Thin adapter between the real engine (@scuttler/core) and the demo. All
  * grammar, matching, ranking and row logic runs in core and the rows it returns
  * are the kit `Launcher`'s own input (invariant 10); this file only supplies the
  * fake index and reads an `enter` back into a toast line — no engine logic lives

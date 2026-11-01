@@ -1,6 +1,6 @@
 //! The login item is launchd's job, and launchd brings it back after a crash.
 //!
-//! `tauri-plugin-autostart` writes `~/Library/LaunchAgents/scuttlarr.plist`
+//! `tauri-plugin-autostart` writes `~/Library/LaunchAgents/scuttler.plist`
 //! with `RunAtLoad` only, so a crash leaves the app dead until the next login —
 //! and with it every keep-awake hold, which lives in this process. After each
 //! registration the plist gains `KeepAlive { SuccessfulExit = false }`: a crash
@@ -14,7 +14,7 @@
 use std::path::PathBuf;
 
 /// The job label the autostart plugin registers (the app's product name).
-pub const LABEL: &str = "scuttlarr";
+pub const LABEL: &str = "scuttler";
 
 const KEEP_ALIVE: &str =
     "  <key>KeepAlive</key>\n  <dict>\n    <key>SuccessfulExit</key>\n    <false/>\n  </dict>\n";
@@ -37,7 +37,7 @@ pub fn supervise() {
     };
     if let Some(patched) = patch(&plist, &user_lang()) {
         if let Err(e) = std::fs::write(&path, patched) {
-            eprintln!("[scuttlarr] login item plist: {e}");
+            eprintln!("[scuttler] login item plist: {e}");
         }
     }
 }
@@ -98,9 +98,9 @@ mod tests {
 <plist version="1.0">
   <dict>
   <key>Label</key>
-  <string>scuttlarr</string>
+  <string>scuttler</string>
   <key>ProgramArguments</key>
-  <array><string>/Applications/scuttlarr.app/Contents/MacOS/scuttlarr</string></array>
+  <array><string>/Applications/scuttler.app/Contents/MacOS/scuttler</string></array>
   <key>RunAtLoad</key>
   <true/>
   </dict>
@@ -153,7 +153,7 @@ mod tests {
 
     #[test]
     fn plutil_accepts_the_patched_plist() {
-        let dir = std::env::temp_dir().join(format!("scuttlarr-login-item-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("scuttler-login-item-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let file = dir.join("job.plist");
         std::fs::write(&file, patch(PLUGIN_PLIST, "en_US.UTF-8").unwrap()).unwrap();

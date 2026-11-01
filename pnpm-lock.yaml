@@ -47,16 +47,16 @@ importers:
 
   apps/desktop:
     dependencies:
-      '@scuttlarr/core':
+      '@scuttler/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@scuttlarr/plugins':
+      '@scuttler/plugins':
         specifier: workspace:*
         version: link:../../packages/plugins
-      '@scuttlarr/theme':
+      '@scuttler/theme':
         specifier: workspace:*
         version: link:../../packages/theme
-      '@scuttlarr/tui':
+      '@scuttler/tui':
         specifier: workspace:*
         version: link:../../packages/tui
       '@tauri-apps/api':
@@ -99,13 +99,13 @@ importers:
 
   apps/www:
     dependencies:
-      '@scuttlarr/core':
+      '@scuttler/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@scuttlarr/plugins':
+      '@scuttler/plugins':
         specifier: workspace:*
         version: link:../../packages/plugins
-      '@scuttlarr/tui':
+      '@scuttler/tui':
         specifier: workspace:*
         version: link:../../packages/tui
       class-variance-authority:
@@ -170,7 +170,7 @@ importers:
 
   packages/plugins:
     dependencies:
-      '@scuttlarr/tui':
+      '@scuttler/tui':
         specifier: workspace:*
         version: link:../tui
       lucide-react:
@@ -215,14 +215,14 @@ importers:
 
   packages/tui:
     dependencies:
-      '@scuttlarr/core':
+      '@scuttler/core':
         specifier: workspace:*
         version: link:../core
       lucide-react:
         specifier: ^1.30.0
         version: 1.30.0(react@19.2.8)
     devDependencies:
-      '@scuttlarr/theme':
+      '@scuttler/theme':
         specifier: workspace:*
         version: link:../theme
       '@types/react':

@@ -1,4 +1,4 @@
-# link.zsh — `scuttlarr` on PATH: ~/.local/bin/scuttlarr → base/bin/scuttlarr.
+# link.zsh — `scuttler` on PATH: ~/.local/bin/scuttler → base/bin/scuttler.
 #
 # One symlink, owned like any other path: a `symlink` line (layer cli) in the
 # manifest, so doctor checks it and remove takes it away. Whatever already
@@ -10,8 +10,8 @@
 
 typeset -gi SC_LINK_CHANGED=0
 
-sc_link_path()   { print -r -- "$HOME/.local/bin/scuttlarr"; }
-sc_link_source() { print -r -- "$SCUTTLARR_BASE/bin/scuttlarr"; }
+sc_link_path()   { print -r -- "$HOME/.local/bin/scuttler"; }
+sc_link_source() { print -r -- "$SCUTTLER_BASE/bin/scuttler"; }
 
 # The link is no use if its directory isn't on PATH; say so.
 sc_link_path_hint() {

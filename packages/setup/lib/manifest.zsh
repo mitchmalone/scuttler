@@ -1,4 +1,4 @@
-# manifest.zsh — every path scuttlarr owns, and how (docs/ARCHITECTURE.md).
+# manifest.zsh — every path scuttler owns, and how (docs/ARCHITECTURE.md).
 #
 #   <mode>\t<path>\t<source-or-hash>\t<layer>
 #
@@ -9,9 +9,9 @@
 # remove strips it), root (a root-owned file written through sudo — only the
 # sudoers rule, lib/sudoers.zsh; its hash is recorded and remove sudo-deletes it). This file is the whole basis for
 # `doctor` and `remove` — a write that isn't here didn't happen, as far as
-# scuttlarr is concerned.
+# scuttler is concerned.
 
-sc_manifest_path() { print -r -- "$SCUTTLARR_STATE/manifest"; }
+sc_manifest_path() { print -r -- "$SCUTTLER_STATE/manifest"; }
 
 # sc_manifest_add <mode> <path> <source> <layer>
 sc_manifest_add() {

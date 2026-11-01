@@ -241,7 +241,7 @@
   margin-top: 10px;
 }
 
-/* The agent card (design: Claude Design "scuttlarr agent dots" v2). A 2px
+/* The agent card (design: Claude Design "scuttler agent dots" v2). A 2px
  * rule along the top edge and a tinted swatch carry the state colour; the
  * title steps up to 13px; the "doing" line is a verb and an object; location
  * is crumbs in tmux order; the meta line is the two clocks. An idle card goes

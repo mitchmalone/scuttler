@@ -1,9 +1,9 @@
-// scuttlarr script: format the JSON on your clipboard and copy it back.
+// scuttler script: format the JSON on your clipboard and copy it back.
 // Yours to edit. Runs under Bun (docs/SCRIPTS.md); `json ⏎` in the launcher.
 //
 // The type import is erased at run time — it's there so an editor in the repo
-// (or one that resolves @scuttlarr/core) checks the contract for you.
-import type { ScriptItem } from '@scuttlarr/core/types'
+// (or one that resolves @scuttler/core) checks the contract for you.
+import type { ScriptItem } from '@scuttler/core/types'
 import { execFileSync } from 'node:child_process'
 
 export function manifest() {

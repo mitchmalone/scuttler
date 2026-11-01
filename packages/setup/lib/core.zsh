@@ -1,17 +1,21 @@
-# core.zsh — paths, logging, small shared helpers. Sourced first by bin/scuttlarr
+# core.zsh — paths, logging, small shared helpers. Sourced first by bin/scuttler
 # and by every test. Everything else in lib/ assumes this is loaded.
 #
 # Every location is overridable through the environment so tests (and a curious
 # user) can point the CLI at a scratch tree: nothing here hard-codes $HOME.
 
-: "${SCUTTLARR_BASE:=${${(%):-%x}:A:h:h}}"
-: "${SCUTTLARR_STATE:=${XDG_STATE_HOME:-$HOME/.local/state}/scuttlarr}"
-: "${SCUTTLARR_OVERLAY:=${XDG_CONFIG_HOME:-$HOME/.config}/scuttlarr}"
+: "${SCUTTLER_BASE:=${${(%):-%x}:A:h:h}}"
+# SCUTTLARR_* is the previous name's spelling (DECISIONS 2026-11-01): a user's own
+# script or shell that still exports it is honoured for one release.
+: "${SCUTTLER_STATE:=${SCUTTLARR_STATE:-${XDG_STATE_HOME:-$HOME/.local/state}/scuttler}}"
+: "${SCUTTLER_OVERLAY:=${SCUTTLARR_OVERLAY:-${XDG_CONFIG_HOME:-$HOME/.config}/scuttler}}"
 # The `defaults` binary — tests substitute a fake that keeps a flat store.
-: "${SCUTTLARR_DEFAULTS_BIN:=/usr/bin/defaults}"
-export SCUTTLARR_BASE SCUTTLARR_STATE SCUTTLARR_OVERLAY SCUTTLARR_DEFAULTS_BIN
+: "${SCUTTLER_DEFAULTS_BIN:=/usr/bin/defaults}"
+: "${SCUTTLER_NO_NETWORK:=${SCUTTLARR_NO_NETWORK-}}"
+export SCUTTLER_BASE SCUTTLER_STATE SCUTTLER_OVERLAY SCUTTLER_DEFAULTS_BIN
+[[ -n "$SCUTTLER_NO_NETWORK" ]] && export SCUTTLER_NO_NETWORK || unset SCUTTLER_NO_NETWORK
 
-SCUTTLARR_VERSION="0.0.0-dev"
+SCUTTLER_VERSION="0.0.0-dev"
 
 # ---- logging -----------------------------------------------------------------
 
@@ -43,7 +47,7 @@ sc_confirm() {
 
 # Ensure the state directory exists (first write creates it).
 sc_state_init() {
-  [[ -d "$SCUTTLARR_STATE" ]] || mkdir -p "$SCUTTLARR_STATE"
+  [[ -d "$SCUTTLER_STATE" ]] || mkdir -p "$SCUTTLER_STATE"
 }
 
 # `~`-shorten a path for display.

@@ -20,7 +20,7 @@ import {
 const cfg = (over: Partial<Config> = {}): Config =>
   ({
     hotkey: 'Alt+Space',
-    theme: 'scuttlarr',
+    theme: 'scuttler',
     themes: {},
     bar: { enabled: true, layout: { left: [], center: [], right: [] } },
     agents: { ...DEFAULT_AGENTS_CONFIG },
@@ -128,8 +128,8 @@ describe('theme tracking', () => {
 
   it('follows back from light to dark too', () => {
     const light = choices({ theme: 'solarized-light' })
-    expect(followConfig(light, cfg({ theme: 'scuttlarr' })).theme).toBe(
-      'scuttlarr',
+    expect(followConfig(light, cfg({ theme: 'scuttler' })).theme).toBe(
+      'scuttler',
     )
   })
 
@@ -229,7 +229,7 @@ describe('applySetup', () => {
 
   it('never writes back a theme setup opened on when the config moved since', () => {
     const fresh = cfg({ theme: 'solarized-light' })
-    const next = applySetup(fresh, choices({ theme: 'scuttlarr' }), noPick)
+    const next = applySetup(fresh, choices({ theme: 'scuttler' }), noPick)
     expect(next.theme).toBe('solarized-light')
   })
 
@@ -238,10 +238,10 @@ describe('applySetup', () => {
       theme,
       appearance: {} as never,
     }))
-    const picked = chooseSetup(choices(), { theme: 'scuttlarr' })
+    const picked = chooseSetup(choices(), { theme: 'scuttler' })
     const next = applySetup(cfg({ theme: 'solarized-light' }), picked, pick)
-    expect(pick).toHaveBeenCalledWith(expect.anything(), 'scuttlarr')
-    expect(next.theme).toBe('scuttlarr')
+    expect(pick).toHaveBeenCalledWith(expect.anything(), 'scuttler')
+    expect(next.theme).toBe('scuttler')
   })
 
   it('matching the theme turns the rung and editors on, and off again', () => {
@@ -282,8 +282,8 @@ describe('recapLines', () => {
       }),
     )
     expect(lines).toEqual([
-      { on: true, text: '⌥ Space opens scuttlarr' },
-      { on: true, text: 'The scuttlarr menu bar' },
+      { on: true, text: '⌥ Space opens scuttler' },
+      { on: true, text: 'The scuttler menu bar' },
       { on: true, text: 'Watching your agents, with usage limits' },
       { on: true, text: 'tokyo-night in Ghostty, tmux and your editors' },
       { on: false, text: 'No tiling' },
@@ -295,10 +295,10 @@ describe('recapLines', () => {
       choices({ bar: false, agents: false, match: false, tiling: true }),
     )
     expect(lines.map((l) => l.text)).toEqual([
-      '⌥ Space opens scuttlarr',
+      '⌥ Space opens scuttler',
       'The macOS menu bar stays',
       'Agent tracking off',
-      'scuttlarr, in scuttlarr only',
+      'scuttler, in scuttler only',
       'Tiling with AeroSpace',
     ])
   })

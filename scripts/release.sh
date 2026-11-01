@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The local half of releasing scuttlarr. Deterministic: every step either passes or
+# The local half of releasing scuttler. Deterministic: every step either passes or
 # the script dies telling you exactly what's missing. If a release step isn't in here
 # or in .github/workflows/release.yml, it isn't part of the release — add it first.
 # See docs/RELEASING.md.
@@ -19,7 +19,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DESKTOP="$ROOT/apps/desktop"
 WWW="$ROOT/apps/www"
-REPO="mitchmalone/scuttlarr"
+REPO="mitchmalone/scuttler"
 NOTARY_PROFILE="launcharr-notary"  # local keychain profile name; not renamed
 
 die() { echo "✗ $*" >&2; exit 1; }
@@ -47,8 +47,8 @@ done
 TAG="v$VERSION"
 NOTES="$ROOT/docs/releases/$TAG.md"
 DIST="$ROOT/dist/$TAG"
-ZIP="scuttlarr-$VERSION.zip"
-DMG="scuttlarr-$VERSION.dmg"
+ZIP="scuttler-$VERSION.zip"
+DMG="scuttler-$VERSION.dmg"
 DL="https://github.com/$REPO/releases/download/$TAG"
 
 step "1/8 preflight"
@@ -91,7 +91,7 @@ if [[ "$DRY" == 1 ]]; then
   step "dry run — remaining plan"
   cat <<EOF
   3. bump $VERSION into apps/desktop/{package.json,src-tauri/tauri.conf.json,src-tauri/Cargo.toml}
-  4. pnpm --filter @scuttlarr/desktop tauri build  (signed: $SIGNED; targets: app + dmg)
+  4. pnpm --filter @scuttler/desktop tauri build  (signed: $SIGNED; targets: app + dmg)
   5. verify (spctl), package $ZIP + $DMG + SHA256SUMS into dist/$TAG/;
      write apps/www/src/lib/release.json (ships in the release commit)
   6. smoke tests, scripted: fresh profile (cold start, hotkey, setup owed) and the
@@ -125,8 +125,8 @@ else
 fi
 # A dmg run that died leaves its scratch image (rw.<pid>.*.dmg) behind.
 rm -f "$DESKTOP"/src-tauri/target/release/bundle/macos/rw.*.dmg
-pnpm --filter @scuttlarr/desktop tauri build
-APP_BUNDLE="$DESKTOP/src-tauri/target/release/bundle/macos/scuttlarr.app"
+pnpm --filter @scuttler/desktop tauri build
+APP_BUNDLE="$DESKTOP/src-tauri/target/release/bundle/macos/scuttler.app"
 DMG_SRC=$(find "$DESKTOP"/src-tauri/target/release/bundle/dmg -maxdepth 1 -name "*.dmg" | head -1)
 [[ -n "$DMG_SRC" ]] || die "no dmg in the bundle output"
 
@@ -193,10 +193,10 @@ echo "  fresh profile…"
 EXTRACTED="$DIST-extracted"
 rm -rf "$EXTRACTED" && mkdir -p "$EXTRACTED"
 ditto -x -k "$DIST/$ZIP" "$EXTRACTED"
-FRESH_HOME=$(mktemp -d "${TMPDIR:-/tmp}/scuttlarr-fresh.XXXXXX")
+FRESH_HOME=$(mktemp -d "${TMPDIR:-/tmp}/scuttler-fresh.XXXXXX")
 mkdir -p "$FRESH_HOME/Library/Logs"
 FRESH_LOG="$FRESH_HOME/stderr.log"
-HOME="$FRESH_HOME" "$EXTRACTED/scuttlarr.app/Contents/MacOS/scuttlarr" >"$FRESH_LOG" 2>&1 &
+HOME="$FRESH_HOME" "$EXTRACTED/scuttler.app/Contents/MacOS/scuttler" >"$FRESH_LOG" 2>&1 &
 FRESH_PID=$!
 for _ in $(seq 1 200); do
   grep -q "cold start" "$FRESH_LOG" 2>/dev/null && break
@@ -212,7 +212,7 @@ cold=$(grep -o 'cold start [0-9]*ms' "$FRESH_LOG" | head -1 | grep -o '[0-9]*' |
 if grep -q "hotkey registration failed" "$FRESH_LOG"; then
   grep "hotkey" "$FRESH_LOG"; die "fresh profile: the hotkey did not register"
 fi
-FRESH_CONFIG="$FRESH_HOME/.config/scuttlarr/config.json"
+FRESH_CONFIG="$FRESH_HOME/.config/scuttler/config.json"
 [[ -f "$FRESH_CONFIG" ]] || die "fresh profile: no config.json was written"
 jq -e '.setupPending == true' "$FRESH_CONFIG" >/dev/null \
   || die "fresh profile: a new config does not owe the first-launch setup"
@@ -227,12 +227,23 @@ rm -rf "$FRESH_HOME"
 # must be exactly as it was — config, themes, scripts, hooks, widgets — the
 # frecency db still there, and the new version up and reporting its plugins.
 echo "  upgrade over the running version…"
-USER_DIR="$HOME/.config/scuttlarr"
-FRECENCY_DB="$HOME/Library/Application Support/$IDENTIFIER/scuttlarr.db"
-tree_sum() { (cd "$1" && find . -type f ! -name '*.tmp' -print0 | sort -z | xargs -0 shasum -a 256 | shasum -a 256 | cut -c1-64); }
-before_tree=$(tree_sum "$USER_DIR")
-before_db=$(stat -f %z "$FRECENCY_DB" 2>/dev/null || echo 0)
-LOGBOOK="$HOME/Library/Logs/scuttlarr.log"
+USER_DIR="$HOME/.config/scuttler"
+FRECENCY_DB="$HOME/Library/Application Support/$IDENTIFIER/scuttler.db"
+# Across the rename (DECISIONS 2026-11-01) the installed version's home is the
+# previous name's; the first launch moves it, rewrites our own names inside
+# config.json and purges the plugin build cache — so those two are left out of
+# the "nothing changed" sum, and the move itself is asserted instead.
+PREV_USER_DIR="$HOME/.config/scuttlarr"
+PREV_FRECENCY_DB="$HOME/Library/Application Support/$IDENTIFIER/scuttlarr.db"
+tree_sum() { (cd "$1" && find . -type f ! -name '*.tmp' ! -path './.build/*' ! -name config.json -print0 | sort -z | xargs -0 shasum -a 256 | shasum -a 256 | cut -c1-64); }
+before_dir="$USER_DIR"; before_db_file="$FRECENCY_DB"
+if [[ ! -d "$USER_DIR" && -d "$PREV_USER_DIR" ]]; then
+  before_dir="$PREV_USER_DIR"; before_db_file="$PREV_FRECENCY_DB"
+  echo "  (upgrading across the rename: $PREV_USER_DIR → $USER_DIR)"
+fi
+before_tree=$(tree_sum "$before_dir")
+before_db=$(stat -f %z "$before_db_file" 2>/dev/null || echo 0)
+LOGBOOK="$HOME/Library/Logs/scuttler.log"
 before_lines=$(grep -c "" "$LOGBOOK" 2>/dev/null || echo 0)
 "$ROOT/scripts/dev-install.sh"
 for _ in $(seq 1 300); do
@@ -241,10 +252,13 @@ for _ in $(seq 1 300); do
 done
 tail -n "+$((before_lines + 1))" "$LOGBOOK" | grep -q "plugin(s):" \
   || die "upgrade path: the new version did not come up (no plugins line in $LOGBOOK)"
-installed=$(plutil -extract CFBundleShortVersionString raw /Applications/scuttlarr.app/Contents/Info.plist)
+installed=$(plutil -extract CFBundleShortVersionString raw /Applications/scuttler.app/Contents/Info.plist)
 [[ "$installed" == "$VERSION" ]] || die "upgrade path: /Applications runs $installed, not $VERSION"
+[[ -d "$USER_DIR" ]] || die "upgrade path: $USER_DIR missing after upgrade"
+[[ "$before_dir" == "$USER_DIR" || ! -e "$PREV_USER_DIR" ]] || die "upgrade path: $PREV_USER_DIR still there after the rename"
 after_tree=$(tree_sum "$USER_DIR")
 [[ "$after_tree" == "$before_tree" ]] || die "upgrade path: something under $USER_DIR changed on upgrade"
+[[ "$(jq -r .theme "$USER_DIR/config.json")" != "scuttlarr" ]] || die "upgrade path: config.json still names the theme scuttlarr"
 after_db=$(stat -f %z "$FRECENCY_DB" 2>/dev/null || echo 0)
 (( after_db >= before_db )) || die "upgrade path: the frecency db shrank ($before_db → $after_db bytes)"
 echo "  upgrade ok: $VERSION running, $USER_DIR untouched, frecency intact"
@@ -259,10 +273,10 @@ git push origin main
 
 step "8/8 GitHub release (creates the tag → triggers the fan-out workflow)"
 gh release create "$TAG" "$DIST/$ZIP" "$DIST/$DMG" "$DIST/SHA256SUMS" \
-  --repo "$REPO" --title "scuttlarr $TAG" --notes-file "$NOTES" \
+  --repo "$REPO" --title "scuttler $TAG" --notes-file "$NOTES" \
   --target "$(git rev-parse HEAD)"
 
 echo
-echo "✔ scuttlarr $TAG released. Fan-out (tap, Notion, deploy hook) is CI's job now:"
+echo "✔ scuttler $TAG released. Fan-out (tap, Notion, deploy hook) is CI's job now:"
 echo "  gh run watch --repo $REPO \$(gh run list --repo $REPO --workflow release --limit 1 --json databaseId --jq '.[0].databaseId')"
 echo "  Post-release: update docs/STATUS.md; announce (deliberate, optional)."

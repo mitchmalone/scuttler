@@ -5,6 +5,51 @@
 
 ---
 
+### 2026-11-01 · The last rename: scuttlarr → scuttler at www.scuttler.app, as v0.8.1, bundle id kept
+
+- **Decision.** The product, repo, package scopes (`@scuttler/*`), crate, CLI
+  (`bin/scuttler`), config and state homes (`~/.config/scuttler`, `~/.local/state/scuttler`,
+  `~/.local/share/scuttler`), built-in theme, Keychain service, env vars (`SCUTTLER_*`),
+  cask and site all take the name **scuttler** (always lowercase); the canonical host is
+  **www.scuttler.app** (every old domain redirects there, Mitch 2026-11-01). It ships as
+  **v0.8.1**, a docs-and-rename release with no feature in it. Tagline unchanged.
+  Three things deliberately keep the old name:
+  - **The bundle id stays `com.mitchmalone.scuttlarr`.** `selfupdate.rs` refuses a
+    downloaded bundle whose id differs from the running one, so a new id would have broken
+    the one upgrade path this release depends on (a 0.8.0 install updating itself), and a
+    new id resets every TCC grant (Automation, Screen Recording, Bluetooth) for nothing the
+    user can see. The id is opaque; `~/Library/Application Support/com.mitchmalone.scuttlarr`
+    stays put and only `scuttlarr.db` inside it renames.
+  - **History files**: DECISIONS, JOURNAL, `releases/*`, `plans/done/*` keep whatever name
+    was true when they were written. The one workbench story title carrying the name stays
+    (an external screenshot script keys on titles; STATUS).
+  - **The notary profile** `launcharr-notary` (local keychain; physics).
+- **Migration (second hop of `rename.rs`, same shape as the first).** Dirs move by
+  `rename`; `scuttlarr.plist` is removed and the login item re-registers; names inside
+  `config.json` that are ours rewrite in place (`theme`, `appearance.pair`,
+  `appearance.focus`, the `themes.scuttlarr` key, shortcuts bound to `scuttlarr — …` rows);
+  frecency `scuttlarr:*` ids rewrite when the database opens; the first launch from
+  `/Applications/scuttlarr.app` (what the 0.8.0 updater leaves) renames its own bundle
+  folder and relaunches. **One symlink, state only:** `~/.local/state/scuttlarr →
+scuttler` for one release, because the Machine rung's generated shell files import the
+  theme from that absolute path; the setup migration `2026-11-01-rename-to-scuttler.zsh`
+  re-renders them, retires `scuttlarr.gitconfig`, and removes the link once no owned file
+  names the old path. Config gets no symlink: one owner (invariant 11).
+- **Compatibility, one hop back only.** `@scuttlarr/tui` stays a shared plugin external
+  mapped to the kit (`@launcharr/tui` retires — two hops is enough); the Keychain reads the
+  `scuttlarr` service as a fallback and copies forward, never deletes; the setup CLI
+  honours `SCUTTLARR_STATE/OVERLAY/NO_NETWORK` and recognises the previous touched-block
+  markers; `sudoers status` reports the root-owned `/etc/sudoers.d/scuttlarr` as on (its
+  rule grants by content, not filename) and `sudoers on|off` remove it; the site reads the
+  `scuttlarr-theme` storage key as a fallback. Each of these comes out at the release after
+  next.
+- **Left to the user, said in the notes.** `custom:scuttler` in Claude Code (the theme
+  file installs under the new name; the old one is history), `scuttler sudoers on` (so the
+  rule file carries the right name), and their own dotfiles that import the old paths.
+- **Why.** "Simpler, and this is the last rename" (Mitch). The docs sweep ran first so the
+  mechanical rename turned true text into true text.
+- **Plan.** `plans/active/2026-11-01-rename-to-scuttler.md`.
+
 ### 2026-11-01 · The site imports the panel registry, the bar's default arrangement and the launcher prompt; nothing is retyped
 
 - **Decision.** Three more surfaces move out of `apps/desktop` into packages so

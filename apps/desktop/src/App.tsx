@@ -1,6 +1,6 @@
-import { untilDeadline } from '@scuttlarr/core/awake'
-import { parseInput } from '@scuttlarr/core/grammar'
-import { generateLorem, loremToast } from '@scuttlarr/core/lorem'
+import { untilDeadline } from '@scuttler/core/awake'
+import { parseInput } from '@scuttler/core/grammar'
+import { generateLorem, loremToast } from '@scuttler/core/lorem'
 import {
   type QuicklinkDraft,
   type Row,
@@ -15,24 +15,24 @@ import {
   panelRows,
   quicklinkRows,
   scriptRows,
-} from '@scuttlarr/core/rows'
+} from '@scuttler/core/rows'
 import type {
   Clip,
   FrecencyMap,
   IndexItem,
   ScriptInfo,
   ScriptItem,
-} from '@scuttlarr/core/types'
-import { expandPlaceholders, placeholdersIn } from '@scuttlarr/core/url'
+} from '@scuttler/core/types'
+import { expandPlaceholders, placeholdersIn } from '@scuttler/core/url'
 import {
   type AskTurn,
   Launcher,
   WidgetGlyph,
   launcherPrompt,
-} from '@scuttlarr/tui'
-import '@scuttlarr/tui/launcher.css'
-import { pluginPanelInfo } from '@scuttlarr/tui/plugins'
-import '@scuttlarr/tui/styles.css'
+} from '@scuttler/tui'
+import '@scuttler/tui/launcher.css'
+import { pluginPanelInfo } from '@scuttler/tui/plugins'
+import '@scuttler/tui/styles.css'
 import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import type React from 'react'
@@ -150,7 +150,7 @@ const DEFAULT_CONFIG: Config = {
   shortcuts: {},
   searchFallback: 'https://www.google.com/search?q={query}',
   indexBookmarks: false,
-  theme: 'scuttlarr',
+  theme: 'scuttler',
   themes: {},
   bar: { enabled: true, layout: DEFAULT_BAR_LAYOUT },
   agents: DEFAULT_AGENTS_CONFIG,
@@ -257,7 +257,7 @@ export default function App() {
     if (previous === null || previous === config.theme) return
     if (!appearanceOf(config).everywhere) return
     applyThemeEverywhere(config).catch((e) =>
-      console.error('[scuttlarr theme] apply everywhere failed:', e),
+      console.error('[scuttler theme] apply everywhere failed:', e),
     )
   }, [configLoaded, config])
   // Desktop layer (v0.4): this webview lives for the whole session, so it is the

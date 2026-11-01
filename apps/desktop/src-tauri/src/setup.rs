@@ -1,7 +1,7 @@
 //! The machine rung: the app drives the bundled setup CLI (`packages/setup`,
 //! shipped under `Contents/Resources/setup/`) — it never reimplements it.
 //! Rust here is a thin, allowlisted runner: pick the verb, spawn `zsh
-//! bin/scuttlarr <args>`, hand the text back. The CLI owns the manifest, the
+//! bin/scuttler <args>`, hand the text back. The CLI owns the manifest, the
 //! defaults snapshot, adopt-never-overwrite (AGENTS invariant 11); the app is
 //! one more way to invoke it, next to the terminal.
 //!
@@ -23,7 +23,7 @@ pub enum SetupVerb {
     DefaultsPlan,
     /// Apply them (the CLI snapshots first). Settings shows the plan before offering this.
     DefaultsApply,
-    /// Put `scuttlarr` on PATH (`~/.local/bin`, manifest-recorded).
+    /// Put `scuttler` on PATH (`~/.local/bin`, manifest-recorded).
     Link,
     Unlink,
     /// Run unrun migrations once.
@@ -76,19 +76,19 @@ pub fn base_dir(resource_dir: Option<PathBuf>) -> Option<PathBuf> {
     candidates
         .into_iter()
         .flatten()
-        .find(|d| d.join("bin/scuttlarr").is_file())
+        .find(|d| d.join("bin/scuttler").is_file())
         .map(|d| d.canonicalize().unwrap_or(d))
 }
 
 /// Run one verb against `base`, capturing everything. Never interactive.
 pub fn run_at(base: &Path, verb: SetupVerb) -> CmdResult<SetupOutput> {
     let out = std::process::Command::new("/bin/zsh")
-        .arg(base.join("bin/scuttlarr"))
+        .arg(base.join("bin/scuttler"))
         .args(argv(verb))
-        .env("SCUTTLARR_BASE", base)
+        .env("SCUTTLER_BASE", base)
         .env("NO_COLOR", "1")
-        .env_remove("SCUTTLARR_STATE")
-        .env_remove("SCUTTLARR_OVERLAY")
+        .env_remove("SCUTTLER_STATE")
+        .env_remove("SCUTTLER_OVERLAY")
         .output()
         .map_err(|e| CmdError::Internal(format!("setup cli failed to start: {e}")))?;
     let mut output = String::from_utf8_lossy(&out.stderr).into_owned();
@@ -123,11 +123,11 @@ pub fn boot(app: &tauri::AppHandle, enabled: bool) {
     std::thread::spawn(move || match run(&app, SetupVerb::Migrate) {
         Ok(o) if o.ok => {
             for line in o.output.lines().filter(|l| !l.trim().is_empty()) {
-                eprintln!("[scuttlarr setup] {line}");
+                eprintln!("[scuttler setup] {line}");
             }
         }
-        Ok(o) => eprintln!("[scuttlarr setup] migrate failed:\n{}", o.output),
-        Err(e) => eprintln!("[scuttlarr setup] {e}"),
+        Ok(o) => eprintln!("[scuttler setup] migrate failed:\n{}", o.output),
+        Err(e) => eprintln!("[scuttler setup] {e}"),
     });
 }
 

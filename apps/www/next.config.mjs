@@ -14,11 +14,7 @@ const nextConfig = {
     process.env.DOTFILES_HOST_TAILSCALE_NAME,
     process.env.DOTFILES_HOST_HOSTNAME,
   ].filter(Boolean),
-  transpilePackages: [
-    '@scuttlarr/core',
-    '@scuttlarr/tui',
-    '@scuttlarr/plugins',
-  ],
+  transpilePackages: ['@scuttler/core', '@scuttler/tui', '@scuttler/plugins'],
   typedRoutes: true,
   images: {
     unoptimized: true,

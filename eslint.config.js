@@ -103,12 +103,12 @@ export default tseslint.config(
             { group: NODE_IO, message: NODE_IO_MESSAGE('packages/core') },
             {
               group: [
-                '@scuttlarr/tui',
-                '@scuttlarr/tui/*',
-                '@scuttlarr/plugins',
-                '@scuttlarr/plugins/*',
-                '@scuttlarr/theme',
-                '@scuttlarr/theme/*',
+                '@scuttler/tui',
+                '@scuttler/tui/*',
+                '@scuttler/plugins',
+                '@scuttler/plugins/*',
+                '@scuttler/theme',
+                '@scuttler/theme/*',
               ],
               message: 'packages/core sits under the kit, never on it.',
             },
@@ -136,7 +136,7 @@ export default tseslint.config(
             },
             { group: NODE_IO, message: NODE_IO_MESSAGE('packages/theme') },
             {
-              group: ['@scuttlarr/*'],
+              group: ['@scuttler/*'],
               message:
                 'packages/theme is a leaf: it imports no workspace package.',
             },

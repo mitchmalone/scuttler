@@ -1,4 +1,4 @@
-import type { CellTone } from '@scuttlarr/tui'
+import type { CellTone } from '@scuttler/tui'
 
 /**
  * The updates plugin's logic, pure and tested apart from React — the
@@ -59,8 +59,8 @@ export interface UpgradeRun {
   tail: string[]
 }
 
-/** `scuttlarr` is the app itself (selfupdate.rs): its upgrade runs in-process, then relaunches. */
-export type SourceId = 'scuttlarr' | 'brew' | 'mas' | 'pnpm' | 'mise'
+/** `scuttler` is the app itself (selfupdate.rs): its upgrade runs in-process, then relaunches. */
+export type SourceId = 'scuttler' | 'brew' | 'mas' | 'pnpm' | 'mise'
 
 export interface UpdateSource {
   id: SourceId

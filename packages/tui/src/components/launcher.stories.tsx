@@ -5,8 +5,8 @@ import {
   launchRows,
   quicklinkRows,
   scriptRows,
-} from '@scuttlarr/core/rows'
-import type { Clip, IndexItem, ScriptItem } from '@scuttlarr/core/types'
+} from '@scuttler/core/rows'
+import type { Clip, IndexItem, ScriptItem } from '@scuttler/core/types'
 
 import '../launcher.css'
 import { defineStories } from '../story'
@@ -45,13 +45,13 @@ const FRECENCY = { '/Applications/Ghostty.app': 9 }
 const FALLBACK = 'https://www.google.com/search?q={query}'
 
 const CLIPS: Clip[] = [
-  { id: 41, content: 'pnpm --filter @scuttlarr/desktop tauri dev', ts: 0 },
+  { id: 41, content: 'pnpm --filter @scuttler/desktop tauri dev', ts: 0 },
   {
     id: 40,
-    content: 'https://github.com/mitchmalone/scuttlarr/pull/42',
+    content: 'https://github.com/mitchmalone/scuttler/pull/42',
     ts: 0,
   },
-  { id: 39, content: 'export SCUTTLARR_LOG=debug', ts: 0 },
+  { id: 39, content: 'export SCUTTLER_LOG=debug', ts: 0 },
   { id: 38, content: '192.168.1.199', ts: 0 },
 ]
 
@@ -163,7 +163,7 @@ export const launcherStories = defineStories('Launcher prompt', [
   {
     name: 'emoji results — :fire',
     notes:
-      '`:` is consumed as the mode key; the user’s own emoji are the only ones scuttlarr shows.',
+      '`:` is consumed as the mode key; the user’s own emoji are the only ones scuttler shows.',
     keys: '⏎ copy emoji',
     render: () =>
       prompt({ mode: 'emoji', value: 'fire', rows: emojiRows('fire') }),

@@ -1,4 +1,4 @@
-import { GithubIcon } from '@scuttlarr/tui/icons'
+import { GithubIcon } from '@scuttler/tui/icons'
 import Image from 'next/image'
 import Link from 'next/link'
 
@@ -12,14 +12,12 @@ export function SiteHeader() {
       <div className="flex items-center gap-3">
         <Image
           src="/menubar-icon.png"
-          alt="scuttlarr"
+          alt="scuttler"
           width={44}
           height={44}
           className="[filter:var(--logo)]"
         />
-        <span className="text-base font-bold tracking-[-0.01em]">
-          scuttlarr
-        </span>
+        <span className="text-base font-bold tracking-[-0.01em]">scuttler</span>
         <span className="rounded-full border border-(--border) px-2 py-0.5 text-[11px] text-(--dim)">
           {VERSION}
         </span>

@@ -1,6 +1,6 @@
 /**
  * Brand marks lucide doesn't ship: GitHub and X (the settings About tab and
- * the scuttlarr.com footer), Claude and Codex (the usage card). One path, no
+ * the www.scuttler.app footer), Claude and Codex (the usage card). One path, no
  * second copy (invariant 10).
  */
 type IconProps = {

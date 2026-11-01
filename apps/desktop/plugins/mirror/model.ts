@@ -2,16 +2,16 @@
  * The mirror plugin's pure half (docs/PLUGINS.md): what to sync and what the
  * cell says about it. rsync itself lives in service.ts.
  */
-import type { WidgetView } from '@scuttlarr/tui/bar/types'
+import type { WidgetView } from '@scuttler/tui/bar/types'
 
 export interface MirrorJob {
   /** ssh host alias. */
   host: string
-  /** `codex` | `claude` — the mirror dir scuttlarr's usage scan looks for. */
+  /** `codex` | `claude` — the mirror dir scuttler's usage scan looks for. */
   provider: 'codex' | 'claude'
   /** Remote path, relative to the remote home unless absolute. */
   remote: string
-  /** Local destination: ~/.local/share/scuttlarr/mirrors/<host>/<provider>/ */
+  /** Local destination: ~/.local/share/scuttler/mirrors/<host>/<provider>/ */
   dest: string
 }
 
@@ -21,7 +21,7 @@ export function jobs(
 ): MirrorJob[] {
   const host = env.MIRROR_HOST?.trim()
   if (!host) return []
-  const base = `${home}/.local/share/scuttlarr/mirrors/${host}`
+  const base = `${home}/.local/share/scuttler/mirrors/${host}`
   return [
     {
       host,

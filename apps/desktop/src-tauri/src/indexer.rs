@@ -15,7 +15,7 @@ use crate::settings_panes;
 pub enum ItemKind {
     App,
     Settings,
-    Scuttlarr,
+    Scuttler,
     Link,
     Command,
 }
@@ -23,7 +23,7 @@ pub enum ItemKind {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IndexItem {
-    /// Stable identity: app bundle path, `settings:<pane-id>`, or `scuttlarr:<action>`.
+    /// Stable identity: app bundle path, `settings:<pane-id>`, or `scuttler:<action>`.
     pub id: String,
     pub name: String,
     pub kind: ItemKind,
@@ -36,7 +36,7 @@ pub struct IndexItem {
     /// Curated synonyms the fuzzy matcher may match against (the *alias* role).
     pub aliases: Vec<String>,
     /// Derived search-only hints — bundle id tail, `CFBundleName`, executable — that
-    /// only count at a word start (the *keyword* role; `@scuttlarr/core/ranking`).
+    /// only count at a word start (the *keyword* role; `@scuttler/core/ranking`).
     /// Absent for anything but apps.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub keywords: Vec<String>,
@@ -131,14 +131,14 @@ pub fn scan(links: &[crate::config::Link], include_bookmarks: bool) -> Vec<Index
         items.dedup_by(|a, b| a.id == b.id);
     }
 
-    // scuttlarr self-indexes (PRD §4.5): the prompt is the preferences UI.
+    // scuttler self-indexes (PRD §4.5): the prompt is the preferences UI.
     for (action, name, alias) in [
         (
             "settings",
-            "scuttlarr — Settings",
+            "scuttler — Settings",
             "settings preferences options",
         ),
-        ("reindex", "scuttlarr — Reindex apps", "reindex"),
+        ("reindex", "scuttler — Reindex apps", "reindex"),
         (
             "colorpicker",
             "Color Picker",
@@ -146,27 +146,27 @@ pub fn scan(links: &[crate::config::Link], include_bookmarks: bool) -> Vec<Index
         ),
         (
             "config",
-            "scuttlarr — Open config",
+            "scuttler — Open config",
             "config settings preferences",
         ),
         (
             "theme",
-            "scuttlarr — Theme switcher",
+            "scuttler — Theme switcher",
             "theme themes appearance switcher colors colours",
         ),
         (
             "wallpaper",
-            "scuttlarr — Next wallpaper",
+            "scuttler — Next wallpaper",
             "wallpaper background desktop picture next",
         ),
-        ("quit", "scuttlarr — Quit", "quit exit"),
+        ("quit", "scuttler — Quit", "quit exit"),
     ] {
         items.push(IndexItem {
-            id: format!("scuttlarr:{action}"),
+            id: format!("scuttler:{action}"),
             name: name.into(),
-            kind: ItemKind::Scuttlarr,
+            kind: ItemKind::Scuttler,
             path: String::new(),
-            hint: "scuttlarr".into(),
+            hint: "scuttler".into(),
             icon: None,
             aliases: alias.split(' ').map(String::from).collect(),
             keywords: Vec::new(),
@@ -200,7 +200,7 @@ const GENERIC_KEYWORDS: &[&str] = &[
     "shortcuts",
 ];
 
-/// The keyword role for an app (`@scuttlarr/core/ranking`, DECISIONS 2026-09-16):
+/// The keyword role for an app (`@scuttler/core/ranking`, DECISIONS 2026-09-16):
 /// the bundle id's tail (`VSCode`), `CFBundleName` (`Code`) and the executable
 /// (`Resolve`), each kept only when it says something the display name doesn't —
 /// not equal to it, not contained in it, not a generic word, not a number, not a
@@ -313,7 +313,7 @@ pub fn start(app: AppHandle) {
         let mut watcher = match notify::recommended_watcher(tx) {
             Ok(w) => w,
             Err(e) => {
-                eprintln!("[scuttlarr] app watcher failed: {e}");
+                eprintln!("[scuttler] app watcher failed: {e}");
                 return;
             }
         };
@@ -400,7 +400,7 @@ mod tests {
         assert!(items
             .iter()
             .any(|i| i.name == "Bluetooth" && i.kind == ItemKind::Settings));
-        assert!(items.iter().any(|i| i.id == "scuttlarr:quit"));
+        assert!(items.iter().any(|i| i.id == "scuttler:quit"));
     }
 
     #[test]

@@ -14,7 +14,7 @@ export type ThemeSource = { name: string; text: string }
  * original three, then everything else alphabetically — the order the hand-written
  * map had, so regenerating changes no UI.
  */
-const LEAD = ['scuttlarr', 'dracula', 'terminal', 'amber']
+const LEAD = ['scuttler', 'dracula', 'terminal', 'amber']
 
 export function orderThemes<T extends { name: string }>(themes: T[]): T[] {
   const rank = (name: string) => {
@@ -42,7 +42,7 @@ export function buildTokens(
   return out
 }
 
-export const GENERATED_HEADER = `// GENERATED — do not edit; pnpm --filter @scuttlarr/theme build
+export const GENERATED_HEADER = `// GENERATED — do not edit; pnpm --filter @scuttler/theme build
 // Source: packages/theme/themes/<name>/colors.toml, baked by packages/theme/src/generate.ts.
 // \`pnpm verify:themes\` fails when this file is stale.`
 
@@ -51,7 +51,7 @@ export function generateModule(sources: ThemeSource[]): string {
   const tokens = buildTokens(sources)
   const lines: string[] = [
     GENERATED_HEADER,
-    "import type { ThemeTokens } from '@scuttlarr/theme/tokens'",
+    "import type { ThemeTokens } from '@scuttler/theme/tokens'",
     '',
     'export const BUILTIN_THEMES: Record<string, ThemeTokens> = {',
   ]

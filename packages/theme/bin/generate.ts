@@ -55,7 +55,7 @@ for (const [path, text] of outputs) {
   if (check) {
     const current = existsSync(path) ? readFileSync(path, 'utf8') : ''
     if (current !== text)
-      fail(`${path} is stale — run: pnpm --filter @scuttlarr/theme build`)
+      fail(`${path} is stale — run: pnpm --filter @scuttler/theme build`)
     console.error(`generate: ${path} up to date`)
   } else {
     writeFileSync(path, text)

@@ -7,8 +7,8 @@ import {
   BarCell,
   BarHoverCell,
   ICON_PROPS,
-} from '@scuttlarr/tui'
-import type { PluginCellProps } from '@scuttlarr/tui/plugins'
+} from '@scuttler/tui'
+import type { PluginCellProps } from '@scuttler/tui/plugins'
 import { CalendarDays } from 'lucide-react'
 
 import {

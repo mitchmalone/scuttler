@@ -1,8 +1,8 @@
 {
-  "name": "@scuttlarr/plugins",
+  "name": "@scuttler/plugins",
   "private": true,
   "type": "module",
-  "description": "scuttlarr's first-party plugins — the bundled cells and panels, written to the same contract third-party plugins use (docs/PLUGINS.md). The app bundles them; scuttlarr.com imports them.",
+  "description": "scuttler's first-party plugins — the bundled cells and panels, written to the same contract third-party plugins use (docs/PLUGINS.md). The app bundles them; www.scuttler.app imports them.",
   "exports": {
     ".": "./index.ts",
     "./usage/cell": "./usage/cell.tsx",
@@ -23,7 +23,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@scuttlarr/tui": "workspace:*",
+    "@scuttler/tui": "workspace:*",
     "lucide-react": "^1.30.0"
   },
   "peerDependencies": {

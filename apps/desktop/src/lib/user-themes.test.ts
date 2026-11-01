@@ -1,4 +1,4 @@
-import { BUILTIN_THEME_SOURCES } from '@scuttlarr/theme'
+import { BUILTIN_THEME_SOURCES } from '@scuttler/theme'
 import { describe, expect, it } from 'vitest'
 
 import { type UserTheme, mergeThemes, tokensOf } from './user-themes'

@@ -1,4 +1,4 @@
-import type { PluginState } from '@scuttlarr/tui/plugins'
+import type { PluginState } from '@scuttler/tui/plugins'
 import { describe, expect, it, vi } from 'vitest'
 
 import { samePlugins } from './use-plugins'

@@ -1,4 +1,4 @@
-import { BUILTIN_THEMES } from '@scuttlarr/tui/themes'
+import { BUILTIN_THEMES } from '@scuttler/tui/themes'
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -160,7 +160,7 @@ describe('applyKey', () => {
 
 describe('paintFrame', () => {
   const base = {
-    ramp: fieldRamp(BUILTIN_THEMES.scuttlarr!),
+    ramp: fieldRamp(BUILTIN_THEMES.scuttler!),
     width: 1200,
     height: 700,
     dpr: 1,

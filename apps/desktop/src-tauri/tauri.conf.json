@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "scuttlarr",
+  "productName": "scuttler",
   "version": "0.8.0",
   "identifier": "com.mitchmalone.scuttlarr",
   "build": {
@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "scuttlarr",
+        "title": "scuttler",
         "width": 640,
         "height": 64,
         "visible": false,

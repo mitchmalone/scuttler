@@ -1,6 +1,6 @@
 'use client'
 
-import { themeNames } from '@scuttlarr/tui/themes'
+import { themeNames } from '@scuttler/tui/themes'
 import { Check } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 

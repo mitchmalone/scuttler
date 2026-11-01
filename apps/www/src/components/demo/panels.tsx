@@ -3,10 +3,10 @@
 import {
   UPDATES_PLUGIN,
   updatesReportAt,
-} from '@scuttlarr/plugins/updates/fixtures'
-import UpdatesPanelPlugin from '@scuttlarr/plugins/updates/panel'
-import { USAGE_PLUGIN, usageReportAt } from '@scuttlarr/plugins/usage/fixtures'
-import UsagePanelPlugin from '@scuttlarr/plugins/usage/panel'
+} from '@scuttler/plugins/updates/fixtures'
+import UpdatesPanelPlugin from '@scuttler/plugins/updates/panel'
+import { USAGE_PLUGIN, usageReportAt } from '@scuttler/plugins/usage/fixtures'
+import UsagePanelPlugin from '@scuttler/plugins/usage/panel'
 import {
   KeyHints,
   ListRow,
@@ -14,14 +14,14 @@ import {
   SectionHeader,
   TextPrompt,
   useListNav,
-} from '@scuttlarr/tui'
-import { NOOP_HOST } from '@scuttlarr/tui/plugins'
+} from '@scuttler/tui'
+import { NOOP_HOST } from '@scuttler/tui/plugins'
 import { useState } from 'react'
 
 import { PANEL_INFO, type PanelId, WIFI } from '@/lib/demo-data'
 
 /**
- * The demo's TUI panels, rendered from the *shipping* `@scuttlarr/tui` components
+ * The demo's TUI panels, rendered from the *shipping* `@scuttler/tui` components
  * rather than website mock-ups (DECISIONS 2026-08-16). Only the data is fictional;
  * the chrome, keyboard navigation and row selection are the same code the app runs.
  */
@@ -261,7 +261,7 @@ export function StubPanel({
         dim
         label="A browser has no Mac behind it to read: no audio devices, pasteboard, screenshots, agents or tiling."
       />
-      <ListRow dim label="Install scuttlarr and type this trigger to see it." />
+      <ListRow dim label="Install scuttler and type this trigger to see it." />
     </Panel>
   )
 }

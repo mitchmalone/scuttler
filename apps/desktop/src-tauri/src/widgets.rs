@@ -1,4 +1,4 @@
-//! Bar widgets: user plugins in `~/.config/scuttlarr/widgets/` — `.ts` files
+//! Bar widgets: user plugins in `~/.config/scuttler/widgets/` — `.ts` files
 //! run under Bun (runtime.rs), or any executable — that own a cell (and hover
 //! card) in the bar. The scripts protocol, pointed at the bar (docs/WIDGETS.md):
 //!
@@ -16,12 +16,12 @@
 //!
 //! Widgets are data, never code: Rust runs them on their own cadence (never on
 //! the 1 Hz push path), keeps the last view per id, and ships the lot in
-//! `BarSnapshot.widgets`; `@scuttlarr/tui` renders every widget with one
+//! `BarSnapshot.widgets`; `@scuttler/tui` renders every widget with one
 //! generic cell + card. A failing tick keeps the last view and marks the widget
 //! `error` with the reason — fail-visible, never a silent blank.
 //!
 //! Refresh comes three ways: the interval, `touch
-//! ~/.config/scuttlarr/triggers/widget.<id>` (bar.rs forwards those to
+//! ~/.config/scuttler/triggers/widget.<id>` (bar.rs forwards those to
 //! `poke`), and any change in the widgets dir (re-discovery, immediate tick).
 
 use std::{
@@ -73,7 +73,7 @@ pub struct WidgetManifest {
     pub requires: Vec<WidgetRequire>,
 }
 
-/// One declared prerequisite — mirrored by `WidgetRequire` in @scuttlarr/tui.
+/// One declared prerequisite — mirrored by `WidgetRequire` in @scuttler/tui.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetRequire {
@@ -83,7 +83,7 @@ pub struct WidgetRequire {
     pub fix: Option<String>,
 }
 
-/// One declared setting — mirrored by `WidgetSetting` in @scuttlarr/tui.
+/// One declared setting — mirrored by `WidgetSetting` in @scuttler/tui.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetSetting {
@@ -101,7 +101,7 @@ pub struct WidgetSetting {
     pub required: bool,
 }
 
-/// The widget's opt-in `auth` command — mirrored by `WidgetAuth` in @scuttlarr/tui.
+/// The widget's opt-in `auth` command — mirrored by `WidgetAuth` in @scuttler/tui.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetAuth {
@@ -188,7 +188,7 @@ pub struct WidgetView {
     pub setup: Option<WidgetSetup>,
 }
 
-/// Mirrored by `WidgetSetup` in @scuttlarr/tui.
+/// Mirrored by `WidgetSetup` in @scuttler/tui.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetSetup {
@@ -198,7 +198,7 @@ pub struct WidgetSetup {
     pub fix: Option<String>,
 }
 
-/// A widget as the bar sees it — mirrored by `BarWidget` in @scuttlarr/tui.
+/// A widget as the bar sees it — mirrored by `BarWidget` in @scuttler/tui.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WidgetState {
@@ -501,7 +501,7 @@ fn discover(dir: &Path) -> Vec<(WidgetManifest, PathBuf)> {
         }
         match run_widget(&path, "manifest", MANIFEST_TIMEOUT).and_then(|out| parse_manifest(&out)) {
             Ok(m) => found.push((m, path)),
-            Err(e) => eprintln!("[scuttlarr widgets] {} manifest: {e}", path.display()),
+            Err(e) => eprintln!("[scuttler widgets] {} manifest: {e}", path.display()),
         }
     }
     found.sort_by(|a, b| a.0.id.cmp(&b.0.id));
@@ -554,7 +554,7 @@ fn refresh() {
         reg.push(entry);
     }
     eprintln!(
-        "[scuttlarr widgets] {} widget(s): {}",
+        "[scuttler widgets] {} widget(s): {}",
         reg.len(),
         reg.iter()
             .map(|e| e.state.id.as_str())
@@ -590,7 +590,7 @@ fn tick(
                     e.state.last_ok = Some(now);
                 }
                 Some(Err(err)) => {
-                    eprintln!("[scuttlarr widgets] {id}: {err}");
+                    eprintln!("[scuttler widgets] {id}: {err}");
                     e.state.error = Some(err);
                 }
                 None => {
@@ -692,7 +692,7 @@ pub fn auth(app: AppHandle, id: String) -> Result<(), String> {
                 crate::plugins::poke(&id);
             }
             Err(error) => {
-                eprintln!("[scuttlarr widgets] {id} auth: {error}");
+                eprintln!("[scuttler widgets] {id} auth: {error}");
                 auth_emit(
                     &app,
                     AuthEvent::Error {
@@ -869,7 +869,7 @@ fn download(url: &str) -> Result<(String, Vec<u8>), String> {
     let agent = ureq::AgentBuilder::new()
         .timeout_connect(Duration::from_secs(5))
         .timeout(Duration::from_secs(15))
-        .user_agent("scuttlarr-widgets/0.1")
+        .user_agent("scuttler-widgets/0.1")
         .build();
     let response = agent
         .get(url)
@@ -949,7 +949,7 @@ pub fn start(app: AppHandle) {
         let mut watcher = match notify::recommended_watcher(tx) {
             Ok(w) => w,
             Err(e) => {
-                eprintln!("[scuttlarr widgets] watcher failed: {e}");
+                eprintln!("[scuttler widgets] watcher failed: {e}");
                 return;
             }
         };
@@ -1169,7 +1169,7 @@ mod tests {
 
     #[test]
     fn discover_runs_manifests_and_skips_non_executables() {
-        let dir = std::env::temp_dir().join(format!("scuttlarr-widgets-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("scuttler-widgets-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         let good = dir.join("b-good");

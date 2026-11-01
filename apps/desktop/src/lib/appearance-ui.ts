@@ -12,7 +12,7 @@ import {
   resolveAppearance,
   withPick,
   withPickSlot,
-} from '@scuttlarr/core/appearance'
+} from '@scuttler/core/appearance'
 
 import type { Config } from './config'
 import { appearanceOf } from './theme'

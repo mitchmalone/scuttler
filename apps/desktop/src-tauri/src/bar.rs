@@ -1,4 +1,4 @@
-//! The bar, scuttlarr's menubar replacement: one status-level, non-activating
+//! The bar, scuttler's menubar replacement: one status-level, non-activating
 //! panel per display (`screens.rs` reconciles them), pinned to the top edge,
 //! visible on every space, with hover cards that grow the window downward.
 //! Gated by `bar.enabled` in config (default off; off spawns and polls nothing,
@@ -158,7 +158,7 @@ pub fn set_enabled(app: &AppHandle, on: bool) {
     let _ = app.run_on_main_thread(move || {
         if on && handle.get_webview_window("bar-0").is_none() {
             if let Err(e) = init(&handle) {
-                eprintln!("[scuttlarr bar] enable failed: {e:?}");
+                eprintln!("[scuttler bar] enable failed: {e:?}");
             }
             return;
         }
@@ -183,7 +183,7 @@ pub fn init(app: &AppHandle) -> CmdResult<()> {
     if up == 0 {
         return Err(CmdError::Internal("no bar window came up".into()));
     }
-    eprintln!("[scuttlarr bar] {up} bar(s) up");
+    eprintln!("[scuttler bar] {up} bar(s) up");
     crate::bar_constrain::prevent_app_nap();
     if !THREADS_STARTED.swap(true, std::sync::atomic::Ordering::SeqCst) {
         crate::bar_modules::start();
@@ -213,7 +213,7 @@ fn sync(app: &AppHandle) {
             }
             let notched = crate::screens::notched(screen.id);
             if let Err(e) = build(app, &label, notched) {
-                eprintln!("[scuttlarr bar] {label} build failed: {e:?}");
+                eprintln!("[scuttler bar] {label} build failed: {e:?}");
                 continue;
             }
             let mut assigned = ASSIGNED.lock().unwrap();
@@ -254,7 +254,7 @@ fn sync(app: &AppHandle) {
         };
         if window.is_visible().unwrap_or(false) {
             let _ = window.hide();
-            eprintln!("[scuttlarr bar] bar-{i} hidden: display gone");
+            eprintln!("[scuttler bar] bar-{i} hidden: display gone");
         }
     }
 }
@@ -314,7 +314,7 @@ fn build(app: &AppHandle, label: &str, notched: bool) -> CmdResult<()> {
     // makes y=0 legal again.
     panel.set_level(PanelLevel::Floating.value());
     if !crate::bar_constrain::install(c"BarPanel") {
-        eprintln!("[scuttlarr bar] constrain override failed; bar may sit low");
+        eprintln!("[scuttler bar] constrain override failed; bar may sit low");
     }
     panel.set_style_mask(StyleMask::empty().nonactivating_panel().into());
     panel.set_collection_behavior(
@@ -333,10 +333,10 @@ fn build(app: &AppHandle, label: &str, notched: bool) -> CmdResult<()> {
         .ok_or_else(|| CmdError::Internal(format!("{label} missing post-conversion")))?;
     let _ = window.with_webview(|platform| {
         if !crate::bar_constrain::disable_occlusion_detection(platform.inner().cast()) {
-            eprintln!("[scuttlarr bar] occlusion-detection override unavailable");
+            eprintln!("[scuttler bar] occlusion-detection override unavailable");
         }
         if !crate::bar_constrain::enable_hover_events(platform.inner().cast()) {
-            eprintln!("[scuttlarr bar] hover tracking unavailable");
+            eprintln!("[scuttler bar] hover tracking unavailable");
         }
     });
     Ok(())
@@ -361,7 +361,7 @@ pub(crate) fn push(app: &AppHandle) {
     }
     let snap = snapshot();
     if snap.focused.is_none() && !snap.workspaces.is_empty() {
-        eprintln!("[scuttlarr bar] push without focus: {snap:?}");
+        eprintln!("[scuttler bar] push without focus: {snap:?}");
     }
     let Ok(json) = serde_json::to_string(&snap) else {
         return;
@@ -376,20 +376,20 @@ pub(crate) fn push(app: &AppHandle) {
             continue;
         }
         if let Err(e) = window.eval(&script) {
-            eprintln!("[scuttlarr bar] eval push failed on bar-{i}: {e}");
+            eprintln!("[scuttler bar] eval push failed on bar-{i}: {e}");
         }
     }
 }
 
 /// Event-driven refresh: anything touching a file in
-/// `~/.config/scuttlarr/triggers/` makes the bar re-snapshot immediately.
+/// `~/.config/scuttler/triggers/` makes the bar re-snapshot immediately.
 /// Aerospace's `exec-on-workspace-change` points here — polling is only the
 /// fallback, so workspace switches show up in tens of ms, not up to a second.
 /// It's also a hackable surface: any script can poke the bar.
 fn watch_triggers(app: AppHandle) {
     let dir = crate::config::config_dir().join("triggers");
     if let Err(e) = std::fs::create_dir_all(&dir) {
-        eprintln!("[scuttlarr bar] triggers dir failed: {e}");
+        eprintln!("[scuttler bar] triggers dir failed: {e}");
         return;
     }
     std::thread::spawn(move || {
@@ -398,12 +398,12 @@ fn watch_triggers(app: AppHandle) {
         let mut watcher = match notify::recommended_watcher(tx) {
             Ok(w) => w,
             Err(e) => {
-                eprintln!("[scuttlarr bar] trigger watcher failed: {e}");
+                eprintln!("[scuttler bar] trigger watcher failed: {e}");
                 return;
             }
         };
         if let Err(e) = watcher.watch(&dir, RecursiveMode::NonRecursive) {
-            eprintln!("[scuttlarr bar] trigger watch failed: {e}");
+            eprintln!("[scuttler bar] trigger watch failed: {e}");
             return;
         }
         while let Ok(first) = rx.recv() {
@@ -494,7 +494,7 @@ pub fn snapshot() -> BarSnapshot {
         focused = aerospace(&["list-workspaces", "--focused"])
             .map(|out| parse_lines(&out).into_iter().next())
             .unwrap_or_default();
-        eprintln!("[scuttlarr bar] focus fallback used; table={raw:?} → focused={focused:?}");
+        eprintln!("[scuttler bar] focus fallback used; table={raw:?} → focused={focused:?}");
     }
     let (battery_pct, on_ac, charging) = crate::battery::cached();
     BarSnapshot {

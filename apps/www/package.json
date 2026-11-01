@@ -1,8 +1,8 @@
 {
-  "name": "@scuttlarr/www",
+  "name": "@scuttler/www",
   "private": true,
   "type": "module",
-  "description": "scuttlarr.com — the terminal developer's desktop for macOS; the demo is the app",
+  "description": "www.scuttler.app — the terminal developer's desktop for macOS; the demo is the app",
   "scripts": {
     "dev": "next dev",
     "prebuild": "cp ../../install/install.sh public/install",
@@ -11,9 +11,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@scuttlarr/core": "workspace:*",
-    "@scuttlarr/plugins": "workspace:*",
-    "@scuttlarr/tui": "workspace:*",
+    "@scuttler/core": "workspace:*",
+    "@scuttler/plugins": "workspace:*",
+    "@scuttler/tui": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.30.0",

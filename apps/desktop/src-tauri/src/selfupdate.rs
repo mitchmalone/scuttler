@@ -1,5 +1,5 @@
-//! scuttlarr updating itself (DECISIONS 2026-09-16):
-//! the `scuttlarr` source in the `updates` plugin. The check reads the public
+//! scuttler updating itself (DECISIONS 2026-09-16):
+//! the `scuttler` source in the `updates` plugin. The check reads the public
 //! GitHub Releases feed — the same feed the site's `release.json` is cut from —
 //! and sends nothing about the user (invariant 2: the request serves the user,
 //! it does not report on them). The install downloads the release zip, checks
@@ -23,8 +23,8 @@ use sha2::{Digest, Sha256};
 
 use crate::updates::{UpdateItem, UpdateSource};
 
-pub const SOURCE_ID: &str = "scuttlarr";
-const RELEASES_LATEST: &str = "https://api.github.com/repos/mitchmalone/scuttlarr/releases/latest";
+pub const SOURCE_ID: &str = "scuttler";
+const RELEASES_LATEST: &str = "https://api.github.com/repos/mitchmalone/scuttler/releases/latest";
 /// A release zip larger than this is refused rather than downloaded.
 const MAX_ZIP_BYTES: u64 = 200 * 1024 * 1024;
 
@@ -92,20 +92,20 @@ fn plist_id_version(bundle: &Path) -> Option<(String, String)> {
     ))
 }
 
-/// Whether the `scuttlarr` source exists at all: a signed bundle, and the check on.
+/// Whether the `scuttler` source exists at all: a signed bundle, and the check on.
 pub fn eligible() -> bool {
     CHECK_ENABLED.load(Ordering::Relaxed) && identity().is_some()
 }
 
 /// The terminal route for the same upgrade (`t` / `c` in the panel).
-pub const UPGRADE_COMMAND: &str = "brew upgrade --cask scuttlarr";
+pub const UPGRADE_COMMAND: &str = "brew upgrade --cask scuttler";
 
 fn agent() -> ureq::Agent {
     ureq::AgentBuilder::new()
         .timeout_connect(Duration::from_secs(6))
         .timeout(Duration::from_secs(30))
         // The app's name, nothing about the machine or the person.
-        .user_agent("scuttlarr")
+        .user_agent("scuttler")
         .build()
 }
 
@@ -132,7 +132,7 @@ fn latest(agent: &ureq::Agent) -> Result<Latest, String> {
 pub fn parse_latest(body: &serde_json::Value) -> Result<Latest, String> {
     let tag = body["tag_name"].as_str().ok_or("no tag_name in release")?;
     let version = tag.trim_start_matches('v').to_string();
-    let zip_name = format!("scuttlarr-{version}.zip");
+    let zip_name = format!("scuttler-{version}.zip");
     let assets = body["assets"].as_array().ok_or("no assets in release")?;
     let url_of = |name: &str| {
         assets
@@ -173,12 +173,12 @@ pub fn is_newer(available: &str, installed: &str) -> bool {
     false
 }
 
-/// One check: the `scuttlarr` row of the updates report. An error is the row's
+/// One check: the `scuttler` row of the updates report. An error is the row's
 /// `error`, exactly like a package manager's failed check.
 pub fn check() -> UpdateSource {
     let mut source = UpdateSource {
         id: SOURCE_ID.into(),
-        label: "scuttlarr".into(),
+        label: "scuttler".into(),
         upgrade_command: UPGRADE_COMMAND.into(),
         checked_at: now_secs(),
         error: None,
@@ -194,7 +194,7 @@ pub fn check() -> UpdateSource {
         Ok(latest) => {
             if is_newer(&latest.version, &id.version) {
                 source.items.push(UpdateItem {
-                    name: "scuttlarr".into(),
+                    name: "scuttler".into(),
                     installed: id.version.clone(),
                     available: latest.version,
                     kind: Some("app".into()),
@@ -210,7 +210,7 @@ pub fn check() -> UpdateSource {
 fn update_dir() -> Result<PathBuf, String> {
     let dir = dirs::cache_dir()
         .ok_or("no cache dir")?
-        .join("scuttlarr")
+        .join("scuttler")
         .join("update");
     fs::create_dir_all(&dir).map_err(|e| format!("create {}: {e}", dir.display()))?;
     Ok(dir)
@@ -219,7 +219,7 @@ fn update_dir() -> Result<PathBuf, String> {
 /// Remove what a previous update left (its zip, its stage, the bundle it
 /// replaced) — called at boot, once we are demonstrably running the new one.
 pub fn cleanup() {
-    if let Some(dir) = dirs::cache_dir().map(|d| d.join("scuttlarr").join("update")) {
+    if let Some(dir) = dirs::cache_dir().map(|d| d.join("scuttler").join("update")) {
         let _ = fs::remove_dir_all(dir);
     }
 }
@@ -474,14 +474,14 @@ mod tests {
         let body = serde_json::json!({
             "tag_name": "v0.7.0",
             "assets": [
-                {"name": "scuttlarr-0.7.0.dmg", "browser_download_url": "https://x/d"},
-                {"name": "scuttlarr-0.7.0.zip", "browser_download_url": "https://x/z"},
+                {"name": "scuttler-0.7.0.dmg", "browser_download_url": "https://x/d"},
+                {"name": "scuttler-0.7.0.zip", "browser_download_url": "https://x/z"},
                 {"name": "SHA256SUMS", "browser_download_url": "https://x/s"}
             ]
         });
         let l = parse_latest(&body).unwrap();
         assert_eq!(l.version, "0.7.0");
-        assert_eq!(l.zip_name, "scuttlarr-0.7.0.zip");
+        assert_eq!(l.zip_name, "scuttler-0.7.0.zip");
         assert_eq!(l.zip_url, "https://x/z");
         assert_eq!(l.sums_url, "https://x/s");
         // A release without the zip is not installable and not offered.
@@ -492,13 +492,13 @@ mod tests {
 
     #[test]
     fn reads_the_sums_file() {
-        let sums = "abc123  scuttlarr-0.7.0.zip\nDEF456  scuttlarr-0.7.0.dmg\n";
+        let sums = "abc123  scuttler-0.7.0.zip\nDEF456  scuttler-0.7.0.dmg\n";
         assert_eq!(
-            sum_for(sums, "scuttlarr-0.7.0.zip").as_deref(),
+            sum_for(sums, "scuttler-0.7.0.zip").as_deref(),
             Some("abc123")
         );
         assert_eq!(
-            sum_for(sums, "scuttlarr-0.7.0.dmg").as_deref(),
+            sum_for(sums, "scuttler-0.7.0.dmg").as_deref(),
             Some("def456")
         );
         assert_eq!(sum_for(sums, "other.zip"), None);

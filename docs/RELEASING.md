@@ -1,4 +1,4 @@
-# Releasing scuttlarr
+# Releasing scuttler
 
 **The release is `scripts/release.sh` + `.github/workflows/release.yml`. If a step isn't in
 one of those two, it isn't part of the release** — add it there first (decisions 2026-08-10,
@@ -31,16 +31,16 @@ scripts/release.sh 0.4.0          # or --unsigned while the cert is pending
    `-D warnings`).
 3. **Bump** — version into `apps/desktop/{package.json,src-tauri/tauri.conf.json,src-tauri/Cargo.toml}`
    (+ lockfile), verified consistent.
-4. **Build** — `pnpm --filter @scuttlarr/desktop tauri build`, app + dmg targets, signed &
+4. **Build** — `pnpm --filter @scuttler/desktop tauri build`, app + dmg targets, signed &
    notarized via the stored keychain profile when signing is on.
-5. **Verify + package** — `spctl` must accept; `dist/vX.Y.Z/` gets `scuttlarr-X.Y.Z.zip` (cask feed),
-   `scuttlarr-X.Y.Z.dmg` (human download), `SHA256SUMS`; writes `apps/www/src/lib/release.json` (generated, never
+5. **Verify + package** — `spctl` must accept; `dist/vX.Y.Z/` gets `scuttler-X.Y.Z.zip` (cask feed),
+   `scuttler-X.Y.Z.dmg` (human download), `SHA256SUMS`; writes `apps/www/src/lib/release.json` (generated, never
    hand-edited — it ships in the release commit).
 6. **Smoke tests, scripted** (interactive `[y/N]` gates until 2026-11-01, DECISIONS) — the
    zip is unpacked and launched with an empty `HOME`: it must report its cold start under
    1 s, register the hotkey, write a config that owes the first-launch setup, and not
    panic. Then this build is installed over the running one (`dev-install.sh`): the new
-   version must come up and report its plugins, nothing under `~/.config/scuttlarr` may
+   version must come up and report its plugins, nothing under `~/.config/scuttler` may
    change, the frecency db may not shrink. The running app is stopped for the first test
    (a second instance would fight it for the hotkey); a bar and tray icon show for a few
    seconds.
@@ -54,12 +54,12 @@ scripts/release.sh 0.4.0          # or --unsigned while the cert is pending
 - **check** — notes exist without placeholders; `release.json` version matches the tag
   (fails the release rather than pushing corrections — branch-protection-safe); release
   assets all present.
-- **homebrew** — writes `Casks/scuttlarr.rb` whole in the tap repo from the template
-  `.github/cask/scuttlarr.rb` (version + zip sha filled in) — change the cask there, never
+- **homebrew** — writes `Casks/scuttler.rb` whole in the tap repo from the template
+  `.github/cask/scuttler.rb` (version + zip sha filled in) — change the cask there, never
   in the tap. `Casks/launcharr.rb` stays at 0.6.0 as a deprecated alias: the job adds its
-  `deprecate! … replacement_cask: "scuttlarr"` once and otherwise leaves it alone. Gated on
+  `deprecate! … replacement_cask: "scuttler"` once and otherwise leaves it alone. Gated on
   `vars.HOMEBREW_TAP_REPO` + `secrets.HOMEBREW_TAP_TOKEN`.
-- **notion** — sets `Version` on the Scuttlarr row. Gated on `vars.NOTION_RELEASE_PAGE` +
+- **notion** — sets `Version` on the Scuttler row. Gated on `vars.NOTION_RELEASE_PAGE` +
   `secrets.NOTION_API_KEY`.
 - **deploy-mmcom** — POSTs the mitchmalone.com Vercel deploy hook. Gated on
   `secrets.MMCOM_DEPLOY_HOOK`.
@@ -78,22 +78,22 @@ announcing anywhere is a deliberate, separate decision.
 | **Homebrew** (advertised) | tap `mitchmalone/homebrew-tap` (shared, all projects) → release zip | everyone; the cask is `auto_updates` — the app updates itself (`updates ⏎`) |
 | dmg                       | GitHub Release                                                      | browser downloads, drag-to-Applications                                     |
 | zip                       | GitHub Release                                                      | what the cask consumes; direct download                                     |
-| source                    | git clone + `pnpm --filter @scuttlarr/desktop tauri build`          | the committed                                                               |
+| source                    | git clone + `pnpm --filter @scuttler/desktop tauri build`           | the committed                                                               |
 
-**In-app updates (DECISIONS 2026-09-16):** the `updates` plugin's `scuttlarr` source reads
+**In-app updates (DECISIONS 2026-09-16):** the `updates` plugin's `scuttler` source reads
 GitHub's `releases/latest` every 6 h and, on `↵`, installs the release zip after checking
 its sha256 against `SHA256SUMS` and its signature against the running app's team
 (`selfupdate.rs`). It therefore depends on every release carrying **the zip, `SHA256SUMS`,
 and a Developer ID signature** — `release.sh` produces all three; an `--unsigned` release is
 never offered. Homebrew stays the advertised channel. **The cask must declare
 `auto_updates true`** (Homebrew's flag for an app that manages its own version) so `brew
-outdated` stops reporting a self-updated app as stale; add it when `Casks/scuttlarr.rb` is
+outdated` stops reporting a self-updated app as stale; add it when `Casks/scuttler.rb` is
 created. Never instruct users to strip quarantine — the updater refuses a quarantined
 download rather than clearing the flag.
 
 **Dependencies (v0.4, DECISIONS 2026-08-17):** the cask declares
 `depends_on cask: "nikitabobko/tap/aerospace"` — a structural line in
-`Casks/scuttlarr.rb` that CI's version/sha `sed` leaves alone; edit it in the tap when the
+`Casks/scuttler.rb` that CI's version/sha `sed` leaves alone; edit it in the tap when the
 dependency changes. JankyBorders is **not** a dependency (GPL-3, opt-in): the app installs
 it via `brew install felixkratz/formulae/borders` from Settings → Desktop when asked. dmg/zip installs get the
 same in-app install offer for AeroSpace. Nothing is ever vendored.
@@ -104,7 +104,7 @@ same in-app install offer for AeroSpace. Nothing is ever vendored.
       Signed with Mitch's paid personal enrollment (decision 2026-08-10).
 - [x] **Notary profile** — `xcrun notarytool store-credentials launcharr-notary` (the local
       keychain profile keeps its pre-rename name; `scripts/release.sh` `NOTARY_PROFILE`).
-- [x] **Tap repo** — `mitchmalone/homebrew-tap` (shared across projects; `Casks/scuttlarr.rb`,
+- [x] **Tap repo** — `mitchmalone/homebrew-tap` (shared across projects; `Casks/scuttler.rb`,
       `Casks/launcharr.rb` deprecated alias); CI owns updates (no local clone needed).
 - [x] **LICENSE** — MIT.
 - [x] **Fan-out config** — repo variables `HOMEBREW_TAP_REPO`, `NOTION_RELEASE_PAGE`;

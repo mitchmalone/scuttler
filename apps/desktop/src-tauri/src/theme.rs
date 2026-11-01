@@ -1,6 +1,6 @@
 //! Theme apply: the Omarchy mechanism on macOS (DECISIONS 2026-09-11).
 //!
-//! TypeScript renders (`@scuttlarr/theme`, pure); Rust receives finished bytes
+//! TypeScript renders (`@scuttler/theme`, pure); Rust receives finished bytes
 //! and makes them true on disk, then tells the running world:
 //!
 //! 1. stage every rendered file under `<state>/next-theme/`, `rm -rf` the old
@@ -10,7 +10,7 @@
 //!    into every pty the user owns + SIGWINCH (running shells retint — tmux or
 //!    not, Ghostty or Terminal.app — with no permission), an opt-in Ghostty
 //!    config reload over AppleScript, macOS appearance for the theme's mode,
-//!    wallpaper, then the user's `~/.config/scuttlarr/hooks/theme-set.d/*`.
+//!    wallpaper, then the user's `~/.config/scuttler/hooks/theme-set.d/*`.
 //!
 //! Nothing here knows what a theme *is*; that's the renderer's business. Paths
 //! are the contract: base configs import from `current/theme/<file>`.
@@ -45,7 +45,7 @@ pub struct ThemeApply {
     #[serde(default)]
     pub backgrounds: Vec<String>,
     /// A Claude Code custom theme (rendered `claude.json`), written to
-    /// `~/.claude/themes/scuttlarr.json` — the one file outside the state dir.
+    /// `~/.claude/themes/scuttler.json` — the one file outside the state dir.
     #[serde(default)]
     pub claude: Option<String>,
     /// Hot editors (theme_editors.rs): off unless `config.appearance.editors`.
@@ -54,10 +54,10 @@ pub struct ThemeApply {
     /// Rendered `vscode-theme.json` — installed as a local extension for VS Code and Cursor.
     #[serde(default)]
     pub vscode: Option<String>,
-    /// Rendered `zed-theme.json` → `~/.config/zed/themes/scuttlarr.json`.
+    /// Rendered `zed-theme.json` → `~/.config/zed/themes/scuttler.json`.
     #[serde(default)]
     pub zed: Option<String>,
-    /// Rendered `btop.theme` → `~/.config/btop/themes/scuttlarr.theme`.
+    /// Rendered `btop.theme` → `~/.config/btop/themes/scuttler.theme`.
     #[serde(default)]
     pub btop: Option<String>,
     /// `:colorscheme` for running Neovim servers.
@@ -337,7 +337,7 @@ pub fn pick_next<'a>(backgrounds: &'a [String], current: Option<&str>) -> Option
     backgrounds.get(idx)
 }
 
-/// Advance the wallpaper: remember the list (`backgrounds.txt`, for `scuttlarr:wallpaper`)
+/// Advance the wallpaper: remember the list (`backgrounds.txt`, for `scuttler:wallpaper`)
 /// and the choice (`background`), then set it.
 pub fn wallpaper_next(state: &Path, backgrounds: &[String]) -> Result<String, String> {
     let current_dir = state.join("current");
@@ -359,7 +359,7 @@ pub fn wallpaper_next(state: &Path, backgrounds: &[String]) -> Result<String, St
     Ok(next)
 }
 
-/// `scuttlarr — Next wallpaper`: cycle within the current theme's list.
+/// `scuttler — Next wallpaper`: cycle within the current theme's list.
 pub fn wallpaper_next_current() -> CmdResult<String> {
     let state = crate::config::state_dir();
     let list: Vec<String> = std::fs::read_to_string(state.join("current").join("backgrounds.txt"))
@@ -388,7 +388,7 @@ fn set_wallpaper(path: &str) -> Result<(), String> {
     ))
 }
 
-/// `~/.claude/themes/scuttlarr.json`: Claude Code picks it up as `custom:scuttlarr`
+/// `~/.claude/themes/scuttler.json`: Claude Code picks it up as `custom:scuttler`
 /// (the user selects it once; the file retints with every theme set).
 fn write_claude_theme(body: &str) -> std::io::Result<PathBuf> {
     let dir = dirs::home_dir()
@@ -396,12 +396,12 @@ fn write_claude_theme(body: &str) -> std::io::Result<PathBuf> {
         .join(".claude")
         .join("themes");
     std::fs::create_dir_all(&dir)?;
-    let path = dir.join("scuttlarr.json");
+    let path = dir.join("scuttler.json");
     std::fs::write(&path, body)?;
     Ok(path)
 }
 
-/// `~/.config/scuttlarr/hooks/theme-set.d/*` — executable, gets the theme name.
+/// `~/.config/scuttler/hooks/theme-set.d/*` — executable, gets the theme name.
 fn run_hooks(config_dir: &Path, name: &str) -> Vec<(String, String)> {
     let dir = config_dir.join("hooks").join("theme-set.d");
     let Ok(entries) = std::fs::read_dir(&dir) else {
@@ -511,7 +511,7 @@ pub fn apply(req: ThemeApply) -> CmdResult<ThemeResult> {
         }
     }
     for (what, why) in &res.failed {
-        eprintln!("[scuttlarr theme] {what}: {why}");
+        eprintln!("[scuttler theme] {what}: {why}");
     }
     Ok(res)
 }
@@ -525,7 +525,7 @@ mod tests {
         // shared a dir and raced each other's atomic swap (flaked 2026-09-16).
         static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
         let d = std::env::temp_dir().join(format!(
-            "scuttlarr-theme-{}-{}",
+            "scuttler-theme-{}-{}",
             std::process::id(),
             N.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         ));

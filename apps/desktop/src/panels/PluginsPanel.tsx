@@ -1,7 +1,7 @@
 /**
  * Plugins panel, presentational half — `plugins ⏎`, the gallery: every
  * plugin's live cell in a strip, its health, and the keys to open its panel
- * or restart it. Pure props + @scuttlarr/tui — no tauri imports; the
+ * or restart it. Pure props + @scuttler/tui — no tauri imports; the
  * container hands in the plugin list and how a cell renders.
  */
 import {
@@ -10,9 +10,9 @@ import {
   Panel,
   SectionHeader,
   useListNav,
-} from '@scuttlarr/tui'
-import '@scuttlarr/tui/bar.css'
-import type { PluginState } from '@scuttlarr/tui/plugins'
+} from '@scuttler/tui'
+import '@scuttler/tui/bar.css'
+import type { PluginState } from '@scuttler/tui/plugins'
 import { Puzzle } from 'lucide-react'
 import type { ReactNode } from 'react'
 
