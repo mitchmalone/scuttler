@@ -37,14 +37,14 @@ record decisions/gotchas as they happen; at close update `STATUS.md` and move th
 
 pnpm monorepo:
 
-| Path             | What it is                                                                                                                                    |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/desktop`   | The macOS app — Tauri 2 shell (Rust) + React panel UI (WKWebView)                                                                             |
-| `apps/www`       | scuttlarr.com — static-export Next.js marketing site (Vercel)                                                                                 |
-| `packages/core`  | The shared engine: grammar, fuzzy matcher, ranking, rows — pure TypeScript                                                                    |
-| `packages/tui`   | The UI kit both apps render: components, bar, theme tokens (generated from `packages/theme`)                                                  |
-| `packages/theme` | Omarchy model: `themes/<name>/colors.toml`, templates, pure renderer, generated token files (stale-checked)                                   |
-| `packages/setup` | scuttlarr's zsh CLI (ported 2026-09-11): install, defaults, Brewfile, shell, Caps→Hyper, duti, migrations, remove, manifest — `docs/SETUP.md` |
+| Path             | What it is                                                                                                                                                                            |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/desktop`   | The macOS app — Tauri 2 shell (Rust) + React panel UI (WKWebView)                                                                                                                     |
+| `apps/www`       | scuttlarr.com — static-export Next.js marketing site (Vercel)                                                                                                                         |
+| `packages/core`  | The shared engine: grammar, fuzzy matcher, ranking, rows — pure TypeScript                                                                                                            |
+| `packages/tui`   | The UI kit both apps render: components, bar, theme tokens (generated from `packages/theme`)                                                                                          |
+| `packages/theme` | Omarchy model: `themes/<name>/colors.toml`, templates, pure renderer, generated token files (stale-checked)                                                                           |
+| `packages/setup` | The Machine rung's zsh CLI, shipped in the bundle: `doctor`, `defaults`, `shell`, `link`, `migrate`, `sudoers`, `remove`; manifest, snapshot, adopt-never-overwrite — `docs/SETUP.md` |
 
 The only external repo is the generated satellite `mitchmalone/homebrew-tap` (shared tap; `Casks/scuttlarr.rb`, generated whole from `.github/cask/scuttlarr.rb`;
 `launcharr.rb` stays at 0.6.0 as a deprecated alias), written by the release pipeline —

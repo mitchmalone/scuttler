@@ -1,8 +1,9 @@
 # migrations
 
 One-shot changes to a machine that a base change needs, run once each by
-`scuttlarr migrate` (and by `update`, once it exists). A base change that alters
-user-visible state ships with its migration in the same commit (`docs/SETUP.md`).
+`scuttlarr migrate` — which the app runs at startup when the Machine rung is on
+(`setup::boot`). A base change that alters user-visible state ships with its migration
+in the same commit (`docs/SETUP.md`).
 
 ## Naming
 

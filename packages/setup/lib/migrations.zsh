@@ -1,4 +1,4 @@
-# migrations.zsh — one-shot base changes, each run once (docs/SETUP.md, `update`).
+# migrations.zsh — one-shot base changes, each run once (docs/SETUP.md, `migrate`).
 #
 # The base ships migrations/YYYY-MM-DD-slug.zsh; state/migrations lists, one
 # name per line, the ones that have run. sc_migrate sources every unrun file

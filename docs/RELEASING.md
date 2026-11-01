@@ -73,12 +73,12 @@ announcing anywhere is a deliberate, separate decision.
 
 ## Install methods (decision 2026-08-10)
 
-| Method                    | Artifact                                                            | Audience                                           |
-| ------------------------- | ------------------------------------------------------------------- | -------------------------------------------------- |
-| **Homebrew** (advertised) | tap `mitchmalone/homebrew-tap` (shared, all projects) → release zip | everyone; also the update channel (`brew upgrade`) |
-| dmg                       | GitHub Release                                                      | browser downloads, drag-to-Applications            |
-| zip                       | GitHub Release                                                      | what the cask consumes; direct download            |
-| source                    | git clone + `pnpm --filter @scuttlarr/desktop tauri build`          | the committed                                      |
+| Method                    | Artifact                                                            | Audience                                                                    |
+| ------------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| **Homebrew** (advertised) | tap `mitchmalone/homebrew-tap` (shared, all projects) → release zip | everyone; the cask is `auto_updates` — the app updates itself (`updates ⏎`) |
+| dmg                       | GitHub Release                                                      | browser downloads, drag-to-Applications                                     |
+| zip                       | GitHub Release                                                      | what the cask consumes; direct download                                     |
+| source                    | git clone + `pnpm --filter @scuttlarr/desktop tauri build`          | the committed                                                               |
 
 **In-app updates (DECISIONS 2026-09-16):** the `updates` plugin's `scuttlarr` source reads
 GitHub's `releases/latest` every 6 h and, on `↵`, installs the release zip after checking
@@ -107,9 +107,9 @@ same in-app install offer for AeroSpace. Nothing is ever vendored.
 - [x] **Tap repo** — `mitchmalone/homebrew-tap` (shared across projects; `Casks/scuttlarr.rb`,
       `Casks/launcharr.rb` deprecated alias); CI owns updates (no local clone needed).
 - [x] **LICENSE** — MIT.
-- [ ] **Fan-out config** — repo variables `HOMEBREW_TAP_REPO`, `NOTION_RELEASE_PAGE`;
+- [x] **Fan-out config** — repo variables `HOMEBREW_TAP_REPO`, `NOTION_RELEASE_PAGE`;
       secrets `HOMEBREW_TAP_TOKEN` (fine-grained PAT, contents:write on the tap), `NOTION_API_KEY`,
-      `MMCOM_DEPLOY_HOOK`. Unset ⇒ that job skips with a notice.
+      `MMCOM_DEPLOY_HOOK`. Unset ⇒ that job skips with a notice. All four ran green on v0.8.0.
 
 ## Versioning
 

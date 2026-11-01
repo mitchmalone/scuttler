@@ -5,8 +5,8 @@
 # host is `currentHost` or `-`; value is the raw `defaults read` output with
 # newlines escaped, or the marker `<absent>`. A key is recorded once, the first
 # time apply is about to write it — never updated afterwards, so `remove` can
-# put the machine back the way it was found (docs/ARCHITECTURE.md, "the
-# snapshot precedes the first write").
+# put the machine back the way it was found (docs/SETUP.md, "the snapshot
+# precedes the first write").
 
 SC_ABSENT='<absent>'
 _sc_nl=$'\n'

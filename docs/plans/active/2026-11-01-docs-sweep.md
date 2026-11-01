@@ -2,7 +2,7 @@
 title: Docs sweep — every doc true against v0.8.0, and a memory receipt that ends the argument
 status: active
 created: 2026-11-01
-updated: 2026-11-01 (steps 1–2 landed)
+updated: 2026-11-01 (steps 1–3 landed)
 links:
   - 2026-11-01-rename-to-scuttler.md # the follow-on; runs on the swept docs
   - ../done/2026-10-19-docs-truth-and-stories.md # the last truth pass (README/PRD/ROADMAP)
@@ -122,22 +122,22 @@ written.
 
 ### 3. Machine rung and the standard: SETUP, AGENTS row, DEVIATIONS, STANDARDS
 
-- [ ] SETUP.md rewritten from the top against `packages/setup`: what the base is (the
+- [x] SETUP.md rewritten from the top against `packages/setup`: what the base is (the
       bundle's `Contents/Resources/setup/`), the real verbs, the real overlay
       (`defaults.sh`, `zsh/`, `ghostty`, `tmux.conf`), the real state (`manifest`,
       `defaults.before`, `adopted/`, `touched/`, `migrations`, `current/theme.name`), the
       five manifest modes, sudoers, reversal. The handshake section becomes one history
       line pointing at DECISIONS 2026-09-11.
-- [ ] `packages/setup/README.md` lib list and tense; `migrations/README.md` drops
+- [x] `packages/setup/README.md` lib list and tense; `migrations/README.md` drops
       `update`; `bin/scuttlarr` header comment.
-- [ ] AGENTS.md setup row says what is built; DEVIATIONS rows 2 (smoke tests scripted
+- [x] AGENTS.md setup row says what is built; DEVIATIONS rows 2 (smoke tests scripted
       2026-11-01) and 5 (setup built) corrected.
-- [ ] STANDARDS.md re-vendored from the jig HEAD (stamp comment updated); DEVIATIONS
+- [x] STANDARDS.md re-vendored from the jig HEAD (stamp comment updated); DEVIATIONS
       gains the divergences it demands: Bun as the user-plugin runtime, `interface` where
       the standard says `type`, and an N/A line for the web-product sections (Vercel
       pairs, Better Auth, Hono, Zod env). STATUS length stops being a deviation once step
       2 lands.
-- [ ] `_TEMPLATE.md` link hint drops the non-existent STACK.md. RELEASING install table
+- [x] `_TEMPLATE.md` link hint drops the non-existent STACK.md. RELEASING install table
       drops "also the update channel (brew upgrade)" (cask is `auto_updates`); fan-out
       checkbox ticked (all four jobs green on v0.8.0).
 

@@ -1,9 +1,10 @@
 #!/bin/zsh
 # scuttlarr — the CLI. zsh 5.9, nothing else (DEVIATIONS.md).
 #
-# Runnable from a checkout (`bin/scuttlarr doctor`) or from the installed base
-# (`~/.local/share/scuttlarr/bin/scuttlarr`); SCUTTLARR_BASE is derived from
-# this file's real location unless the environment says otherwise.
+# Runnable from a checkout (`bin/scuttlarr doctor`) or from the app bundle
+# (`scuttlarr.app/Contents/Resources/setup/bin/scuttlarr`, which `link` puts on
+# PATH); SCUTTLARR_BASE is derived from this file's real location unless the
+# environment says otherwise.
 
 emulate -L zsh
 setopt err_exit no_unset pipe_fail
