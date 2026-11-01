@@ -32,10 +32,14 @@ if it needs more. Never duplicate global AGENTS.md rules here.
 - The macro's mandatory `-> ()` trips clippy `unused_unit`; allowed crate-wide in lib.rs.
 - `tauri.conf.json` assetProtocol requires the `protocol-asset` cargo feature on `tauri`.
 
-## Scripts / Python
+## Scripts and widgets (user code under Bun)
 
-- Never name a script after a python stdlib module — the scripts dir is `sys.path[0]` and it
-  shadows the real module for every script there. Bundled scripts `del sys.path[0]` first.
+- Bundled scripts are TypeScript under Bun since v0.6 (`ip.ts`, `json-format.ts`; `lorem` is
+  a built-in); the Python twins are parked as `*.py.retired` on first launch. A Python
+  script's one trap: the scripts dir is `sys.path[0]`, so a file named after a stdlib module
+  shadows it (JOURNAL 2026-08-09).
+- Guard a `.ts` entry point with `if (import.meta.main)` so the file also imports into a test
+  (the bundled scripts and reference widgets do).
 
 ## www (Next.js site)
 

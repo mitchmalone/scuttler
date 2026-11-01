@@ -2,7 +2,7 @@
 title: Docs sweep — every doc true against v0.8.0, and a memory receipt that ends the argument
 status: active
 created: 2026-11-01
-updated: 2026-11-01 (steps 1–3 landed)
+updated: 2026-11-01 (steps 1–4 landed)
 links:
   - 2026-11-01-rename-to-scuttler.md # the follow-on; runs on the swept docs
   - ../done/2026-10-19-docs-truth-and-stories.md # the last truth pass (README/PRD/ROADMAP)
@@ -143,15 +143,15 @@ written.
 
 ### 4. Extension docs: THEMES, WIDGETS, PLUGINS, SCRIPTS
 
-- [ ] Split the theme trio: `packages/theme/README.md` = API and derivation (adds
+- [x] Split the theme trio: `packages/theme/README.md` = API and derivation (adds
       `good → green`, `builtin.generated.ts`); THEMES.md = user surfaces and policy (13
       tokens; names `theme_editors.rs`, `user_themes.rs`); `templates/README.md` = the
       surface table only, pointing at both ("every tty", not "tmux panes").
-- [ ] WIDGETS.md header states the fold plan (widgets.rs → plugins.rs, ROADMAP) and fixes
+- [x] WIDGETS.md header states the fold plan (widgets.rs → plugins.rs, ROADMAP) and fixes
       the done-plan link. PLUGINS.md takes ownership of settings/auth/tick definitions so
       the fold can delete WIDGETS.md later without losing them; marks `lights` and
       `amaran` as external examples; documents the `@launcharr/tui` alias.
-- [ ] SCRIPTS.md: sample manifest uses a claimable trigger (not `lorem`); Python section
+- [x] SCRIPTS.md: sample manifest uses a claimable trigger (not `lorem`); Python section
       reduced to one legacy line; "up to 8 items" verified against the code or removed;
       pointer to PLUGINS beside WIDGETS. LEARNINGS "Scripts / Python" rewritten.
 

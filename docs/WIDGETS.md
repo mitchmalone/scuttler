@@ -1,10 +1,13 @@
 # scuttlarr widgets
 
-> **Widgets are the no-UI plugin.** Since 2026-08-27 a plugin (`docs/PLUGINS.md`) is a
-> directory that may add its own `cell.tsx` / `panel.tsx` in React on the kit; a
-> single-file widget here is the same `tick` contract rendered by the generic cell and
-> card, and keeps working unchanged. Start here for a glyph and a card; move to
-> `PLUGINS.md` when the card isn't enough.
+> **A widget is the single-file form of a plugin.** A plugin (`docs/PLUGINS.md`) is a
+> directory that may add its own `cell.tsx` / `panel.tsx`; a widget is one `.ts` file
+> answering the same tick contract, rendered by the generic cell and card. Start here for
+> a glyph and a card; move to `PLUGINS.md` when the card isn't enough. The field
+> reference (`WidgetView`, `settings`, `requires`, `auth`) lives in PLUGINS.md and is not
+> repeated here. **Direction:** `widgets.rs` folds into `plugins.rs` as the first-party
+> panels move to plugins (ROADMAP "Plugins slice G"); the file format stays, this doc
+> then becomes a section of PLUGINS.md.
 
 Widgets are the bar's scripts: drop a **TypeScript file** into
 `~/.config/scuttlarr/widgets/` and it owns a cell in the menubar — a glyph, an optional
@@ -100,74 +103,18 @@ Called every `interval` seconds (and on demand, below). Print the cell + card an
 }
 ```
 
-Every field is optional; `{}` is a valid blank cell.
-
-- `icon` — lucide name for this tick (falls back to the manifest icon).
-- `label` — short text beside the glyph. Keep it to a count or a percentage: the strip is
-  glyph-first, details belong in the card.
-- `tone` — colours the cell: `ok` (plain fg) · `warn` (theme warn) · `error` (theme danger) · `muted` ·
-  `accent`; omitted = plain foreground.
-- `click` — what clicking the cell does; the scripts action vocabulary:
-  `{"type":"open","value":…}` (URL/file/app via `open`), `{"type":"copy","value":…}`,
-  `{"type":"none"}`.
-- `card` — the hover card: `title`, dim `subtitle`, `rows`, dim `hint` at the bottom.
-  Each row: `dot` (a tone, or none for no dot), `text`, dim right-aligned `hint`, and an
-  optional `action` that makes the row clickable.
-- `setup` — `{ "message": "no GitHub credentials — sign in with the GitHub CLI", "fix": "gh auth login" }`:
-  the widget can't run until the user acts. A **dim** cell (not red — nothing broke), the
-  message in the card and the settings row, the fix as a copyable command in both. Use
-  this for a missing or stale credential — never `hidden`, which hides the problem _and_
-  the fix (Mitch, 2026-08-20).
-- `hidden: true` — no cell this tick, for a widget with genuinely nothing to say. The
-  widget stays registered and re-ticks on schedule.
+Every field is optional; `{}` is a valid blank cell. The fields — `icon`, `label`,
+`tone`, `click`, `card`, `setup`, `hidden` — are the `WidgetView` defined in
+[PLUGINS.md](PLUGINS.md) ("`WidgetView` — the generic cell and card").
 
 ## Settings and sign-in
 
-**Piggyback first:** the best credential is one the user already has — the provider CLI's
-own login (`gh auth token`, the Vercel CLI's store), which the CLI keeps fresh. Declare it
-in `requires`, and when it's missing or stale answer with `setup` (above) so the user is
-told and handed the fix. Declared **settings** are the override for users without the CLI:
-scuttlarr collects them in **Settings → Menubar → Custom widgets** and hands them to every
-`tick` as **environment variables**. The widget never touches a store (try-out, 2026-08-19/20;
-plan `docs/plans/active/widget-settings.md`).
-
-```json
-"settings": [
-  { "key": "VERCEL_TOKEN", "label": "Vercel", "hint": "a token from vercel.com/account/tokens", "secret": true, "required": true }
-]
-```
-
-Keep it to what a user must type. One token is the norm; a widget that needs a plain value
-(an id, a list) can declare it, but defaults in the file beat fields in the UI.
-
-- `key` — the env-var name (`[A-Z][A-Z0-9_]*`, ≤ 40). `label`/`hint` are the field copy.
-- `secret: true` — stored in the **macOS Keychain** (service `scuttlarr`, account
-  `widget/<id>/<KEY>`), masked in the UI, never sent to the settings webview or written to
-  `config.json`. Plain settings live in `config.json` under `widgets.<id>.<KEY>` — edit
-  either place.
-- `required: true` — until it's set the widget is **not run**: the cell is a dim glyph, the
-  card and the settings row say `needs setup: <KEYS>`. Optional settings just arrive unset.
-- Up to 16 settings. A widget still owns its fallbacks: `vercel.ts` reads `VERCEL_TOKEN`,
-  else the Vercel CLI's own login.
-
-### `<widget> auth` (optional)
-
-A widget can own an OAuth / device flow. Declare `"auth": { "label": "Sign in with X" }`
-and answer `auth`: scuttlarr runs it (same env as a tick; up to 15 minutes; **cancel**
-kills it) and reads **one JSON object per stdout line**:
-
-- `{"url": "https://github.com/login/device", "code": "ABCD-1234"}` — shown with an
-  **open** button; the user types the code in the browser.
-- `{"message": "waiting for approval…"}` — progress, shown dim. A non-JSON line is
-  treated as a message.
-- `{"settings": {"GITHUB_TOKEN": "gho_…"}}` — stored. Only keys declared **`secret`** may
-  be set this way (an auth result is a credential); anything else fails the sign-in.
-
-Exit 0 = signed in (the widget ticks at once); non-zero = the stderr tail is the error.
-`github-actions.ts` carries the worked example (GitHub's device flow), **dormant** until a
-scuttlarr OAuth App client id is baked into the widget — with no client id it offers no
-button, and the CLI piggyback above is the story. A client id is public; it only names the
-app being approved. When a token expires the widget answers `setup`, not `error`.
+`settings`, `requires` and `auth` are defined in [PLUGINS.md](PLUGINS.md) ("Settings and
+sign-in") and mean the same here: declared settings are collected in **Settings → Menubar
+→ Custom widgets** and arrive as environment variables on every `tick`; secrets go to the
+Keychain; piggyback on the provider CLI's own login first and answer `setup` when it is
+missing. `vercel.ts` reads `VERCEL_TOKEN`, else the Vercel CLI's store;
+`github-actions.ts` carries the device-flow `auth` example.
 
 ## Refresh, failure, and the rules of the road
 

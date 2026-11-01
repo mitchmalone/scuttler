@@ -41,10 +41,11 @@ Colour math (`src/color.ts`) rounds exactly as the awk does. One extension: a mi
 `{{ key_strip }}`, `{{ key_rgb }}`, and `{{ mix a b 30% }}` / `mix_strip` / `mix_rgb`
 (operands are keys or literal `#rrggbb`). Unknown keys throw — no raw placeholders.
 
-## `[launcher]`
+## `[launcher]` — the app's tokens
 
-`toTokens(resolved, launcher)` (`src/tokens.ts`) maps the palette onto the launcher's
-tokens:
+`toTokens(resolved, launcher)` (`src/tokens.ts`) maps the palette onto the app's
+thirteen UI tokens (`ThemeTokens` in `src/theme-tokens.ts`; the TOML table keeps its
+pre-fold name `[launcher]`):
 
 | token      | default                  |
 | ---------- | ------------------------ |
@@ -60,6 +61,7 @@ tokens:
 | `selected` | `rgba(accent, 0.14)`     |
 | `warn`     | `yellow`                 |
 | `danger`   | `red`                    |
+| `good`     | `green`                  |
 
 An optional `[launcher]` table in `colors.toml` overrides any token verbatim. Overrides
 don't cascade: pinning `accent` leaves `selected` derived from the palette accent, so
@@ -70,11 +72,15 @@ pin both when they should move together.
 1. `mkdir themes/<name>` and write `colors.toml` (copy Omarchy's if it ships one).
 2. Add a `[launcher]` table only where the defaults read wrong in the app.
 3. `pnpm --filter @scuttlarr/theme build` regenerates
-   `packages/tui/src/themes.generated.ts`; commit both.
+   `packages/tui/src/themes.generated.ts` and `src/builtin.generated.ts`; commit all
+   three (`pnpm verify:themes` fails on a stale module).
 4. If the theme must match a fixed set of tokens, add them to
    `src/themes.test.ts`'s fixture.
 
 ## Rendering surfaces
+
+Which surface each template feeds and how it takes effect is user-facing: `docs/THEMES.md`
+"Surfaces". This section is the renderer's contract.
 
 `renderTheme({ name, text, templates, handFiles? })` (`src/render.ts`) returns
 `{ name, mode, tokens, files, osc }`: `files` maps each template key minus `.tpl` to its

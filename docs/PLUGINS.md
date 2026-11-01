@@ -65,9 +65,10 @@ Tauri; it gets a four-call `host` and nothing else.
 - `interval` — seconds; **present = tick mode** (below). Absent = stream mode.
 - `timeout` — seconds a tick may run (default 10, max 60).
 - `panel` — `title`, `hint` (dim row copy), extra `triggers`, fuzzy `aliases`.
-- `settings`, `requires`, `auth` — exactly as in [WIDGETS.md](WIDGETS.md): settings are
-  collected in Settings → Menubar → Plugins and delivered as **env**; secrets go to the
-  Keychain; `auth` means `service.ts auth` runs the plugin's own sign-in.
+- `settings`, `requires`, `auth` — what the plugin needs from the user; defined under
+  **Settings and sign-in** below. Settings are collected in Settings → Menubar → Plugins
+  and delivered as **env**; secrets go to the Keychain; `auth` means `service.ts auth`
+  runs the plugin's own sign-in.
 - `permissions` — privacy classes the service touches: `bluetooth`, `camera`,
   `microphone`, `location`, `contacts`, `calendars`, `reminders`, `photos`,
   `local-network`. Shown under the plugin in Settings with what macOS currently says;
@@ -88,17 +89,98 @@ process exits it is restarted with backoff (1 s doubling to 60 s; reset after a 
 alive); the cell keeps the last state and shows the error.
 
 **Tick mode** (`interval` set): `service.ts tick` runs every N seconds (min 5) with a
-timeout; stdout is one JSON state. This is the [WIDGETS.md](WIDGETS.md) contract — a
-data-only widget whose state is a `WidgetView` and which has no `cell.tsx` renders
-through the generic cell and card, unchanged.
+timeout; stdout is one JSON state. A tick-mode plugin with no `cell.tsx` whose state is a
+`WidgetView` (below) renders through the generic cell and card — that is all a
+single-file widget ([WIDGETS.md](WIDGETS.md)) is.
 
 stderr goes to scuttlarr's log (`Console.app`, `[plugin <id>]`) and its tail lands on the
 cell when the service dies. A line over 1 MiB is dropped as an error.
 
+### `WidgetView` — the generic cell and card
+
+A tick's JSON state, when there is no `cell.tsx` (type: `@scuttlarr/tui/bar/types`):
+
+```json
+{
+  "icon": "arrow-big-down",
+  "label": "2",
+  "tone": "error",
+  "click": { "type": "open", "value": "https://status.example.com/" },
+  "card": {
+    "title": "Uptime",
+    "subtitle": "2 of 9 down",
+    "rows": [
+      {
+        "dot": "ok",
+        "text": "mitchmalone.com",
+        "hint": "238 ms",
+        "action": { "type": "open", "value": "https://mitchmalone.com" }
+      },
+      { "dot": "error", "text": "psyke.co", "hint": "down" }
+    ],
+    "hint": "click a site to open it"
+  }
+}
+```
+
+Every field is optional; `{}` is a valid blank cell.
+
+- `icon` — lucide name for this tick (falls back to the manifest icon).
+- `label` — short text beside the glyph: a count or a percentage; details belong in the card.
+- `tone` — `ok` (plain fg) · `warn` · `error` (theme danger) · `muted` · `accent`.
+- `click` — `{"type":"open","value":…}` (URL/file/app via `open`), `{"type":"copy","value":…}`,
+  `{"type":"none"}` — the scripts action vocabulary.
+- `card` — `title`, dim `subtitle`, `rows` (each: `dot` tone, `text`, dim right-aligned
+  `hint`, optional `action`), dim `hint` at the bottom.
+- `setup` — `{ "message": "no GitHub credentials — sign in with the GitHub CLI", "fix": "gh auth login" }`:
+  the plugin can't run until the user acts. A **dim** cell (nothing broke), the message in
+  the card and the settings row, the fix as a copyable command. Use this for a missing or
+  stale credential — never `hidden`, which hides the problem and the fix (Mitch, 2026-08-20).
+- `hidden: true` — no cell this tick, for a plugin with genuinely nothing to say.
+
+## Settings and sign-in
+
+**Piggyback first:** the best credential is one the user already has — the provider CLI's
+own login (`gh auth token`, the Vercel CLI's store), which the CLI keeps fresh. Declare it
+in `requires`, and when it's missing or stale answer with `setup` (above) so the user is
+told and handed the fix. Declared **settings** are the override for users without the CLI:
+scuttlarr collects them in Settings and hands them to the service as **environment
+variables**. The plugin never touches a store (DECISIONS 2026-08-19;
+`plans/done/widget-settings.md`).
+
+```json
+"settings": [
+  { "key": "VERCEL_TOKEN", "label": "Vercel", "hint": "a token from vercel.com/account/tokens", "secret": true, "required": true }
+],
+"requires": [{ "label": "GitHub CLI, signed in", "fix": "brew install gh && gh auth login" }],
+"auth": { "label": "Sign in with GitHub" }
+```
+
+- `key` — the env-var name (`[A-Z][A-Z0-9_]*`, ≤ 40). `label`/`hint` are the field copy.
+- `secret: true` — stored in the **macOS Keychain** (service `scuttlarr`, account
+  `widget/<id>/<KEY>`), masked in the UI, never sent to the settings webview or written to
+  `config.json`. Plain settings live in `config.json` (`widgets.<id>.<KEY>` for widgets,
+  the plugin's block for plugins) — edit either place.
+- `required: true` — until it's set the service is **not run**: the cell is a dim glyph,
+  the card and the settings row say `needs setup: <KEYS>`. Optional settings arrive unset.
+- Up to 16 settings. Defaults in the file beat fields in the UI.
+- `requires` — static prerequisites, shown under the plugin in Settings with the fix
+  copyable, so the expectation is visible before anything fails.
+- `auth` — the plugin owns an OAuth / device flow: scuttlarr runs `service.ts auth` (same
+  env as a tick; up to 15 minutes; **cancel** kills it) and reads **one JSON object per
+  stdout line**: `{"url": …, "code": …}` (shown with an **open** button),
+  `{"message": …}` (progress, dim; a non-JSON line counts as a message),
+  `{"settings": {"GITHUB_TOKEN": "gho_…"}}` (stored; only keys declared `secret` may be
+  set this way). Exit 0 = signed in and tick now; non-zero = the stderr tail is the error.
+  When a token expires the plugin answers `setup`, not `error`. The GitHub device flow in
+  `apps/desktop/widgets/github-actions.ts` is the worked example, dormant until a
+  scuttlarr OAuth App client id exists.
+
 ## `cell.tsx` and `panel.tsx` — the UI
 
 Default-export a React component. Import from `@scuttlarr/tui` (components, hooks, the
-bar cells and cards), `@scuttlarr/tui/plugins` (types), `lucide-react`, and `react` —
+bar cells and cards), `@scuttlarr/tui/plugins` (types), `lucide-react`, and `react` (a
+plugin written before the fold may still import `@launcharr/tui`; the alias resolves) —
 the app provides its own single instance of each (a plugin directory has no
 `node_modules`; these resolve at load time), so a second React or a second kit never
 loads. Anything else you import must be vendored into the plugin directory, and is
@@ -129,8 +211,8 @@ Use `BarHoverCell` with `id={`plugin:${plugin.id}`}` for a cell with a card (car
 to their zone's edge automatically, so they stay on screen wherever the cell sits); the kit's
 `Panel`, `ListRow`, `KeyHints`, `Calendar`, `MeterRow`… for panels. A card can hold
 controls too — wrap them in `BarCardControls` and `Toggle`, `Slider`, `ListRow`,
-`SegmentedControl` render as they do in a panel (the `lights` plugin: a row per light,
-sliders under it). A component that
+`SegmentedControl` render as they do in a panel (the author's `lights` plugin, outside
+this repo, does this: a row per light, sliders under it). A component that
 throws paints its own cell red (the message is in the card and in Settings) and nothing
 else in the bar changes.
 
@@ -195,7 +277,8 @@ fixture isn't finished.
   and Bun does not load node-gyp addons, so a service that needs a radio or a device
   spawns a small compiled helper (Swift + CoreBluetooth, JSON lines on stdio, built once
   into a dotdir the watcher ignores) and keeps the protocol in TypeScript where it is
-  testable. Worked example: the `amaran` light plugin (JOURNAL 2026-09-10).
+  testable. Worked example: the author's `amaran` light plugin, outside this repo
+  (JOURNAL 2026-09-10).
 - **Declare what you touch.** macOS attributes a helper's privacy access to scuttlarr.app
   and kills it, no prompt, when the bundle lacks the usage string. The bundle ships a
   string for every class in `permissions` (DECISIONS 2026-09-10 ×2) and `permissions.rs`

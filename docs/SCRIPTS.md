@@ -16,14 +16,14 @@ Print a JSON manifest to stdout and exit 0:
 
 ```json
 {
-  "trigger": "lorem",
-  "name": "Lorem ipsum",
-  "description": "Generate placeholder text"
+  "trigger": "ip",
+  "name": "Local IP",
+  "description": "Your addresses, copy on Enter"
 }
 ```
 
-- `trigger` — the word that activates the script (`lorem 3`). No whitespace. First
-  registration wins on collision.
+- `trigger` — the word that activates the script (`ip`, `json {…}`). No whitespace. First
+  registration wins on collision; a built-in trigger (`lorem`, `clip`) cannot be claimed.
 - `description` — optional, shown nowhere yet (reserved for a future script browser).
 
 ### `<script> query <args>`
@@ -43,7 +43,8 @@ Called on every keystroke (debounced ~120ms). Print results to stdout and exit 0
 }
 ```
 
-- Up to 8 items are shown. `subtitle` is optional (renders in the dimmed hint column).
+- The panel shows eight rows at most, so items past the eighth are never seen. `subtitle`
+  is optional (renders in the dimmed hint column).
 - `altAction` (optional, same shape as `action`) runs on ⌥⏎ instead.
 - `action` decides what Enter does:
   - `{"type": "copy", "value": "…"}` — put text on the clipboard
@@ -59,16 +60,16 @@ Called on every keystroke (debounced ~120ms). Print results to stdout and exit 0
   scripts) so the file also imports cleanly into a test; type-only imports from
   `@scuttlarr/core/types` are erased at run time. No Bun or Node on the machine → the
   script is skipped with a log line (`needs bun — brew install oven-sh/bun/bun`).
-- **Python gotcha** (if you still write one): the scripts dir is `sys.path[0]` for python
-  scripts — don't name one after a stdlib module. The old bundled `.py` scripts are parked
-  as `*.py.retired` on first launch of a TS-era build.
+- **Other languages:** any executable works. Python's one trap: the scripts dir is
+  `sys.path[0]`, so a script named after a stdlib module shadows it (the pre-v0.6 bundled
+  `.py` scripts are parked as `*.py.retired` on first launch).
 
-## Widgets
+## The bar has the same idea
 
-The bar has the same idea for cells: `docs/WIDGETS.md` — executables in
-`~/.config/scuttlarr/widgets/` answering `manifest` / `tick`.
+A cell in the bar is a **widget** (`docs/WIDGETS.md`: one file answering `manifest` /
+`tick`) or a **plugin** (`docs/PLUGINS.md`: a directory with its own React cell and panel).
 
 ## Built-in triggers
 
-`clip` (clipboard history) is a built-in, not a script — its trigger participates in the
-same grammar and cannot be claimed by a script.
+`lorem` and `clip` (clipboard history) are built-ins, not scripts — their triggers
+participate in the same grammar and cannot be claimed by a script.

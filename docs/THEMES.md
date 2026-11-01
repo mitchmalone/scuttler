@@ -1,9 +1,11 @@
 # Themes
 
 One palette, rendered into every surface. Decided 2026-09-11 (DECISIONS: theme format;
-theme policy); built in `packages/theme`, `packages/core/src/appearance.ts`, and
-`apps/desktop/src-tauri/src/{theme,appearance}.rs`. This is what shipped; the plan that got
-here is `plans/done/2026-09-11-unify-into-scuttlarr.md`.
+theme policy). Built in `packages/theme` (the model: parsing, derivation, templates,
+tokens — its README is the API reference), `packages/core/src/appearance.ts` (the
+policy), and `apps/desktop/src-tauri/src/{theme,appearance,theme_editors,user_themes}.rs`
+(apply, inputs, the editor retints, your themes). This file is the user-facing truth:
+what a theme is, where it lands, and which one is active when.
 
 ## A theme is one file
 
@@ -24,29 +26,24 @@ red = "#ff5555"  yellow = "#f1fa8c"  orange = "#ffb86c"  green = "#50fa7b"
 cyan = "#8be9fd" blue = "#bd93f9"    magenta = "#ff79c6" brown = "#a0522d"
 # bright_* derive (mix with white, 20%) if absent
 
-[launcher]                    # optional: pin any of the app's twelve UI tokens
+[launcher]                    # optional: pin any of the app's thirteen UI tokens
 sigil = "#50fa7b"
 selected = "rgba(68, 71, 90, 0.55)"
 ```
 
-Derivation (mixes, aliases, `colorN` ↔ names, mode from luminance) is ported from
-`omarchy-theme-color` step for step and tested. The app's tokens (`bg`, `surface`,
-`glass`, `border`, `fg`, `dim`, `accent`, `sigil`, `bang`, `selected`, `warn`, `danger`)
-map from the palette by rule — `toTokens` in `packages/theme/src/tokens.ts` — and
-`[launcher]` overrides any of them verbatim.
-
-**The tui's built-in tokens are generated.** `packages/tui/src/themes.generated.ts` and
-`packages/theme/src/builtin.generated.ts` are baked from `themes/*/colors.toml` by
-`pnpm --filter @scuttlarr/theme build`; `pnpm verify:themes` fails when they are stale.
-Nobody hand-types a colour twice.
+Derivation (mixes, aliases, `colorN` ↔ names, mode from luminance) is Omarchy's, step
+for step. The app's thirteen tokens (`bg`, `surface`, `glass`, `border`, `fg`, `dim`,
+`accent`, `sigil`, `bang`, `selected`, `warn`, `danger`, `good`) map from the palette by
+rule, and `[launcher]` overrides any of them verbatim. The rules, the token table, the
+template syntax and how the built-in token modules are generated and stale-checked are in
+`packages/theme/README.md`; adding a theme is the four steps there.
 
 ## Surfaces
 
-Templates live in `packages/theme/templates/<file>.tpl` and render by token substitution
-only — `{{ key }}`, `{{ key_rgb }}`, `{{ key_strip }}`, `{{ mix a b N% }}` — plus
-`name`, `mode`, and `bat_theme`. No logic in themes, no logic in templates. A theme
-directory may ship a hand-written file with the same output name; the renderer leaves it
-alone.
+Templates live in `packages/theme/templates/` (one per surface, token substitution
+only, no logic; `templates/README.md` lists them). Rendered files land in
+`~/.local/state/scuttlarr/current/theme/<file>`; a theme directory may ship a hand-written
+file with the same output name and the renderer leaves it alone.
 
 | Surface         | Rendered file       | How it takes effect                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | --------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

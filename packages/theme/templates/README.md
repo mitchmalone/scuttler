@@ -1,25 +1,25 @@
 # templates
 
-One file per surface, rendered by `@scuttlarr/theme` into
-`~/.local/state/scuttlarr/current/theme/<name without .tpl>`. Token substitution only —
-`{{ key }}`, `{{ key_rgb }}`, `{{ key_strip }}`, `{{ mix a b N% }}` — no logic (THEMES.md).
-Keys are Omarchy's `colors.toml` vocabulary plus `name`, `mode`, `bat_theme` (a bat
-built-in syntax theme name the palette maps to; defaults by mode), and the editor names
-`vscode_theme`, `neovim_colorscheme`, `helix_theme` (`src/editors.ts` defaults per theme). Base configs shipped by
-`packages/setup` import from the rendered path; the app pushes OSC colours into running
-tmux panes at `theme set`, so terminals don't need a reload.
+One file per surface, rendered by `@scuttlarr/theme` (`renderTheme`, `../README.md`)
+into `~/.local/state/scuttlarr/current/theme/<name without .tpl>`. Token substitution
+only, no logic; the syntax and the extra keys (`name`, `mode`, `bat_theme`, the editor
+names from `src/editors.ts`) are in the package README. How each rendered file reaches
+its program — include lines, live retint by OSC into every tty the user owns, the editor
+hot-reload paths — is `docs/THEMES.md` "Surfaces"; `scuttlarr shell --apply` writes the
+include lines (`docs/SETUP.md`).
 
-| Template                | Consumer                                                                                                       |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `ghostty.tpl`           | `config-file = ?…/current/theme/ghostty` in the base Ghostty config                                            |
-| `tmux.conf.tpl`         | `source-file -q …/current/theme/tmux.conf` at the end of tmux.conf                                             |
-| `p10k-colors.zsh.tpl`   | sourced by the lean `.p10k.zsh` before segment styling                                                         |
-| `delta.gitconfig.tpl`   | `[include] path = …/current/theme/delta.gitconfig`                                                             |
-| `claude.json.tpl`       | copied to `~/.claude/themes/scuttlarr.json` (Omarchy does the same)                                            |
-| `vscode-theme.json.tpl` | VS Code / Cursor colour theme, installed as the local extension `scuttlarr.theme` (ported from Omarchy's, MIT) |
-| `zed-theme.json.tpl`    | Zed theme family, written to `~/.config/zed/themes/scuttlarr.json`                                             |
-| `neovim.lua.tpl`        | LazyVim spec naming `neovim_colorscheme`; running nvims get `:colorscheme`                                     |
-| `btop.theme.tpl`        | `~/.config/btop/themes/scuttlarr.theme` (ported from Omarchy's, MIT)                                           |
+| Template                | Output              | Consumer                                          |
+| ----------------------- | ------------------- | ------------------------------------------------- |
+| `ghostty.tpl`           | `ghostty`           | Ghostty `config-file = ?…`                        |
+| `tmux.conf.tpl`         | `tmux.conf`         | tmux `source-file -q …`                           |
+| `p10k-colors.zsh.tpl`   | `p10k-colors.zsh`   | sourced by the lean `.p10k.zsh`                   |
+| `delta.gitconfig.tpl`   | `delta.gitconfig`   | git `[include]`                                   |
+| `claude.json.tpl`       | `claude.json`       | copied to `~/.claude/themes/scuttlarr.json`       |
+| `vscode-theme.json.tpl` | `vscode-theme.json` | VS Code / Cursor local extension (`editors`)      |
+| `zed-theme.json.tpl`    | `zed-theme.json`    | `~/.config/zed/themes/scuttlarr.json` (`editors`) |
+| `neovim.lua.tpl`        | `neovim.lua`        | LazyVim spec (`editors`)                          |
+| `btop.theme.tpl`        | `btop.theme`        | `~/.config/btop/themes/` (`editors`)              |
 
-A theme directory may ship a hand-written file with the same output name; the renderer
-leaves it alone (Omarchy's rule: the template never overwrites an existing file).
+Helix has no template: its config names a theme, so the app rewrites one line. A theme
+directory may ship a hand-written file with the same output name; the renderer leaves it
+alone (Omarchy's rule).

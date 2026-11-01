@@ -1,6 +1,6 @@
 <!-- vendored from the jig on 2026-11-01 (jig commit 3439cde); reconcile deliberately, never ambiently -->
 
-# AGENTS.md
+# STANDARDS — the jig standard, as vendored
 
 The canonical standard for projects built on the jig. Self-contained: everything an agent (or a human) needs to work in a jig project is here or in the project's own `AGENTS.md`.
 
