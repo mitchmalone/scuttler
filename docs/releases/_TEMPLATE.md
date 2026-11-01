@@ -17,7 +17,11 @@
 | ------------------------------ | -------- | ------------ |
 | Hotkey → panel visible         | < 100 ms | _ ms         |
 | Cold start → hotkey registered | < 1 s    | _ ms         |
-| Idle memory (panel hidden)     | < 120 MB | _ MB         |
+| Idle memory (the receipt)      | < 120 MB | _ MB         |
+
+Receipt: `scripts/mem.sh --receipt` on this build, <Mac>, reference config (bar on, agents
+monitor off, no plugin services, Desktop rung off, one display), a minute after launch.
+Daily footprint (unbudgeted, trend): _ MB app, _ MB with helpers, after _ h on <Mac>.
 
 ## Install
 

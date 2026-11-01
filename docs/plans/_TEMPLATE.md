@@ -3,7 +3,7 @@ title: <short task name>
 status: planned # planned | active | done — only the slice actually in flight is `active`
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
-links: # related plans, STACK.md section, ROADMAP item, issue/PR
+links: # related plans, ROADMAP item, DECISIONS date, issue/PR
   -
 ---
 
@@ -31,7 +31,7 @@ The chosen approach in a few sentences. Note alternatives considered if the choi
 
 - [ ] Observable condition that means "done"
 - [ ] Tests / checks that must pass
-- [ ] Memory: `scripts/mem.sh` idle before → after, if this adds a process, window, watcher or cache
+- [ ] Memory: `scripts/mem.sh --receipt` before → after, if this adds a process, window, watcher or cache
 
 ## Out of scope
 

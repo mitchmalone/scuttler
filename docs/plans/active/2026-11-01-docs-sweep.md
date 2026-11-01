@@ -2,7 +2,7 @@
 title: Docs sweep — every doc true against v0.8.0, and a memory receipt that ends the argument
 status: active
 created: 2026-11-01
-updated: 2026-11-01
+updated: 2026-11-01 (step 1 landed)
 links:
   - 2026-11-01-rename-to-scuttler.md # the follow-on; runs on the swept docs
   - ../done/2026-10-19-docs-truth-and-stories.md # the last truth pass (README/PRD/ROADMAP)
@@ -80,7 +80,7 @@ written.
 
 ### 1. The memory receipt (DECISIONS, then applied)
 
-- [ ] DECISIONS entry: **the receipt** is `scripts/mem.sh --receipt` on a release build,
+- [x] DECISIONS entry: **the receipt** is `scripts/mem.sh --receipt` on a release build,
       panel hidden, bar on, agents monitor off, no plugin services, one display, 60 s
       after launch, median of three readings; app process plus any always-on helper under
       that config (none today); the Mac is named in the notes. It is the only number
@@ -88,16 +88,19 @@ written.
       real config, uptime stated) is trend, not budget. The definition-of-done rule
       narrows to: a change that adds something resident records the receipt before and
       after; everything else is covered by the release receipt.
-- [ ] `scripts/mem.sh --receipt`: three readings 10 s apart, prints the median, and a
+- [x] `scripts/mem.sh --receipt`: three readings 10 s apart, prints the median, and a
       warning line when plugin services or the agents monitor are running (so the number
       produced is the one claimed). Plain `mem.sh` unchanged.
-- [ ] Apply: AGENTS.md perf table footnote + definition-of-done bullet; PRD §7 row;
+- [x] Apply: AGENTS.md perf table footnote + definition-of-done bullet; PRD §7 row;
       `releases/_TEMPLATE.md` (receipt row with config line, footprint row); `_TEMPLATE.md`
       plan checklist line; STATUS memory paragraph replaced by one pointer.
-- [ ] ROADMAP: one memory item with triggers — growth with uptime (240 MB at 25 h), and
+- [x] ROADMAP: one memory item with triggers — growth with uptime (240 MB at 25 h), and
       whether 120 holds with the bar on by default; borders' footprint as its own line.
 - [ ] Take the v0.8.0 receipt under the new definition on the primary Mac and record it in
-      the ROADMAP item as the baseline (not in the shipped v0.8.0 notes).
+      the ROADMAP item as the baseline (needs the running app stopped and relaunched under
+      the reference config: Mitch's hands, or the next release build). The daily footprint
+      was taken 2026-11-01 (131 MB app, 501 MB with borders and three Bun services) and is
+      in the DECISIONS entry.
 
 ### 2. Cursor docs: STATUS, ROADMAP, PRD
 

@@ -183,14 +183,14 @@ Guiding split: **Rust owns the OS, TypeScript owns the experience.** Anything to
 
 ## 7. Performance budgets (requirements, not aspirations)
 
-| Metric                                           | Budget                                                                                 |
-| ------------------------------------------------ | -------------------------------------------------------------------------------------- |
-| Hotkey press → panel visible and accepting input | **< 100 ms** (target 50)                                                               |
-| Keystroke → updated results on screen            | **< 16 ms** (one frame)                                                                |
-| Enter → app launch initiated + panel dismissed   | **< 50 ms** scuttlarr-side                                                             |
-| Idle memory (resident, panel hidden)             | **< 120 MB** (WKWebView floor makes ~sub-100 heroic; 120 is the ceiling, not the goal) |
-| Cold app start → hotkey registered               | **< 1 s**                                                                              |
-| Full index rebuild                               | **< 500 ms** for ~300 apps                                                             |
+| Metric                                           | Budget                                                                                                                                   |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Hotkey press → panel visible and accepting input | **< 100 ms** (target 50)                                                                                                                 |
+| Keystroke → updated results on screen            | **< 16 ms** (one frame)                                                                                                                  |
+| Enter → app launch initiated + panel dismissed   | **< 50 ms** scuttlarr-side                                                                                                               |
+| Idle memory (the receipt, panel hidden)          | **< 120 MB** (the receipt: `scripts/mem.sh --receipt`, reference config, DECISIONS 2026-11-01; the WKWebView floor makes sub-100 heroic) |
+| Cold app start → hotkey registered               | **< 1 s**                                                                                                                                |
+| Full index rebuild                               | **< 500 ms** for ~300 apps                                                                                                               |
 
 If a budget can't be met, the feature causing the miss gets cut or moved behind a flag. These numbers are the "lightweight" value made falsifiable — and the honest scoreboard against Raycast's 350–450 MB.
 

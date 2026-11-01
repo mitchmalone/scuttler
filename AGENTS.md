@@ -165,15 +165,19 @@ it in `docs/DECISIONS.md`.
 | Hotkey → panel visible and accepting input | **< 100 ms** (target 50)   |
 | Keystroke → updated results on screen      | **< 16 ms** (one frame)    |
 | Enter → launch initiated + panel dismissed | **< 50 ms** scuttlarr-side |
-| Idle memory (resident, panel hidden)       | **< 120 MB** ceiling       |
+| Idle memory (the receipt, panel hidden)    | **< 120 MB** ceiling       |
 | Cold start → hotkey registered             | **< 1 s**                  |
 | Full index rebuild (~300 apps)             | **< 500 ms**               |
 
 A budget miss cuts or flags the offending feature. Changes touching summon, matching, or
 launch paths must not regress these — measure before claiming; record numbers in the plan
-file or JOURNAL. No UI animation on the hot path (keystroke → results). The matcher and
-ranking are the highest-value test targets in the repo — exhaustive Vitest coverage,
-property-style cases welcome.
+file or JOURNAL. Idle memory is **the receipt** (DECISIONS 2026-11-01): `scripts/mem.sh
+--receipt` on a release build under the reference config (bar on, agents monitor off, no
+plugin services, Desktop rung off, one display, a minute after launch). Release notes
+carry it beside an unbudgeted daily-footprint line; nothing else is compared with 120. No
+UI animation on the hot path (keystroke → results). The matcher and ranking are the
+highest-value test targets in the repo — exhaustive Vitest coverage, property-style cases
+welcome.
 
 ## Rust standards
 
@@ -209,15 +213,15 @@ Same spirit as the TypeScript rules: strict, minimal, boring.
 | `pnpm verify`                                | The gate: typecheck + lint + format + test + site build + cargo test + clippy           |
 | `scripts/dev-install.sh [--build]`           | Run a working-tree build: swap into `/Applications` and relaunch, quietly (no Finder)   |
 | `scripts/release.sh X.Y.Z`                   | The only way to release (see `docs/RELEASING.md`)                                       |
-| `scripts/mem.sh [--watch]`                   | Resident memory of the app and its helpers — the number the definition of done wants    |
+| `scripts/mem.sh [--watch\|--receipt]`        | Resident memory of the app and its helpers; `--receipt` is the budget number            |
 
 ## Definition of done
 
 - `pnpm verify` green (typecheck, lint, format:check, Vitest, cargo test, clippy `-D warnings`).
 - New pure logic (matcher, ranking, grammar) has unit tests written first.
-- Performance budgets not regressed. A change that adds a process, a window, a watcher or
-  a resident cache records `scripts/mem.sh` idle numbers (app + helpers, panel hidden) in
-  its plan file, before and after — the 120 MB ceiling is measured, not assumed.
+- Performance budgets not regressed. A change that adds something resident (a process, a
+  window, a watcher, a cache) records `scripts/mem.sh --receipt` before and after in its
+  plan file; every other change is covered by the release receipt.
 - A ranking complaint becomes a case in `packages/core/src/corpus.json` first; the scorer
   changes second, and every earlier case still holds.
 - `docs/STATUS.md` (and the task's plan file) updated in the same commit; pushed, CI green.

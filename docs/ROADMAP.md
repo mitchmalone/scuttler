@@ -123,6 +123,15 @@ surface; nothing assumes dark), and the live proofs listed in STATUS.
 
 </details>
 
+## Memory (open; the receipt is DECISIONS 2026-11-01)
+
+| Item                                                                                  | Trigger                                                                                   |
+| ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Growth with uptime: 120 MB after a restart, 240 MB after 25 h (defaults-flip plan)    | A receipt or footprint reading more than 1.5× its post-restart value; find the leak first |
+| The receipt with the bar on by default (v0.8.0 read 114 MB on a light config)         | A release receipt over 120 MB fails that release                                          |
+| Plugin services: lazy-load panels, measure each service's Bun cost in Settings        | The daily footprint's helper share passes the app's own                                   |
+| Borders (JankyBorders, 268–460 MB on the primary Mac) — third-party, Desktop rung off | Only if a lighter border tool appears; otherwise a documented cost of the rung            |
+
 ## v2 horizon (recorded now, built later — PRD §10)
 
 | Item                                                      | Trigger                                                        |

@@ -1863,3 +1863,37 @@ DiagnosticReports` and waits the full backoff instead of thrashing. One new comm
 - **Alternatives.** Running jobs in parallel (rejected: brew serialises on its own lock,
   and interleaved tails are unreadable). Multi-select before starting (rejected for now:
   a queue of clicks is the same thing with no mode). A pty for sudo (unchanged: `t`).
+
+### 2026-11-01 · The memory receipt: one measurement definition for the 120 MB budget
+
+- **Problem.** Every release re-argued what "idle memory < 120 MB" meant. Receipts
+  v0.2–v0.6 were main-process RSS (90–118 MB); `scripts/mem.sh` (2026-09-16) sums the app
+  and its helpers (157 MB); v0.7.0 reported 169 MB on the author's daily config; v0.8.0's
+  table read 114 MB on a light config while its prose gave 158 MB for the like-for-like.
+  STATUS carried the September number for six weeks. Four metrics, one table cell, and a
+  budget that was "undecided" in STATUS while AGENTS, the PRD and the release template all
+  said 120.
+- **Decision (the receipt).** The number compared with 120 MB is **the receipt**:
+  `scripts/mem.sh --receipt` on a release build, panel hidden, **bar on, agents monitor
+  off, no plugin services, Desktop rung off, one display**, a minute after launch; three
+  readings 10 s apart, the median; the app process plus any helper that is always on under
+  that config (none today). The notes name the Mac. `--receipt` prints a warning and calls
+  the reading a daily footprint when helpers are running or `agents.monitor` is on, so the
+  number produced is the number claimed.
+- **Decision (the footprint).** Release notes carry a second, unbudgeted line: the
+  **daily footprint**, the author's real config (agents monitor, plugin services, the
+  Desktop rung) with the uptime stated. Trend only; it is what the product costs a heavy
+  user, and it is allowed to be 500 MB with borders in it without failing a release.
+- **Decision (definition of done).** The before/after rule narrows to changes that add
+  something resident (a process, window, watcher or cache): they record the receipt in the
+  plan file. Everything else is covered by the release receipt.
+- **Why the app alone.** The budget is for what we control: the app's own resident set
+  under the install defaults. Plugin services are opt-in Bun processes whose cost belongs
+  to the plugin; borders is a third-party binary behind a rung that is off by default.
+  Budgeting the daily config at a higher ceiling was considered and rejected: it would
+  move with the author's plugin list, not with the app.
+- **What is open.** Growth with uptime (120 MB after a restart, 240 MB after 25 h,
+  `plans/done/2026-10-19-defaults-flip.md`) is the real memory task; ROADMAP carries it
+  with a trigger. The receipt baseline for v0.8.0 under this definition is taken at the
+  next release build on the primary Mac; the daily footprint on 2026-11-01 was 131 MB for
+  the app process and 501 MB with borders (268 MB), three Bun services and the BLE helper.

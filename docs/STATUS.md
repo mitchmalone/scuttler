@@ -61,8 +61,8 @@
   `opensource-readiness-review.md` (not started) — both re-planned by the sweep.
 - **Daily use on the primary Mac:** bar, launcher, panels, agents, usage, updates, awake,
   desktop layer and the theme rung (`appearance.everywhere`, `editors`, `ghostty` on).
-- **Memory is over budget:** first `scripts/mem.sh` reading 157–177 MB app idle against
-  the 120 MB ceiling; borders 370–460 MB (JOURNAL 2026-09-16). The shrink is its own task.
+- **Memory:** the budget has one measurement now, the receipt (DECISIONS 2026-11-01,
+  `scripts/mem.sh --receipt`); the open task, growth with uptime, is in ROADMAP.
 
 ## Needs Mitch (decisions)
 
@@ -199,8 +199,7 @@ Waiting on Mitch elsewhere:
 ## Next
 
 - **Light mode first-class** (ROADMAP, unify step 3.7).
-- **Memory**: get the app under 120 MB idle; lazy-load plugin panels if plugins hold it
-  over; borders' footprint.
+- **Memory**: ROADMAP "Memory" (growth with uptime; the receipt with the bar on).
 - **Plugins slice G** (rolling): awake, agents, wifi, audio, battery panels move to
   `packages/plugins/` as they are touched. Also: fold `widgets.rs` into `plugins.rs`, a
   curated plugin index on scuttlarr.com, per-plugin stderr in the logbook, the hello
