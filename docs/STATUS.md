@@ -4,8 +4,8 @@
 > history lives in git, `plans/done/`, `releases/` and `JOURNAL.md`; the backlog with its
 > triggers lives in `ROADMAP.md`.
 >
-> Last updated: 2026-11-01 (docs sweep step 2: STATUS rewritten as a cursor, ROADMAP
-> collapsed, bar default decided; step 1 the memory receipt)
+> Last updated: 2026-11-01 (docs sweep done — six commits; the site hands-check is the
+> one open item; the rename is next)
 
 ## Where we are
 
@@ -13,8 +13,10 @@
   updates ledger with in-app upgrades and dismissals, agent dots, defaults flipped (bar
   on, tiling off), the site in any app theme. Fan-out green; the next release is one
   command (`scripts/release.sh X.Y.Z`, smoke tests scripted).
-- **Active plan:** `plans/active/2026-11-01-docs-sweep.md` — every doc true against
-  v0.8.0, six commits; steps 1–2 landed. **Planned next:**
+- **Docs sweep done** (`plans/done/2026-11-01-docs-sweep.md`, six commits): the memory
+  receipt, STATUS/ROADMAP/PRD as cursors, SETUP.md true, STANDARDS re-vendored, the
+  extension docs split, the logs re-sorted and marked, the site on the kit's own panel
+  registry, bar layout and launcher. **Next:**
   `plans/active/2026-11-01-rename-to-scuttler.md` — scuttlarr → scuttler at
   `www.scuttler.app` as v0.9.0 (old domains already redirect there).
 - **Parked:** `plans/done/lights-plugin.md` (built, in daily use; Nanoleaf waits on
@@ -33,8 +35,8 @@
 - Usage pace thresholds (±15/25 pts) and worst-across-accounts for the cell.
 - Whether "hidden when clean" is right for the updates cell.
 - p10k dir colour: follow the theme or the host?
-- The `/docs` page's fate when the sweep reaches the site (step 6): a short map with
-  links, or a second copy of README kept in sync. Lean: the map.
+- The `/docs` page is now a map (links to the repo's docs, the panel list and the bar
+  default rendered from the kit); say if a fuller page was wanted instead.
 
 ## Needs Mitch (hands-checks, v0.8.0)
 
@@ -65,7 +67,13 @@ screen restores the old theme; the field stops while hidden (idle CPU); with an 
 hold armed, five fresh-config launches each open setup on first summon.
 
 Release path: self-update live proof at v0.9.0 (`updates ⏎` offers it, `↵` installs,
-across the rename). Site: the workbench stories and the pixel hero in a browser.
+across the rename).
+
+Site (docs sweep step 6, not seen in a browser by the agent): home page copy; `/docs`;
+the demo prompt is now the kit's `Launcher` (type `setup`, `theme`, `ss`, `usage`; `?`
+mode; `!git status`); the bar still, the agent spotlight and the state legend retint with
+the theme picker; the install tabs (Script first); the workbench stories and the pixel
+hero.
 
 ## Needs Mitch (elsewhere)
 
@@ -78,5 +86,5 @@ across the rename). Site: the workbench stories and the pixel hero in a browser.
 
 ## Next
 
-In order: the sweep's steps 3–6 (SETUP and the standard; the extension docs; the logs; the
-site), then the rename. Everything else is in `ROADMAP.md` with a trigger.
+The rename (`plans/active/2026-11-01-rename-to-scuttler.md`), then whatever ROADMAP's
+triggers fire. The v0.8.0 memory receipt baseline is taken at the next release build.

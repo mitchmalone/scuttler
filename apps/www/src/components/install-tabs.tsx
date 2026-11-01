@@ -5,6 +5,7 @@ import { useState } from 'react'
 import {
   BREW_COMMAND,
   GITHUB_URL,
+  INSTALL_COMMAND,
   RELEASE,
   RELEASES_URL,
   SOURCE_INSTALL_COMMANDS,
@@ -13,14 +14,19 @@ import {
 import { CopyInstall } from './copy-install'
 
 /**
- * Install methods, tabbed in recommendation order: Homebrew → Download → Source.
- * Pre-release (release.json artifacts === null) collapses to Source only.
+ * Install methods, tabbed in the README's order: the install script → Homebrew
+ * → Download → Source. Pre-release (release.json artifacts === null) collapses
+ * to Source only.
  */
 const MONO_CODE = 'font-mono text-(--fg)'
+const PRE =
+  'm-0 overflow-x-auto bg-(--bg) px-5 py-[22px] font-mono text-[13.5px] leading-[1.85] text-(--fg)'
+const FOOT =
+  'border-t border-(--border) bg-(--chip) px-4 py-2.5 text-xs text-(--dim)'
 
 export function InstallTabs() {
   const tabs = RELEASE.artifacts
-    ? (['Homebrew', 'Download', 'Source'] as const)
+    ? (['Script', 'Homebrew', 'Download', 'Source'] as const)
     : (['Source'] as const)
   const [tab, setTab] = useState<string>(tabs[0])
 
@@ -49,14 +55,29 @@ export function InstallTabs() {
         ) : null}
       </div>
 
+      {tab === 'Script' && RELEASE.artifacts ? (
+        <>
+          <pre className={PRE}>
+            <span className="text-(--dim2)">$</span> {INSTALL_COMMAND}
+          </pre>
+          <div className={FOOT}>
+            Preflight (Apple Silicon, macOS 14+, Xcode CLT, Homebrew), then the
+            cask, then opens the app. Changes no defaults, touches no dotfiles.
+          </div>
+        </>
+      ) : null}
+
       {tab === 'Homebrew' && RELEASE.artifacts ? (
         <>
-          <pre className="m-0 overflow-x-auto bg-(--bg) px-5 py-[22px] font-mono text-[13.5px] leading-[1.85] text-(--fg)">
+          <pre className={PRE}>
             <span className="text-(--dim2)">$</span> {BREW_COMMAND}
           </pre>
-          <div className="border-t border-(--border) bg-(--chip) px-4 py-2.5 text-xs text-(--dim)">
-            Updates with <code className={MONO_CODE}>brew upgrade</code>. The
-            recommended install.
+          <div className={FOOT}>
+            What the script runs. The cask is{' '}
+            <code className={MONO_CODE}>auto_updates</code>: scuttlarr offers
+            its own newer releases in{' '}
+            <code className={MONO_CODE}>updates ⏎</code> and installs them in
+            place.
           </div>
         </>
       ) : null}
@@ -71,7 +92,7 @@ export function InstallTabs() {
               scuttlarr-{RELEASE.version}.zip
             </a>
           </div>
-          <div className="border-t border-(--border) bg-(--chip) px-4 py-2.5 text-xs text-(--dim)">
+          <div className={FOOT}>
             <a href={RELEASES_URL}>All releases + SHA256 checksums</a>
             {RELEASE.signed ? ' · signed & notarized' : null}
           </div>
@@ -80,7 +101,7 @@ export function InstallTabs() {
 
       {tab === 'Source' ? (
         <>
-          <pre className="m-0 overflow-x-auto bg-(--bg) px-5 py-[22px] font-mono text-[13.5px] leading-[1.85] text-(--fg)">
+          <pre className={PRE}>
             {SOURCE_INSTALL_COMMANDS.map((cmd, i) => (
               <span key={i}>
                 <span className="text-(--dim2)">$</span> {cmd}
@@ -88,7 +109,7 @@ export function InstallTabs() {
               </span>
             ))}
           </pre>
-          <div className="border-t border-(--border) bg-(--chip) px-4 py-2.5 text-xs text-(--dim)">
+          <div className={FOOT}>
             Requires Rust stable + pnpm ·{' '}
             <a href={GITHUB_URL}>github.com/mitchmalone/scuttlarr</a>
           </div>

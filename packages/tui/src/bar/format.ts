@@ -364,3 +364,7 @@ export function foldUsageBarState(report: {
   )
   return { tokensToday, accounts }
 }
+
+/** How long a hover card stays after the cursor leaves the cell or the card
+ * (ms). The app's `useBarHover` and the site's web implementation share it. */
+export const BAR_HOVER_CLOSE_MS = 200

@@ -1,3 +1,4 @@
+import { BAR_HOVER_CLOSE_MS } from '@scuttlarr/tui/bar'
 import { invoke } from '@tauri-apps/api/core'
 import { useEffect, useRef, useState } from 'react'
 
@@ -38,7 +39,7 @@ export interface BarHover {
 }
 
 /** Grace period bridging the pixel gap between the strip and a card. */
-const CLOSE_MS = 200
+const CLOSE_MS = BAR_HOVER_CLOSE_MS
 /** Fail-safe if the Rust mouse feed ever stalls with a card open. */
 const IDLE_MS = 10_000
 /** Growth for a cell that didn't declare one — the agent card's height. */

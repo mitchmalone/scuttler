@@ -1,8 +1,14 @@
 import {
+  PANEL_INFO as CORE_PANELS,
+  type PanelInfo,
+} from '@scuttlarr/core/panels'
+import {
   UPDATES_PLUGIN,
   updatesReportAt,
 } from '@scuttlarr/plugins/updates/fixtures'
+import updatesManifest from '@scuttlarr/plugins/updates/manifest.json'
 import { USAGE_PLUGIN, usageReportAt } from '@scuttlarr/plugins/usage/fixtures'
+import usageManifest from '@scuttlarr/plugins/usage/manifest.json'
 import type { AgentSession, BarSnapshot } from '@scuttlarr/tui'
 
 /**
@@ -14,22 +20,23 @@ import type { AgentSession, BarSnapshot } from '@scuttlarr/tui'
  * `@scuttlarr/core` (invariant 5). This file is data only.
  */
 
-/** The panel registry, mirrored from the app's `src/panels/registry.ts`. */
-export const PANEL_INFO = [
-  { id: 'agents', title: 'Agents', hint: 'coding agent sessions ▸' },
-  { id: 'usage', title: 'Usage', hint: 'token monitor ▸' },
-  { id: 'updates', title: 'Updates', hint: 'app updates ▸' },
-  { id: 'awake', title: 'Awake', hint: 'keep-alive sessions ▸' },
-  { id: 'wifi', title: 'Wi-Fi', hint: 'networks & power ▸' },
-  { id: 'dns', title: 'DNS', hint: 'network info ▸' },
-  { id: 'audio', title: 'Audio', hint: 'volume & devices ▸' },
-  { id: 'clipboard', title: 'Clipboard', hint: 'history & search ▸' },
-  { id: 'screenshots', title: 'Screenshots', hint: 'latest captures ▸' },
-  { id: 'aerospace', title: 'AeroSpace', hint: 'workspaces & tiling ▸' },
-  { id: 'help', title: 'Help', hint: 'commands & keys ▸' },
-] as const
+/**
+ * Every panel the demo's launcher knows: the app's registry (`@scuttlarr/core/panels`,
+ * the same list the app renders) plus the bundled plugins that declare a panel in
+ * their manifest (`usage ⏎`, `updates ⏎`) — exactly how the app assembles its
+ * own list at load time (invariant 10).
+ */
+const PLUGIN_PANELS: PanelInfo[] = [usageManifest, updatesManifest].map(
+  (m) => ({
+    id: m.id,
+    title: m.panel.title,
+    hint: m.panel.hint,
+    aliases: m.panel.aliases,
+  }),
+)
+export const PANEL_INFO: PanelInfo[] = [...CORE_PANELS, ...PLUGIN_PANELS]
 
-export type PanelId = (typeof PANEL_INFO)[number]['id']
+export type PanelId = string
 
 /** Panels the demo actually drives; the rest explain themselves and point at the app. */
 export const INTERACTIVE_PANELS: PanelId[] = ['wifi', 'dns', 'usage', 'updates']
@@ -192,15 +199,15 @@ export function demoSnapshot(nowSeconds: number, focused: string): BarSnapshot {
 export const ASK_ANSWERS: { match: RegExp; text: string }[] = [
   {
     match: /quicklink/i,
-    text: 'Quicklinks are trigger words bound to URL templates. Type a URL in the panel and choose "Add quicklink…" — you pick a name, a browser, and scuttlarr fetches the favicon (the one network request the launcher core ever makes, and only because you asked).\n\nA {query} placeholder makes it Raycast-style:\n\n  yt cute otters ⏎   → youtube.com/results?search_query=cute+otters\n  gh tauri ⏎         → github.com/search?q=tauri\n\nA bare trigger opens the site itself. Triggers are whole-word only, so typing "yt" mid-search never hijacks a fuzzy match.',
+    text: 'Quicklinks are trigger words bound to URL templates. Type a URL in the panel and choose "Add quicklink…" — you pick a name, a browser, and scuttlarr fetches the favicon — a request you asked for; nothing here phones home about you.\n\nA {query} placeholder makes it Raycast-style:\n\n  yt cute otters ⏎   → youtube.com/results?search_query=cute+otters\n  gh tauri ⏎         → github.com/search?q=tauri\n\nA bare trigger opens the site itself. Triggers are whole-word only, so typing "yt" mid-search never hijacks a fuzzy match.',
   },
   {
     match: /script|hack|extend|plugin/i,
-    text: 'Scripts are the plugin API. Drop any executable into ~/.config/scuttlarr/scripts/ and it joins the grammar — no restart, no manifest file, no store.\n\nThe contract is two invocations:\n\n  <script> manifest      → {"trigger": "uuid", "name": "UUID"}\n  <script> query <args>  → {"items": [{"title": …, "action": …}]}\n\nAny language. stderr is ignored; a slow script gets killed, not waited for. json and ip ship bundled as reference implementations.',
+    text: 'Scripts are the plugin API. Drop any executable into ~/.config/scuttlarr/scripts/ and it joins the grammar — no restart, no manifest file, no store.\n\nThe contract is two invocations:\n\n  <script> manifest      → {"trigger": "uuid", "name": "UUID"}\n  <script> query <args>  → {"items": [{"title": …, "action": …}]}\n\nTypeScript under Bun, or any executable. stderr is ignored; a slow script gets killed, not waited for. json and ip ship bundled as reference implementations.',
   },
   {
     match: /bar|menubar/i,
-    text: "The bar is scuttlarr's menubar replacement — an Omarchy-flat strip: no boxes, dim glyphs, one solid block marking the active workspace.\n\nModules live in explicit left / center / right zones under bar.layout in config.json, ordered within each zone. Notched displays get their own arrangement, since the camera housing owns the middle. The whole strip costs ~19 MB marginal memory and is themed by the same tokens as the launcher.",
+    text: "The bar is scuttlarr's menubar replacement — an Omarchy-flat strip: no boxes, dim glyphs, one solid block marking the active workspace.\n\nModules live in explicit left / center / right zones under bar.layout in config.json, ordered within each zone. Notched displays get their own arrangement, since the camera housing owns the middle. Every cell opens a panel in the launcher, and the strip is themed by the same tokens as the launcher; plugins and widgets add cells of their own.",
   },
   {
     match: /.*/,

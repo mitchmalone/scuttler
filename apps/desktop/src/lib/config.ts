@@ -4,8 +4,7 @@ import {
 } from '@scuttlarr/core/appearance'
 import type { DesktopConfig } from '@scuttlarr/core/desktop'
 import type { Link } from '@scuttlarr/core/types'
-import type { BarModule, BarZones } from '@scuttlarr/tui'
-import { isPluginModuleId, pluginModuleId } from '@scuttlarr/tui/plugins'
+import type { BarZones } from '@scuttlarr/tui'
 
 import type { ThemeTokens } from './themes'
 
@@ -95,30 +94,22 @@ export type BarConfig = {
   notchedLayout?: BarZones | null
 }
 
-/* Shape lives in the kit — the bar renders from it in both the app and on
- * scuttlarr.com, so there is one definition (invariant 10). The *semantics*
- * below (normalization, notch derivation, legacy migration) are config
- * concerns and stay here. */
+/* Shape and default arrangement live in the kit — the bar renders from them in
+ * both the app and on scuttlarr.com, so there is one definition and one
+ * normalization (invariant 10; DECISIONS 2026-11-01). Re-exported here so the
+ * app's config consumers keep one import. */
 export type { BarModule, BarZones } from '@scuttlarr/tui'
-
-export type ZoneName = 'left' | 'center' | 'right'
-export const ZONE_NAMES: ZoneName[] = ['left', 'center', 'right']
-
-const module = (id: string): BarModule => ({ id, enabled: true })
-
-/** Default arrangement; also decides which zone a newly shipped widget joins. */
-export const DEFAULT_BAR_LAYOUT: BarZones = {
-  left: ['workspaces', 'agents', 'frontApp'].map(module),
-  center: [module('clock')],
-  right: ['wifi', 'awake', 'plugin:usage', 'battery'].map(module),
-}
-
-/** Module ids that became plugins: an old layout keeps its place. */
-const LEGACY_MODULE_IDS: Record<string, string> = { usage: 'plugin:usage' }
-
-/** Layout id for a user widget (docs/WIDGETS.md): `widget:<id>`. */
-export const widgetModuleId = (id: string) => `widget:${id}`
-export const isWidgetModuleId = (id: string) => id.startsWith('widget:')
+export {
+  BAR_MODULE_IDS,
+  DEFAULT_BAR_LAYOUT,
+  type WidgetHome,
+  ZONE_NAMES,
+  type ZoneName,
+  isWidgetModuleId,
+  normalizeBarZones,
+  notchedZones,
+  widgetModuleId,
+} from '@scuttlarr/tui/bar/layout'
 
 /** Layout id for a plugin's cell (docs/PLUGINS.md): `plugin:<id>`. */
 export {
@@ -126,76 +117,6 @@ export {
   pluginIdOf,
   pluginModuleId,
 } from '@scuttlarr/tui/plugins'
-
-/** What normalization needs to know about a discovered widget or plugin:
- * its id, the zone its manifest asks for, and which of the two it is. */
-export type WidgetHome = {
-  id: string
-  zone: string
-  kind?: 'widget' | 'plugin'
-}
-const homeModuleId = (h: WidgetHome) =>
-  h.kind === 'plugin' ? pluginModuleId(h.id) : widgetModuleId(h.id)
-
-/** Same normalization everywhere (bar renderer + settings): drop unknown ids,
- * append known-but-missing ids enabled into their default zone (falling back
- * to right, where new status widgets belong). Widget ids (`widget:*`) are
- * kept wherever the layout has them — Settings may not know the live set —
- * and discovered widgets missing from the layout join their manifest zone. */
-export function normalizeBarZones(
-  zones: BarZones,
-  widgets: WidgetHome[] = [],
-): BarZones {
-  const known = new Set<string>(BAR_MODULE_IDS)
-  const seen = new Set<string>()
-  const out: BarZones = { left: [], center: [], right: [] }
-  for (const zone of ZONE_NAMES) {
-    for (const raw of zones[zone]) {
-      const m = LEGACY_MODULE_IDS[raw.id]
-        ? { ...raw, id: LEGACY_MODULE_IDS[raw.id]! }
-        : raw
-      if (
-        (known.has(m.id) || isWidgetModuleId(m.id) || isPluginModuleId(m.id)) &&
-        !seen.has(m.id)
-      ) {
-        seen.add(m.id)
-        out[zone].push(m)
-      }
-    }
-  }
-  for (const id of BAR_MODULE_IDS) {
-    if (seen.has(id)) continue
-    const home =
-      ZONE_NAMES.find((z) => DEFAULT_BAR_LAYOUT[z].some((m) => m.id === id)) ??
-      'right'
-    out[home].push(module(id))
-  }
-  for (const w of widgets) {
-    const id = homeModuleId(w)
-    if (seen.has(id)) continue
-    seen.add(id)
-    const home = (ZONE_NAMES as string[]).includes(w.zone)
-      ? (w.zone as ZoneName)
-      : 'right'
-    out[home].push(module(id))
-  }
-  return out
-}
-
-/** The arrangement a notched display uses: the explicit one when set, else
- * the main layout — normalized, then center folded into the head of the right
- * zone (a notched bar has no center; the camera housing owns it). */
-export function notchedZones(
-  bar: BarConfig,
-  widgets: WidgetHome[] = [],
-): BarZones {
-  const base = normalizeBarZones(bar.notchedLayout ?? bar.layout, widgets)
-  return {
-    left: base.left,
-    center: [],
-    right: [...base.center, ...base.right],
-  }
-}
 
 export type AgentsConfig = {
   /** Local agent session monitoring (socket, bar cells, `agents ⏎`). */
@@ -225,17 +146,6 @@ export type ClaudeAccountConfig = {
   label: string | null
   enabled: boolean
 }
-
-/** Every widget the bar knows (TS-only; Rust just stores zones). */
-export const BAR_MODULE_IDS = [
-  'workspaces',
-  'agents',
-  'frontApp',
-  'clock',
-  'wifi',
-  'awake',
-  'battery',
-] as const
 
 export const DEFAULT_AGENTS_CONFIG: AgentsConfig = {
   monitor: false,

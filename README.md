@@ -13,8 +13,10 @@ Desktop, Theme, Machine. Want more? Enable it.
 
 Two values govern every decision:
 
-1. **Lightweight.** Idles invisibly (~90MB), summons instantly (<100ms budget, measured in
-   single-digit ms). When a feature and the weight budget conflict, the feature loses.
+1. **Lightweight.** Idles invisibly (under 120 MB resident is the budget, measured the same
+   way every release — the receipt in each release's notes), summons instantly (<100ms
+   budget, measured in single-digit ms). When a feature and the weight budget conflict, the
+   feature loses.
 2. **Hackable.** Extending scuttlarr feels like scripting, not app development. A script
    is an executable in a folder; a theme is one text file; a plugin is a directory.
 

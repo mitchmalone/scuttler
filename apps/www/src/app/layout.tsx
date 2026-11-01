@@ -7,6 +7,7 @@ import {
   themeBootScript,
   themeTokens,
 } from '@/lib/page-theme'
+import { SITE_URL } from '@/lib/site'
 
 import './globals.css'
 
@@ -29,7 +30,8 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
-  metadataBase: new URL('https://scuttlarr.com'),
+  metadataBase: new URL(SITE_URL),
+  alternates: { canonical: '/' },
   openGraph: {
     title: TITLE,
     description:

@@ -1,19 +1,26 @@
 'use client'
 
 import { parseInput } from '@scuttlarr/core/grammar'
+import type { Row } from '@scuttlarr/core/rows'
 import {
-  AskPinned,
-  AskSurface,
   type AskTurn,
   BUILTIN_THEMES,
+  Launcher,
+  launcherPrompt,
   themeNames,
   themeVars,
 } from '@scuttlarr/tui'
+import '@scuttlarr/tui/launcher.css'
 import { useEffect, useRef, useState } from 'react'
 
 import { useAppTheme } from '@/lib/app-theme'
 import { type PanelId, askAnswer } from '@/lib/demo-data'
-import { type DemoRow, computeDemoRows } from '@/lib/demo-rows'
+import {
+  actionFor,
+  computeDemoRows,
+  launchedId,
+  openedPanel,
+} from '@/lib/demo-rows'
 import { SEED_FRECENCY, TRIGGERS } from '@/lib/launch-index'
 
 import { DemoBar } from './bar'
@@ -25,6 +32,7 @@ import {
   WifiPanel,
 } from './panels'
 
+/** The app's defaults for the three things the prompt shows (config.rs). */
 const TERMINAL = 'Ghostty'
 const SIGIL = '❯'
 const BANG_SIGIL = '$'
@@ -45,9 +53,10 @@ const SAMPLES = [
  * launcher panel hanging Spotlight-style below it.
  *
  * Everything the panel decides — grammar, fuzzy matching, ranking, row shapes —
- * runs in `@scuttlarr/core`, and the TUI panels are the real `@scuttlarr/tui`
- * components. The website supplies a fake index and fake OS data; it never
- * forks engine logic (invariant 5).
+ * runs in `@scuttlarr/core`; the prompt is the kit's `Launcher`, the same
+ * component the app's panel window renders, and the TUI panels are the real
+ * `@scuttlarr/tui` components. The website supplies a fake index and fake OS
+ * data; it never forks engine logic or retypes the UI (invariants 5 and 10).
  */
 export function Demo() {
   const [raw, setRaw] = useState('')
@@ -106,6 +115,16 @@ export function Demo() {
     if (el) el.scrollTop = el.scrollHeight
   }, [ask])
 
+  const { sigil, placeholder } = launcherPrompt({
+    mode: parsed.mode,
+    draftStep: null,
+    loremMenu: false,
+    askActive,
+    askBusy,
+    sigil: SIGIL,
+    bangSigil: BANG_SIGIL,
+  })
+
   /** Adds a turn, "thinks" for a beat, then types the canned answer out a few
    * characters a frame like a streamed reply. Follow-ups append; the first
    * question stays pinned in the header. */
@@ -128,17 +147,19 @@ export function Demo() {
     }, 16)
   }
 
-  const fire = (row: DemoRow | undefined) => {
+  const fire = (row: Row | undefined) => {
     if (!row) return
-    if (row.openPanel) {
-      setPanel(row.openPanel as PanelId)
+    const opens = openedPanel(row)
+    if (opens) {
+      setPanel(opens)
       setRaw('')
       setSelected(0)
       setToast('')
       return
     }
-    if (row.id) setFrecency((f) => ({ ...f, [row.id!]: (f[row.id!] ?? 0) + 1 }))
-    showToast('⏎ ' + row.action + '  ·  panel dismissed, focus returned')
+    const id = launchedId(row)
+    if (id) setFrecency((f) => ({ ...f, [id]: (f[id] ?? 0) + 1 }))
+    showToast('⏎ ' + actionFor(row) + '  ·  panel dismissed, focus returned')
   }
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -186,9 +207,10 @@ export function Demo() {
   }
 
   /* Two token sets, one source. The panel kit resolves through --tui-*; the
-     bar's stylesheet resolves through the unprefixed panel names, which on this
-     page would otherwise hit the *site* palette. `themeVars` is the kit's own
-     mapping, so neither is a second copy. */
+     launcher and bar stylesheets resolve through the unprefixed panel names,
+     which on this page would otherwise hit the *site* palette. `themeVars` is
+     the kit's own mapping, so neither is a second copy. The launcher window is
+     translucent, so its `--bg` is the glass token, as in the app. */
   const scopeVars = {
     '--tui-bg': theme.glass,
     '--tui-surface': theme.surface,
@@ -199,6 +221,7 @@ export function Demo() {
     '--tui-accent': theme.accent,
     '--tui-selected': theme.selected,
     ...themeVars(theme, 'panel'),
+    '--bg': theme.glass,
   } as React.CSSProperties
 
   const panelBody = () => {
@@ -230,7 +253,7 @@ export function Demo() {
           }}
         />
 
-        <DemoBar workspace={workspace} onWorkspace={setWorkspace} />
+        <DemoBar live workspace={workspace} onWorkspace={setWorkspace} />
 
         {/* above the aurora wash, below the bar (z-10) so hover cards win */}
         <div className="relative z-[5] flex h-full items-start justify-center px-8 pt-[150px]">
@@ -244,180 +267,49 @@ export function Demo() {
               </div>
             ) : (
               <div
-                className="flex flex-col overflow-hidden rounded-[10px] border font-mono"
+                className="font-mono"
                 style={{
                   boxShadow: 'var(--shadow)',
-                  background: theme.glass,
-                  borderColor: theme.border,
+                  borderRadius: 10,
                   color: theme.fg,
                 }}
               >
-                {/* Once a conversation starts the first question is pinned
-                    up here and the prompt row drops to the bottom (flex order,
-                    so the input keeps focus) — the app's exact arrangement. */}
-                {askActive && (
-                  <div
-                    className="order-0 flex h-[54px] shrink-0 items-center border-b px-3.5"
-                    style={{ borderColor: theme.border }}
-                  >
-                    <AskPinned prompt={ask[0]?.prompt ?? ''} busy={askBusy} />
-                  </div>
-                )}
-                <div
-                  className={`flex h-[54px] shrink-0 items-center gap-2.5 px-3.5 ${askActive ? 'order-2 border-t' : ''}`}
-                  style={askActive ? { borderColor: theme.border } : undefined}
-                >
-                  <span
-                    className="text-[17px] font-semibold"
-                    style={{
-                      color: isBang
-                        ? theme.bang
-                        : askActive
-                          ? theme.dim
-                          : isAskMode
-                            ? theme.accent
-                            : theme.sigil,
-                    }}
-                  >
-                    {isBang
-                      ? BANG_SIGIL
-                      : askActive
-                        ? '❯'
-                        : isAskMode
-                          ? '?'
-                          : SIGIL}
-                  </span>
-                  <input
-                    type="text"
-                    value={raw}
-                    ref={inputRef}
-                    spellCheck={false}
-                    autoComplete="off"
-                    aria-label="scuttlarr demo prompt"
-                    placeholder={
-                      askActive
-                        ? askBusy
-                          ? 'waiting for the answer…'
-                          : 'ask a follow-up… (Esc ends)'
-                        : 'Search for apps and commands…'
+                <Launcher
+                  mode={parsed.mode}
+                  sigil={sigil}
+                  placeholder={placeholder}
+                  value={raw}
+                  inputRef={inputRef}
+                  onChange={(e) => {
+                    // Leaving ? mode ends the conversation; typing a
+                    // follow-up keeps it.
+                    if (ask.length > 0 && !e.target.value.startsWith('?')) {
+                      clearInterval(stream.current)
+                      setAsk([])
                     }
-                    onChange={(e) => {
-                      // Leaving ? mode ends the conversation; typing a
-                      // follow-up keeps it.
-                      if (ask.length > 0 && !e.target.value.startsWith('?')) {
-                        clearInterval(stream.current)
-                        setAsk([])
-                      }
-                      setRaw(e.target.value)
-                      setSelected(0)
-                      setToast('')
-                    }}
-                    onKeyDown={onKeyDown}
-                    className="flex-1 border-none bg-transparent text-base outline-none"
-                    style={{
-                      color: theme.fg,
-                      caretColor: isBang ? theme.bang : theme.sigil,
-                    }}
-                  />
-                </div>
-
-                {isBang && (
-                  <div className="flex h-10 items-center gap-2.5 px-3.5 text-sm">
-                    <span
-                      className="whitespace-nowrap"
-                      style={{ color: theme.bang }}
-                    >
-                      run in {TERMINAL} ▸
-                    </span>
-                    <span className="overflow-hidden text-ellipsis whitespace-nowrap">
-                      {parsed.command || 'new window'}
-                    </span>
-                  </div>
-                )}
-
-                {askActive && (
-                  <AskSurface
-                    turns={ask}
-                    className="order-1 h-[306px] shrink-0"
-                    scrollRef={askScrollRef}
-                  />
-                )}
-
-                {isAskMode && ask.length === 0 && (
-                  <div
-                    className="flex h-10 items-center px-3.5 text-sm italic"
-                    style={{ color: theme.dim }}
-                  >
-                    ⏎ to ask — answers stream from your own claude or codex CLI
-                  </div>
-                )}
-
-                {!isBang && !isAskMode && rows.length > 0 && (
-                  <ul className="list-none">
-                    {rows.map((row, i) => (
-                      <li
-                        key={row.key}
-                        onMouseEnter={() => setSelected(i)}
-                        onMouseDown={(e) => {
-                          e.preventDefault()
-                          fire(row)
-                        }}
-                        className="flex h-10 items-center gap-2.5 px-3.5 text-sm"
-                        style={{
-                          background:
-                            i === sel ? theme.selected : 'transparent',
-                        }}
-                      >
-                        <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-[15px]">
-                          {row.glyph}
-                        </span>
-                        <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
-                          {row.title.split('').map((ch, j) => (
-                            <span
-                              key={j}
-                              style={{
-                                color: row.positions.includes(j)
-                                  ? theme.accent
-                                  : theme.fg,
-                                fontWeight: row.positions.includes(j)
-                                  ? 700
-                                  : 400,
-                              }}
-                            >
-                              {ch}
-                            </span>
-                          ))}
-                        </span>
-                        <span
-                          className="inline-flex items-center gap-2 text-xs"
-                          style={{ color: theme.dim }}
-                        >
-                          <kbd
-                            style={{
-                              font: 'inherit',
-                              opacity: i === sel ? 0.7 : 0,
-                            }}
-                          >
-                            {i < 8 ? '⌘' + (i + 1) : ''}
-                          </kbd>
-                          {row.hint}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                {!isBang &&
-                  !isAskMode &&
-                  rows.length === 0 &&
-                  raw.length > 0 && (
-                    <div
-                      className="flex h-10 items-center px-3.5 text-sm italic"
-                      style={{ color: theme.dim }}
-                    >
-                      nothing on the horizon
-                    </div>
+                    setRaw(e.target.value)
+                    setSelected(0)
+                    setToast('')
+                  }}
+                  onKeyDown={onKeyDown}
+                  askTurns={ask}
+                  askBusy={askBusy}
+                  askScrollRef={askScrollRef}
+                  askPrompt={isAskMode ? parsed.prompt : ''}
+                  bangCommand={isBang ? parsed.command : ''}
+                  terminal={TERMINAL}
+                  rows={rows}
+                  selected={sel}
+                  // The fake index carries emoji icons; engine rows (url, math,
+                  // emoji, panels) bring their own glyph.
+                  renderIcon={(row) => (
+                    <span className="icon glyph">{row.icon ?? row.glyph}</span>
                   )}
+                  onRowMouseDown={(row, e) => {
+                    e.preventDefault()
+                    fire(row)
+                  }}
+                />
               </div>
             )}
           </div>

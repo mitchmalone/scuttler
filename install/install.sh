@@ -65,4 +65,4 @@ ok "installed $(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$
 # 3. run -----------------------------------------------------------------------
 open -g "$APP"
 ok "scuttlarr is running — ⌥Space summons it"
-say "want the rest (tiling, themes everywhere, the de-shined machine)? Settings → Desktop / Appearance / Machine. Each is a toggle and each shows a plan first."
+say "want the rest (tiling, themes everywhere, the de-shined machine)? Settings → Desktop, General ▸ Theme, Machine. Each is a toggle and each shows a plan first."

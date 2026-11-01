@@ -1,98 +1,22 @@
 'use client'
 
-import UpdatesCell from '@scuttlarr/plugins/updates/cell'
-import UsageCell from '@scuttlarr/plugins/usage/cell'
-import {
-  Bar,
-  BarAgents,
-  BarBatteryCell,
-  BarClock,
-  BarFrontApp,
-  BarWifiCell,
-  BarWorkspaces,
-} from '@scuttlarr/tui'
-import { NOOP_HOST, type PluginCellComponent } from '@scuttlarr/tui/plugins'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 
-import { useWebBarHover } from '@/components/demo/bar-hover'
-import { demoSnapshot } from '@/lib/demo-data'
+import { DemoBar } from '@/components/demo/bar'
 
 import { BarThemeScope } from './bar-theme-scope'
 
-/** Each first-party plugin's own `cell.tsx`, keyed by id (invariant 10). */
-const PLUGIN_CELLS: Record<string, PluginCellComponent<never>> = {
-  usage: UsageCell as PluginCellComponent<never>,
-  updates: UpdatesCell as PluginCellComponent<never>,
-}
-
 /**
- * A still of the bar for the explainer section — the real components from
- * `@scuttlarr/tui`, frozen at a fixed clock so it reads like a screenshot.
- * The website owns no bar markup (AGENTS invariant 10).
+ * A still of the bar for the explainer section: the same `DemoBar` the live demo
+ * renders, frozen at one instant so it reads like a screenshot, in the picked
+ * app theme. The website owns no bar markup (AGENTS invariant 10).
  */
 export function BarStrip() {
   // Fixed instant, chosen once: this is a still, not a live strip.
-  const [now] = useState(() => new Date(2026, 7, 16, 9, 41))
-  const snap = useMemo(
-    () => demoSnapshot(Math.floor(now.getTime() / 1000), '2'),
-    [now],
-  )
-  const hover = useWebBarHover()
-
+  const [at] = useState(() => new Date(2026, 7, 16, 9, 41))
   return (
     <BarThemeScope className="overflow-hidden rounded-[10px] border border-(--hair)">
-      <Bar
-        left={[
-          <BarWorkspaces
-            key="workspaces"
-            workspaces={snap.workspaces}
-            focused={snap.focused}
-            onSwitch={() => {}}
-          />,
-          <BarAgents
-            key="agents"
-            agents={snap.agents}
-            now={now}
-            hover={hover}
-          />,
-          snap.frontApp ? (
-            <BarFrontApp key="frontApp" name={snap.frontApp} />
-          ) : null,
-        ]}
-        center={<BarClock key="clock">Sat 16 Aug 09:41</BarClock>}
-        right={[
-          <BarWifiCell
-            key="wifi"
-            online={snap.wifi.online}
-            ssid={snap.wifi.ssid}
-            rssi={snap.wifi.rssi}
-          />,
-          ...(snap.plugins ?? []).map((p) => {
-            const Cell = PLUGIN_CELLS[p.id]
-            if (!Cell) return null
-            return (
-              <Cell
-                key={`plugin:${p.id}`}
-                plugin={p}
-                state={p.state as never}
-                settings={{}}
-                now={now}
-                hover={hover}
-                host={NOOP_HOST}
-              />
-            )
-          }),
-          <BarBatteryCell
-            key="battery"
-            pct={snap.batteryPct}
-            onAc={snap.onAc}
-            charging={snap.charging}
-            chargeLimit={snap.chargeLimit}
-            detail={null}
-            hover={hover}
-          />,
-        ]}
-      />
+      <DemoBar at={at} />
     </BarThemeScope>
   )
 }

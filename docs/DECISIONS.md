@@ -5,6 +5,30 @@
 
 ---
 
+### 2026-11-01 · The site imports the panel registry, the bar's default arrangement and the launcher prompt; nothing is retyped
+
+- **Decision.** Three more surfaces move out of `apps/desktop` into packages so
+  scuttlarr.com renders them by import (invariant 10): `@scuttlarr/core/panels`
+  (`PANEL_INFO`, `PANEL_TRIGGERS` — pure data; the app's `panels/registry.ts` keeps only
+  the icons and the settings gates), `@scuttlarr/tui/bar/layout` (`DEFAULT_BAR_LAYOUT`,
+  `BAR_MODULE_IDS`, `normalizeBarZones`, `notchedZones` — the arrangement and the one
+  normalization; `lib/config.ts` re-exports them), and the kit's `Launcher`, which the demo
+  now renders instead of its own prompt markup. `BAR_HOVER_CLOSE_MS` joins
+  `@scuttlarr/tui/bar`; the bundled plugins export their `manifest.json` so the demo's panel
+  list is the registry plus the plugins' own `panel` blocks, assembled as the app assembles
+  it.
+- **Why.** The audit of 2026-11-01 found the site's hand-mirrored `PANEL_INFO` missing
+  `setup`, `theme` and `plugins` (two of them v0.8.0 headline features), two bar components
+  duplicating each other with a right zone matching neither default, and a prompt that
+  re-implemented the kit's — each a confident lie that only someone who knows the app would
+  catch, exactly the failure invariant 10 names.
+- **Cost.** `normalizeBarZones` moves from "config semantics" into the kit; its tests stay
+  where they were through the re-export. The demo's `Launcher` carries the kit's unprefixed
+  launcher classes onto the page (`.panel`, `.row`, …); nothing on the site used those names.
+- **Not done.** Brand assets (`og.png`, the icon, the package description) wait for the
+  rename plan; the stats row was dropped rather than fed from `release.json` (perf facts in
+  the release feed is a possible follow-up, not a need).
+
 ### 2026-11-01 · Release smoke tests are scripted, not two `[y/N]` prompts
 
 - **Decision.** `scripts/release.sh` step 6 no longer stops for a human. The fresh-profile

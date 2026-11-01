@@ -1,6 +1,6 @@
 import { parseInput } from '@scuttlarr/core/grammar'
 import {
-  type Row as CoreRow,
+  type Row,
   emojiRows,
   launchRows,
   panelRows,
@@ -12,23 +12,12 @@ import { PANEL_INFO } from './demo-data'
 import { INDEX, QUICKLINKS, TRIGGERS } from './launch-index'
 
 /**
- * Thin adapter between the real engine (@scuttlarr/core) and the demo panel. All grammar,
- * matching, ranking, and row logic runs in core; this file only translates core rows into
- * the demo's presentation shape — no engine logic lives on the website.
+ * Thin adapter between the real engine (@scuttlarr/core) and the demo. All
+ * grammar, matching, ranking and row logic runs in core and the rows it returns
+ * are the kit `Launcher`'s own input (invariant 10); this file only supplies the
+ * fake index and reads an `enter` back into a toast line — no engine logic lives
+ * on the website.
  */
-export type DemoRow = {
-  key: string
-  glyph: string
-  hint: string
-  title: string
-  positions: number[]
-  /** Toast copy simulating what Enter would have done in the app. */
-  action: string
-  /** Set for index items so the demo can bump frecency on fire. */
-  id?: string
-  /** Set for panel rows: Enter opens this panel inside the demo. */
-  openPanel?: string
-}
 
 /** Same shape the app ships as its default searchFallback. */
 const SEARCH_FALLBACK = 'https://www.google.com/search?q={query}'
@@ -50,7 +39,7 @@ const KIND_BY_ID = new Map(INDEX.map((item) => [item.id, item.kind]))
 const stripScheme = (url: string) => url.replace(/^https?:\/\//, '')
 
 /** Human-readable toast line for what the app would do on Enter. */
-function actionFor(row: CoreRow): string {
+export function actionFor(row: Row): string {
   const enter = row.enter
   switch (enter.kind) {
     case 'execute': {
@@ -70,34 +59,25 @@ function actionFor(row: CoreRow): string {
   }
 }
 
-function toDemoRow(row: CoreRow): DemoRow {
-  return {
-    key: row.key,
-    // Index items carry their mock emoji icon; engine rows (url, math, …) use core glyphs.
-    glyph: row.icon ?? row.glyph,
-    hint: row.hint,
-    title: row.title,
-    positions: row.positions,
-    action: actionFor(row),
-    id: row.enter.kind === 'execute' ? row.enter.id : undefined,
-    openPanel: row.enter.kind === 'open-panel' ? row.enter.panel : undefined,
-  }
-}
+/** The index item a row launches, for the demo's frecency bump; null otherwise. */
+export const launchedId = (row: Row): string | null =>
+  row.enter.kind === 'execute' ? row.enter.id : null
 
-export function computeDemoRows(raw: string, frecency: FrecencyMap): DemoRow[] {
+/** The panel a row opens inside the demo; null otherwise. */
+export const openedPanel = (row: Row): string | null =>
+  row.enter.kind === 'open-panel' ? row.enter.panel : null
+
+export function computeDemoRows(raw: string, frecency: FrecencyMap): Row[] {
   const parsed = parseInput(raw, TRIGGERS)
   // The site demo has no terminal or claude CLI behind it.
   if (parsed.mode === 'bang' || parsed.mode === 'ask') return []
-  if (parsed.mode === 'emoji') return emojiRows(parsed.query).map(toDemoRow)
+  if (parsed.mode === 'emoji') return emojiRows(parsed.query)
   if (parsed.mode === 'trigger') {
     const panel = PANEL_INFO.find((p) => p.id === parsed.trigger)
-    if (panel)
-      return panelRows(panel.id, panel.title, panel.hint).map(toDemoRow)
+    if (panel) return panelRows(panel.id, panel.title, panel.hint)
     const link = QUICKLINKS.find((l) => l.trigger === parsed.trigger)
     if (!link) return []
-    return quicklinkRows(link, parsed.args).map(toDemoRow)
+    return quicklinkRows(link, parsed.args)
   }
-  return launchRows(parsed.query, CORE_INDEX, frecency, SEARCH_FALLBACK).map(
-    toDemoRow,
-  )
+  return launchRows(parsed.query, CORE_INDEX, frecency, SEARCH_FALLBACK)
 }

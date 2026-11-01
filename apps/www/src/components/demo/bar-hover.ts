@@ -1,6 +1,7 @@
 'use client'
 
 import type { BarHoverApi } from '@scuttlarr/tui'
+import { BAR_HOVER_CLOSE_MS } from '@scuttlarr/tui/bar'
 import { useEffect, useRef, useState } from 'react'
 
 /**
@@ -12,9 +13,6 @@ import { useEffect, useRef, useState } from 'react'
  * window to grow, so only the *semantics* are shared: the card stays open while
  * the cursor is on the cell or the card, and closes after a grace period.
  */
-
-/** `CLOSE_MS` in apps/desktop/src/bar/hover.ts. */
-const CLOSE_MS = 200
 
 export function useWebBarHover(initial: string | null = null): BarHoverApi {
   const [hovered, setHovered] = useState<string | null>(initial)
@@ -32,7 +30,7 @@ export function useWebBarHover(initial: string | null = null): BarHoverApi {
     },
     leave: () => {
       stay()
-      timer.current = setTimeout(() => setHovered(initial), CLOSE_MS)
+      timer.current = setTimeout(() => setHovered(initial), BAR_HOVER_CLOSE_MS)
     },
     // No window to resize on a web page.
     cardRef: () => {},

@@ -1,8 +1,8 @@
 ---
 title: Docs sweep — every doc true against v0.8.0, and a memory receipt that ends the argument
-status: active
+status: done # hands-check of the site (step 6) stays with Mitch; see STATUS
 created: 2026-11-01
-updated: 2026-11-01 (steps 1–5 landed)
+updated: 2026-11-01 (all six steps landed; closed)
 links:
   - 2026-11-01-rename-to-scuttler.md # the follow-on; runs on the swept docs
   - ../done/2026-10-19-docs-truth-and-stories.md # the last truth pass (README/PRD/ROADMAP)
@@ -184,23 +184,23 @@ written.
 
 ### 6. Site: copy and invariant 10
 
-- [ ] Copy against v0.8.0: stats row from `release.json`-adjacent constants or removed;
+- [x] Copy against v0.8.0: stats row from `release.json`-adjacent constants or removed;
       network sentence matches README Principles; "⌥Space"; agent states by shape in
       `warn`; the eight "V0.5" badges and the v0.4/v0.5 paragraphs gone; roadmap block
       rebuilt from ROADMAP's open list or dropped; AeroSpace workspaces not shown as a
       default cell; install tabs gain `curl | sh` first, Homebrew says `--cask` and that
       `updates ⏎` is the update path; agent monitoring says off by default; the in-app
       updates ledger appears once.
-- [ ] `/docs` stops duplicating: config sample rendered from `DEFAULT_BAR_LAYOUT` and
+- [x] `/docs` stops duplicating: config sample rendered from `DEFAULT_BAR_LAYOUT` and
       `Config::default()`-mirroring constants (or deleted in favour of the README table);
       uninstall and scripts sections become one paragraph each plus a link to the GitHub
       doc. Panel list reads from the registry once the extraction below lands.
-- [ ] Invariant 10: `PANEL_INFO` deleted; the panels registry's info shape moves to
+- [x] Invariant 10: `PANEL_INFO` deleted; the panels registry's info shape moves to
       `packages/core` (or `packages/tui`) and both app and site import it. The demo
       imports the kit `Launcher`. `bar.tsx` and `bar-strip.tsx` collapse to one component
       whose right zone is `DEFAULT_BAR_LAYOUT`. `CLOSE_MS` imported. `BarThemeScope`
       receives the picked theme (invariant 8).
-- [ ] Dead: `ui/tabs.tsx` and `@radix-ui/react-tabs`; `components.json` `@/hooks` alias;
+- [x] Dead: `ui/tabs.tsx` and `@radix-ui/react-tabs`; `components.json` `@/hooks` alias;
       `tsconfig.tsbuildinfo` ignored. Add `sitemap.ts` and `robots.ts` (static export
       supports both). `public/install` regenerated from `install/install.sh` after fixing
       "Settings → Desktop / Appearance / Machine".
@@ -209,25 +209,25 @@ written.
 
 ### Close
 
-- [ ] Agent memory notes refreshed (amaran → lights, travel note closed, project-layout).
-- [ ] STATUS updated; this plan → `done/`; same commit.
+- [x] Agent memory notes refreshed (amaran → lights, travel note closed, project-layout).
+- [x] STATUS updated; this plan → `done/`; same commit.
 
 ## Acceptance criteria
 
-- [ ] A reader can find the memory budget's measurement definition from AGENTS.md in one
+- [x] A reader can find the memory budget's measurement definition from AGENTS.md in one
       hop, and `scripts/mem.sh --receipt` produces it; v0.9.0's notes will use it.
-- [ ] STATUS.md under 120 lines and contains no reading, number or ticket older than
+- [x] STATUS.md under 120 lines and contains no reading, number or ticket older than
       v0.8.0 without a pointer.
-- [ ] `git grep -n "launcharr" -- AGENTS.md README.md docs/*.md` returns only lines that
+- [x] `git grep -n "launcharr" -- AGENTS.md README.md docs/*.md` returns only lines that
       say history (the fold, the deprecated cask, the notary profile).
-- [ ] SETUP.md names no verb, file or directory that `packages/setup` does not have.
-- [ ] JOURNAL and DECISIONS strictly newest-first; every superseded decision names its
+- [x] SETUP.md names no verb, file or directory that `packages/setup` does not have.
+- [x] JOURNAL and DECISIONS strictly newest-first; every superseded decision names its
       successor.
-- [ ] No `PANEL_INFO`, no second launcher prompt, one bar composition in `apps/www`;
+- [x] No `PANEL_INFO`, no second launcher prompt, one bar composition in `apps/www`;
       `pnpm verify` (incl. `verify:www`, depcruise layering) green.
-- [ ] STANDARDS.md stamp comment names the jig commit it was vendored from, and
+- [x] STANDARDS.md stamp comment names the jig commit it was vendored from, and
       DEVIATIONS lists every divergence found by diffing the repo against it.
-- [ ] Memory: not applicable — no process, window, watcher or cache added. The step-1
+- [x] Memory: not applicable — no process, window, watcher or cache added. The step-1
       receipt is a measurement, recorded as the ROADMAP baseline.
 
 ## Out of scope
@@ -255,3 +255,13 @@ written.
   rules allow `packages/core` to carry the panel info shape without pulling React.
 - **Bar default**: picking the TS layout as truth changes nothing for existing configs
   (they persist their own), but changes a fresh install's right zone. Record in DECISIONS.
+
+## Closed (2026-11-01)
+
+Six commits, one per step, on main: 355ace1 (receipt), eb83176 (cursor docs), adc38a4
+(SETUP, standard), a611182 (extension docs), 99fa5e0 (logs), and the site commit. Left
+with Mitch: the site hands-check in a browser (home, `/docs`, the demo typing `setup`,
+`theme`, `ss`; the theme picker retinting the bar still, the spotlight and the legend) and
+the v0.8.0 receipt baseline on the primary Mac under the reference config (needs the
+running app stopped). The `/docs` page is the map (links to the repo's docs) — the lean
+recorded in STATUS, applied; say if the other way was wanted.

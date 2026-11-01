@@ -1,14 +1,16 @@
+import { DEFAULT_BAR_LAYOUT } from '@scuttlarr/tui/bar/layout'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
 import { DocsHeader } from '@/components/docs-header'
 import { PANEL_INFO } from '@/lib/demo-data'
-import { VERSION } from '@/lib/site'
+import { DOCS_URL, README_URL, VERSION } from '@/lib/site'
 
 export const metadata: Metadata = {
-  title: 'scuttlarr docs — scripts, config, panels',
+  title: 'scuttlarr docs — scripts, plugins, config, panels',
   description:
-    'The scuttlarr scripts protocol, config.json reference, panel triggers, and how to uninstall. Drop an executable in a folder and its trigger word joins the launcher grammar.',
+    'Where scuttlarr is documented: the scripts, widget and plugin contracts, config.json, the panel triggers, themes, the Machine rung, and how to uninstall. The repo holds the text; this page is the map.',
+  alternates: { canonical: '/docs' },
 }
 
 const SECTION = 'mx-auto max-w-[900px] px-8'
@@ -42,6 +44,14 @@ function Note({
   )
 }
 
+function Doc({ file, children }: { file: string; children: React.ReactNode }) {
+  return (
+    <a href={`${DOCS_URL}/${file}`} className="whitespace-nowrap">
+      {children}
+    </a>
+  )
+}
+
 const MANIFEST_JSON = `{
   "trigger": "uuid",
   "name": "UUID",
@@ -58,31 +68,18 @@ const QUERY_JSON = `{
   ]
 }`
 
-/* The bar block mirrors DEFAULT_BAR_LAYOUT in apps/desktop/src/lib/config.ts. */
-const CONFIG_JSON = `{
-  "theme": "scuttlarr",
-  "themes": { "my-theme": { "accent": "#ff176c" } },
-  "bar": {
-    "enabled": true,
-    "layout": {
-      "left":   [{ "id": "workspaces" }, { "id": "agents" }, { "id": "frontApp" }],
-      "center": [{ "id": "clock" }],
-      "right":  [{ "id": "wifi" }, { "id": "battery" }]
-    }
-  },
-  "agents": { "askMode": false, "askProvider": "claude" },
-  "desktop": {
-    "tiling":  { "enabled": false, "managed": true, "modifier": "alt", "gaps": 8,
-                 "workspaces": 6, "float": ["com.raycast.macos"] },
-    "borders": { "enabled": false, "width": 5, "style": "round" },
-    "cornerRadius": null
+/* The bar's default arrangement, rendered from the kit's constant — the one the
+ * app writes into a fresh config.json (invariant 10: imported, never retyped). */
+const zone = (ids: { id: string }[]) =>
+  ids.map((m) => `{ "id": "${m.id}" }`).join(', ')
+const BAR_JSON = `"bar": {
+  "enabled": true,
+  "layout": {
+    "left":   [${zone(DEFAULT_BAR_LAYOUT.left)}],
+    "center": [${zone(DEFAULT_BAR_LAYOUT.center)}],
+    "right":  [${zone(DEFAULT_BAR_LAYOUT.right)}]
   }
 }`
-
-const UNINSTALL = `$ rm -rf /Applications/scuttlarr.app \\
-     ~/.config/scuttlarr \\
-     ~/Library/Application\\ Support/com.mitchmalone.scuttlarr \\
-     ~/Library/LaunchAgents/scuttlarr.plist`
 
 export default function Docs() {
   return (
@@ -95,12 +92,14 @@ export default function Docs() {
           Scripts are the plugin API.
         </h1>
         <p className={`m-0 mb-8 max-w-[70ch] ${PROSE}`}>
-          Drop an executable into{' '}
+          Drop a TypeScript file (or any executable) into{' '}
           <code className={CODE}>~/.config/scuttlarr/scripts/</code> and its
-          trigger word joins the launcher grammar — no restart, no store, no
-          manifest file. Any language. The bundled scripts (
-          <code className={CODE}>json</code>, <code className={CODE}>ip</code>)
-          are reference implementations and yours to edit.
+          trigger word joins the launcher grammar — no build, no restart, no
+          store. <code className={CODE}>.ts</code> runs under Bun. The bundled
+          scripts (<code className={CODE}>json</code>,{' '}
+          <code className={CODE}>ip</code>) are reference implementations and
+          yours to edit. The full contract — actions, timeouts, the rules — is{' '}
+          <Doc file="SCRIPTS.md">docs/SCRIPTS.md</Doc>; this is the shape.
         </p>
 
         <h2 className={H2}>The contract — two invocations</h2>
@@ -122,33 +121,33 @@ export default function Docs() {
         </div>
 
         <div className="mt-7 grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-px overflow-hidden rounded-xl border border-(--hair) bg-(--hair)">
-          <Note title="actions">
-            <code className={CODE}>copy</code> puts text on the clipboard,{' '}
-            <code className={CODE}>open</code> opens a URL, file or app,{' '}
-            <code className={CODE}>none</code> is informational.{' '}
-            <code className={CODE}>altAction</code> runs on ⌥⏎.
+          <Note title="widgets">
+            One <code className={CODE}>.ts</code> file in{' '}
+            <code className={CODE}>~/.config/scuttlarr/widgets/</code> owns a
+            cell in the bar — a glyph, a tone, a hover card of rows — on the
+            same manifest / tick shape.{' '}
+            <Doc file="WIDGETS.md">docs/WIDGETS.md</Doc>
           </Note>
-          <Note title="timeouts">
-            Manifest 1.5s, query 3s. A slow script gets killed, not waited for.
-            stderr is ignored; non-zero exit = no results.
+          <Note title="plugins">
+            A directory with a Bun service and React cells and panels on the
+            scuttlarr kit, with declared settings and permissions. The bundled
+            usage, calendar and updates plugins are written to the same
+            contract. <Doc file="PLUGINS.md">docs/PLUGINS.md</Doc>
           </Note>
-          <Note title="rules">
-            Up to 8 items shown. Triggers are whole-word, first registration
-            wins. <code className={CODE}>clip</code> is built-in and can&rsquo;t
-            be claimed.
+          <Note title="themes">
+            One <code className={CODE}>colors.toml</code> in Omarchy&rsquo;s
+            format, rendered into the app and — with the Theme rung on —
+            Ghostty, tmux, your prompt, delta, Claude Code and your editors.{' '}
+            <Doc file="THEMES.md">docs/THEMES.md</Doc>
           </Note>
-          <Note title="python gotcha">
-            The scripts dir is <code className={CODE}>sys.path[0]</code> — a
-            script named <code className={CODE}>json.py</code> shadows the
-            stdlib. Bundled scripts{' '}
-            <code className={CODE}>del sys.path[0]</code> first; do the same.
+          <Note title="the machine">
+            The <code className={CODE}>scuttlarr</code> CLI shipped in the app:
+            de-shined macOS defaults, the shell base, a manifest of every file
+            it writes, <code className={CODE}>doctor</code> and{' '}
+            <code className={CODE}>remove</code>.{' '}
+            <Doc file="SETUP.md">docs/SETUP.md</Doc>
           </Note>
         </div>
-
-        <p className={`m-0 mt-6 max-w-[70ch] ${PROSE}`}>
-          Network is your business for scripts: fetch what you like, and mind
-          the timeouts above.
-        </p>
       </section>
 
       {/* ---- config ---- */}
@@ -159,32 +158,26 @@ export default function Docs() {
             Everything lives in{' '}
             <code className={CODE}>~/.config/scuttlarr/config.json</code> —
             watched and hot-applied, in sync with the settings window both ways.
-            Themes are token overlays; unknown names fall back safely so a
-            hand-edit can&rsquo;t blank the UI.
+            Every key and what a fresh install has on is the{' '}
+            <a href={README_URL}>README&rsquo;s Defaults table</a>; the bar
+            block a fresh install writes is this:
           </p>
-          <Pre>{CONFIG_JSON}</Pre>
+          <Pre>{BAR_JSON}</Pre>
           <p className={`m-0 mt-5 max-w-[70ch] ${PROSE}`}>
-            Bar modules live in explicit <code className={CODE}>left</code> /{' '}
-            <code className={CODE}>center</code> /{' '}
-            <code className={CODE}>right</code> zones and render in the order
-            you list them. The clock is an ordinary module — put it wherever you
-            like. Displays with a notch have no usable center, so they take an
-            optional <code className={CODE}>bar.notchedLayout</code> of the same
-            shape; without one, the main layout applies with the center folded
-            into the head of the right zone.
-          </p>
-          <p className={`m-0 mt-5 max-w-[70ch] ${PROSE}`}>
-            <code className={CODE}>desktop</code> is the tiling layer, off by
-            default. Turn on <code className={CODE}>tiling.enabled</code> (or
-            pick tiling in setup) and scuttlarr renders{' '}
+            Modules render in the order you list them; the clock is an ordinary
+            module. Plugins and widgets join as{' '}
+            <code className={CODE}>plugin:&lt;id&gt;</code> and{' '}
+            <code className={CODE}>widget:&lt;id&gt;</code>. Displays with a
+            notch have no usable center, so they take an optional{' '}
+            <code className={CODE}>bar.notchedLayout</code> of the same shape;
+            without one, the main layout applies with the center folded into the
+            head of the right zone. The Desktop rung (
+            <code className={CODE}>desktop.tiling</code>, off by default)
+            renders{' '}
             <code className={CODE}>~/.config/aerospace/aerospace.toml</code>{' '}
-            from these few knobs and reloads AeroSpace live. Set{' '}
+            from a few knobs and reloads AeroSpace live; set{' '}
             <code className={CODE}>tiling.managed</code> to{' '}
-            <code className={CODE}>false</code> and the file is yours —
-            scuttlarr never writes it again. Borders (JankyBorders) are opt-in
-            from Settings → Desktop and take their colours from the theme;{' '}
-            <code className={CODE}>cornerRadius</code> sets macOS&rsquo;s hidden
-            window-corner default (1–26, apps relaunch to pick it up).
+            <code className={CODE}>false</code> and the file is yours.
           </p>
         </div>
       </section>
@@ -196,7 +189,9 @@ export default function Docs() {
           Some trigger words open a full keyboard-driven TUI panel inside the
           launcher window instead of returning rows. They fuzzy-match like apps,
           so you don&rsquo;t have to type them exactly. Esc walks back; focus
-          returns exactly where it was — including over a full-screen app.
+          returns exactly where it was — including over a full-screen app. This
+          list is the app&rsquo;s own registry plus the bundled plugins&rsquo;
+          panels.
         </p>
         <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-px overflow-hidden rounded-xl border border-(--hair) bg-(--hair)">
           {PANEL_INFO.map((p) => (
@@ -206,9 +201,10 @@ export default function Docs() {
           ))}
         </div>
         <p className={`m-0 mt-5 max-w-[70ch] ${PROSE}`}>
-          <code className={CODE}>usage ⏎</code> and{' '}
-          <code className={CODE}>agents ⏎</code> are gated on the agent settings
-          — both are off until you turn them on.
+          <code className={CODE}>agents ⏎</code> appears once agent monitoring
+          is on (Settings → Agents) and{' '}
+          <code className={CODE}>aerospace ⏎</code> once tiling is; everything
+          else is always there.
         </p>
       </section>
 
@@ -216,19 +212,15 @@ export default function Docs() {
       <section id="uninstall" className="border-t border-(--hair) bg-(--bg2)">
         <div className={`${SECTION} py-20`}>
           <h2 className={H2}>Uninstall</h2>
-          <p className={`m-0 mb-6 max-w-[70ch] ${PROSE}`}>
-            No installer, no daemons left behind. Four paths and it&rsquo;s
-            gone:
-          </p>
-          <Pre>{UNINSTALL}</Pre>
-          <p className={`m-0 mt-5 max-w-[70ch] ${PROSE}`}>
-            Installed with Homebrew?{' '}
-            <code className={CODE}>brew uninstall</code> handles the app; the
-            three dotfile paths are still yours to remove. AeroSpace (installed
-            alongside as a cask dependency) and JankyBorders (if you opted in)
-            stay until you <code className={CODE}>brew uninstall</code> them too
-            — <code className={CODE}>~/.config/aerospace</code> is only
-            scuttlarr&rsquo;s if its first line says so.
+          <p className={`m-0 max-w-[70ch] ${PROSE}`}>
+            <code className={CODE}>scuttlarr remove</code> first if you turned
+            the Machine rung on (it restores every default and file it touched,
+            and asks before doing so). Then{' '}
+            <code className={CODE}>brew uninstall --cask scuttlarr</code> and
+            the five paths listed in the{' '}
+            <a href={`${README_URL}`}>README&rsquo;s Uninstall section</a>. No
+            daemons left behind; AeroSpace and JankyBorders stay until you
+            uninstall them too.
           </p>
         </div>
       </section>

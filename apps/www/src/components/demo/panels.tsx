@@ -259,7 +259,7 @@ export function StubPanel({
       />
       <ListRow
         dim
-        label="A browser has no CoreAudio, pasteboard or live keymap to read."
+        label="A browser has no Mac behind it to read: no audio devices, pasteboard, screenshots, agents or tiling."
       />
       <ListRow dim label="Install scuttlarr and type this trigger to see it." />
     </Panel>

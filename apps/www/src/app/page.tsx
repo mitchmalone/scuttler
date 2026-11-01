@@ -14,6 +14,7 @@ import {
   FileCode2,
   Gauge,
   LayoutGrid,
+  ListChecks,
   MessageCircleQuestion,
   Palette,
   PanelTop,
@@ -133,19 +134,17 @@ const FEATURES = [
   },
   {
     icon: <PanelTop size={22} strokeWidth={1.75} className="text-(--cta)" />,
-    milestone: true,
     title: 'The bar',
     body: (
       <>
         An Omarchy-flat menubar replacement: no boxes, dim glyphs, one solid
-        block on the active workspace. ~19&nbsp;MB marginal memory, themed by
-        the same tokens as the launcher.
+        block on the active workspace. Every cell opens a panel in the launcher,
+        and it wears the same tokens.
       </>
     ),
   },
   {
     icon: <AppWindow size={22} strokeWidth={1.75} className="text-(--cta)" />,
-    milestone: true,
     title: 'TUI panels in the launcher',
     body: (
       <>
@@ -159,18 +158,17 @@ const FEATURES = [
   },
   {
     icon: <Bot size={22} strokeWidth={1.75} className="text-(--green)" />,
-    milestone: true,
     title: 'Agent monitoring',
     body: (
       <>
         Claude and Codex sessions as bar cells, boxed by tmux session, ordered
-        by tab. Blocked breathes red; click a cell to jump straight to the pane.
+        by tab. A session that needs you breathes in the warn colour; click a
+        cell to jump straight to the pane. Off by default.
       </>
     ),
   },
   {
     icon: <Gauge size={22} strokeWidth={1.75} className="text-(--dim)" />,
-    milestone: true,
     title: 'Token usage, locally',
     body: (
       <>
@@ -188,7 +186,6 @@ const FEATURES = [
         className="text-(--dim)"
       />
     ),
-    milestone: true,
     title: '? agent mode',
     body: (
       <>
@@ -201,7 +198,6 @@ const FEATURES = [
   },
   {
     icon: <LayoutGrid size={22} strokeWidth={1.75} className="text-(--cta)" />,
-    milestone: true,
     title: 'The desktop layer',
     body: (
       <>
@@ -215,14 +211,25 @@ const FEATURES = [
   },
   {
     icon: <Camera size={22} strokeWidth={1.75} className="text-(--cta)" />,
-    milestone: true,
     title: 'Screenshots to your agent',
     body: (
       <>
         <code className={MONO_CODE}>ss ⏎</code> — a grid of your latest
         captures, newest first. Enter puts the file on the clipboard;{' '}
         <code className={MONO_CODE}>⌘V</code> into Claude, Cursor or a browser.
-        The whole feature is <code className={MONO_CODE}>⌘Space ss ⏎ ⌘V</code>.
+        The whole feature is <code className={MONO_CODE}>⌥Space ss ⏎ ⌘V</code>.
+      </>
+    ),
+  },
+  {
+    icon: <ListChecks size={22} strokeWidth={1.75} className="text-(--dim)" />,
+    title: 'Updates you can act on',
+    body: (
+      <>
+        <code className={MONO_CODE}>updates ⏎</code> is a ledger: Homebrew, the
+        App Store, pnpm and mise, a count in the bar, each package a click or
+        Enter from upgrading in place with live output. scuttlarr&rsquo;s own
+        releases arrive the same way, verified against our signature.
       </>
     ),
   },
@@ -246,26 +253,19 @@ const FEATURES = [
     title: 'Zero permissions, opt-in everything',
     body: (
       <>
-        No Accessibility, no Full Disk Access, no telemetry, no update pings.
-        The launcher core's only network call is user-initiated: fetching a
-        favicon the moment you add a quicklink.
+        No Accessibility, no Full Disk Access, no telemetry. A prompt only ever
+        follows a toggle you flipped, and the network is used only to do what
+        you asked — a favicon, your usage limits, the update check — never to
+        report on you.
       </>
     ),
   },
 ]
 
-/** Every number here traces to a measurement in docs/JOURNAL.md or docs/ROADMAP.md. */
-const STATS = [
-  { value: '3.7ms', label: 'measured summon — the budget is 100ms' },
-  { value: '~96MB', label: 'main-process RSS while idling invisibly' },
-  { value: '+19MB', label: 'marginal memory for the whole bar' },
-  { value: '0', label: 'permissions scuttlarr asks you to grant' },
-]
-
 const BAR_MODULES = [
   {
     name: 'workspaces',
-    body: 'Aerospace workspaces, clickable and hotkey-tracked. The solid block is where you are.',
+    body: 'AeroSpace workspaces, clickable and hotkey-tracked, once the Desktop rung is on. The solid block is where you are.',
   },
   {
     name: 'agents',
@@ -280,12 +280,12 @@ const BAR_MODULES = [
     body: 'An ordinary module that usually sits in the center zone — move it wherever you like.',
   },
   {
-    name: 'wifi · battery',
-    body: 'Right-zone glyph cells. Alert states go amber, then red. Fail-soft: a module with no data hides, never errors.',
+    name: 'wifi · awake · usage · updates · battery',
+    body: 'Right-zone glyph cells, each with a hover card and a panel behind it. Alert states go warn, then danger. Fail-soft: a cell with nothing to say hides, never errors.',
   },
   {
-    name: 'yours (module API)',
-    body: 'A data-driven, any-language emitter API is on the v0.5 roadmap — same contract philosophy as scripts.',
+    name: 'yours',
+    body: 'A widget is one TypeScript file answering manifest and tick; a plugin is a directory with its own React cell and panel. Same contract philosophy as scripts.',
   },
 ]
 
@@ -325,39 +325,49 @@ const COMPARISON = {
 }
 
 const ROADMAP = [
-  ['done', 'The bar', 'daily driver; zones, notch profiles, hover cards'],
-  ['done', 'Panel framework', 'wifi ⏎ · dns ⏎ · ss ⏎ and eight more'],
-  ['done', 'Agent monitoring', 'cells, tmux groups, usage ⏎, ? mode'],
+  ['done', 'The bar', 'zones, notch profiles, hover cards, a bar per display'],
+  ['done', 'Panels', 'wifi ⏎ · dns ⏎ · ss ⏎ · theme ⏎ · setup ⏎ and more'],
+  ['done', 'Agents', 'cells by shape, tmux groups, usage ⏎, ? mode'],
+  [
+    'done',
+    'Plugins and widgets',
+    'Bun services, React cells and panels, declared permissions',
+  ],
   ['done', 'Desktop rung', 'AeroSpace managed, borders, corners'],
   [
     'done',
-    'Plugins',
-    'any-language services and bar cells, declared permissions',
-  ],
-  [
-    'done',
     'Theme rung',
-    "Omarchy's colors.toml, rendered into Ghostty, tmux, prompt, delta, Claude Code",
+    "Omarchy's colors.toml into Ghostty, tmux, prompt, delta, Claude Code, your editors",
   ],
   [
     'done',
-    'Theme policy',
-    'light/dark pair by macOS or schedule; a theme per macOS Focus; theme ⏎',
+    'Machine rung',
+    'de-shined defaults, the shell base, a manifest, doctor, remove',
+  ],
+  [
+    'done',
+    'First-launch setup',
+    'one question per screen; setup ⏎ runs it again',
+  ],
+  [
+    'done',
+    'Updates',
+    'a ledger across package managers; upgrades in place; self-update',
   ],
   [
     'wip',
-    'Machine rung',
-    'de-shined defaults, manifest, remove — the shell base is next',
+    'The rename',
+    'scuttlarr becomes scuttler, at scuttler.app, as v0.9.0',
   ],
   [
     'todo',
-    'Your themes',
-    'overlays in ~/.config/scuttlarr/themes, theme install <git-url>',
+    'Light mode first-class',
+    'Solarized Light and Catppuccin Latte on every surface',
   ],
   [
     'todo',
-    'Hot editors',
-    'VS Code, Cursor, Zed, Neovim, Helix retint with the theme',
+    'Plugins slice G',
+    'the remaining first-party panels move to plugins',
   ],
 ] as const
 
@@ -435,13 +445,13 @@ export default function Home() {
             style={{
               boxShadow: 'var(--shadow)',
               background:
-                'repeating-linear-gradient(-45deg, #11131d 0, #11131d 14px, #14161f 14px, #14161f 28px)',
+                'repeating-linear-gradient(-45deg, var(--bg2) 0, var(--bg2) 14px, var(--chip) 14px, var(--chip) 28px)',
             }}
           >
             <span className="inline-flex size-[68px] items-center justify-center rounded-full border border-(--border) bg-(--panel) text-(--cta)">
               <Play size={26} strokeWidth={2} />
             </span>
-            <span className="text-[12.5px] text-[#7d8590]">
+            <span className="text-[12.5px] text-(--dim)">
               welcome video — coming soon
             </span>
           </div>
@@ -465,32 +475,9 @@ export default function Home() {
               key={f.title}
               className="grid content-start gap-2.5 bg-(--bg) px-6 py-[26px]"
             >
-              {f.milestone ? (
-                <div className="flex items-center justify-between">
-                  {f.icon}
-                  <Badge variant="milestone">V0.5</Badge>
-                </div>
-              ) : (
-                f.icon
-              )}
+              {f.icon}
               <h3 className="m-0 text-[15px] font-semibold">{f.title}</h3>
               <p className={`m-0 ${CARD_BODY}`}>{f.body}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ---- stats ---- */}
-      <section className="border-y border-(--hair) bg-(--bg2)">
-        <div
-          className={`${SECTION} grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-10 py-14`}
-        >
-          {STATS.map((s) => (
-            <div key={s.label} className="grid gap-2">
-              <span className="text-[38px] font-bold tracking-[-0.03em]">
-                {s.value}
-              </span>
-              <span className="text-[13px] text-(--muted)">{s.label}</span>
             </div>
           ))}
         </div>
@@ -631,16 +618,16 @@ export default function Home() {
         >
           <div className="grid gap-4">
             <h2 className={EYEBROW}>
-              Building in the open — the fold shipped, the rungs are filling in
+              Building in the open — the rungs are in, the name is next
             </h2>
             <p className={`m-0 ${PROSE}`}>
-              v0.4 is where scuttlarr became a control surface: bar, panels,
-              agents, the desktop layer — all in daily use. v0.5 is the plugin
-              release: a module API for the bar, multi-display, settings inside
-              the panels. Explicit non-goals hold: no file search, no snippets,
-              no granted permissions. What once read <em>not a distro</em> is
-              now the rungs: bar + launcher on install, then Desktop, Theme and
-              Machine as toggles you turn on — the Omarchy shape, without Linux.
+              {VERSION} is the whole shape in daily use: bar and launcher on
+              install, then Desktop, Theme and Machine as toggles you turn on —
+              the Omarchy shape, without Linux. Explicit non-goals hold: no file
+              search, no snippets, no granted permissions, nothing that phones
+              home. What&rsquo;s open, and what would start each item, is the
+              repo&rsquo;s{' '}
+              <a href={`${GITHUB_URL}/blob/main/docs/ROADMAP.md`}>ROADMAP</a>.
             </p>
           </div>
           <div className="grid gap-3 rounded-xl border border-(--hair) bg-(--bg) px-6 py-[22px] text-[13px]">

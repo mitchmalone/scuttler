@@ -8,10 +8,12 @@
     "./usage/cell": "./usage/cell.tsx",
     "./usage/panel": "./usage/panel.tsx",
     "./usage/fixtures": "./usage/fixtures.ts",
+    "./usage/manifest.json": "./usage/manifest.json",
     "./calendar/cell": "./calendar/cell.tsx",
     "./calendar/panel": "./calendar/panel.tsx",
     "./calendar/model": "./calendar/model.ts",
     "./updates/cell": "./updates/cell.tsx",
+    "./updates/manifest.json": "./updates/manifest.json",
     "./updates/panel": "./updates/panel.tsx",
     "./updates/model": "./updates/model.ts",
     "./updates/fixtures": "./updates/fixtures.ts"
