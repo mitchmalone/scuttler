@@ -70,16 +70,19 @@ Settings); `setup ⏎` starts from the current config; the hotkey try; Esc on th
 screen restores the old theme; the field stops while hidden (idle CPU); with an awake
 hold armed, five fresh-config launches each open setup on first summon.
 
-Release path (phase 3 of the rename plan, in this order): `gh repo rename scuttler` and
-`git remote set-url origin` (the code already points at `mitchmalone/scuttler`, so
-`release.sh` refuses until the repo does); Vercel project renamed with `www.scuttler.app`
-as its production domain; `scripts/release.sh 0.8.1`; fan-out green and the tap holding
-`scuttler.rb` plus a deprecated `scuttlarr.rb`; then the live proof of the one
-cross-rename upgrade — a 0.8.0 install runs `updates ⏎` → `↵`, lands as `scuttler.app`,
-relaunches with its profile migrated; and `brew upgrade` on a scuttlarr install reports
-the deprecation. Before releasing: `scripts/dev-install.sh --build` over the live profile
-(bar, launcher, theme rung, agents, usage, updates, awake, lights all up; terminals still
-themed; `scuttler doctor` clean after the migration ran; the state symlink gone).
+Release path (phase 3 of the rename plan). Done 2026-11-01: GitHub repo renamed to
+`mitchmalone/scuttler` (origin updated); Vercel project `scuttler` serves `www.scuttler.app`
+from `ab2174a`; the Notion backlog and product-home pages renamed; this Mac dev-installed
+over the live 0.8.0 profile (config, state, share, `scuttler.db`, hook paths and the login
+item migrated; state symlink in place since the Machine rung is off; `sudoers status`
+reports the pre-rename rule); receipt 113 MB and cold start 151 ms in `releases/v0.8.1.md`.
+**Blocked on one thing:** `scripts/release.sh 0.8.1` refuses because the notary profile
+`launcharr-notary` is not in this Mac's keychain (v0.8.0 was notarised on the Mac mini).
+Store it once — `xcrun notarytool store-credentials launcharr-notary --apple-id <id>
+--team-id HXRC74AQZR` — then the release is one command, and after it: fan-out green, the
+tap holding `scuttler.rb` plus a deprecated `scuttlarr.rb`, and the live proof of the one
+cross-rename upgrade (a 0.8.0 install runs `updates ⏎` → `↵`, lands as `scuttler.app`;
+`brew upgrade` on a scuttlarr install reports the deprecation).
 
 Site (docs sweep step 6, not seen in a browser by the agent): home page copy; `/docs`;
 the demo prompt is now the kit's `Launcher` (type `setup`, `theme`, `ss`, `usage`; `?`
