@@ -9,6 +9,23 @@ import {
 
 const ids = (list: { id: string }[]) => list.map((m) => m.id)
 
+describe('DEFAULT_BAR_LAYOUT ids', () => {
+  it('is the arrangement BarConfig::default() writes (config.rs); change both', () => {
+    expect(ids(DEFAULT_BAR_LAYOUT.left)).toEqual([
+      'workspaces',
+      'agents',
+      'frontApp',
+    ])
+    expect(ids(DEFAULT_BAR_LAYOUT.center)).toEqual(['clock'])
+    expect(ids(DEFAULT_BAR_LAYOUT.right)).toEqual([
+      'wifi',
+      'awake',
+      'plugin:usage',
+      'battery',
+    ])
+  })
+})
+
 describe('normalizeBarZones with widgets', () => {
   it('places a discovered widget in its manifest zone when the layout lacks it', () => {
     const out = normalizeBarZones(DEFAULT_BAR_LAYOUT, [

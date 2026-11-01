@@ -2,7 +2,7 @@
 title: Docs sweep — every doc true against v0.8.0, and a memory receipt that ends the argument
 status: active
 created: 2026-11-01
-updated: 2026-11-01 (step 1 landed)
+updated: 2026-11-01 (steps 1–2 landed)
 links:
   - 2026-11-01-rename-to-scuttler.md # the follow-on; runs on the swept docs
   - ../done/2026-10-19-docs-truth-and-stories.md # the last truth pass (README/PRD/ROADMAP)
@@ -104,19 +104,20 @@ written.
 
 ### 2. Cursor docs: STATUS, ROADMAP, PRD
 
-- [ ] STATUS rewritten from the top to one screen: where we are (release + one line per
+- [x] STATUS rewritten from the top to one screen: where we are (release + one line per
       thing since), needs Mitch (decisions, then hands-checks for the current release
       only), next (pointers to ROADMAP). Hands-checks older than v0.8.0 become ROADMAP
       rows with triggers or are dropped; the launch-toast ticket (fixed 2026-10-20)
-      removed; the travel restore items checked with Mitch and closed.
-- [ ] Decide and record the bar default layout: `config.rs` right zone vs
+      removed; the travel restore items stay under "Needs Mitch (elsewhere)" until he
+      confirms them.
+- [x] Decide and record the bar default layout: `config.rs` right zone vs
       `DEFAULT_BAR_LAYOUT` (wifi, awake, usage, battery). One default, one source, the
       other derived or deleted; a test pins them equal.
-- [ ] ROADMAP collapsed to: shipped (one line per release, linking the notes), open with
+- [x] ROADMAP collapsed to: shipped (one line per release, linking the notes), open with
       triggers, non-goals. Emoji removed (line 21). Bundled plugins = usage, calendar,
       updates. Slice G stated as "nothing moved yet". Milestone exits marked as history
       where they say launcharr.
-- [ ] PRD header (v0.8.0, revised 2026-11-01); §6.2 IPC count points at DECISIONS instead
+- [x] PRD header (v0.8.0, revised 2026-11-01); §6.2 IPC count points at DECISIONS instead
       of a number; open question 1 closed (⌥Space held by three months of defaults).
 
 ### 3. Machine rung and the standard: SETUP, AGENTS row, DEVIATIONS, STANDARDS

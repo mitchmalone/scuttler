@@ -2,13 +2,13 @@
 
 > _Scuttle the ship. Sail the wreck._
 
-|              |                                                                     |
-| ------------ | ------------------------------------------------------------------- |
-| **Project**  | scuttlarr (always lowercase; launcharr until 11 Sep 2026)           |
-| **Version**  | living document; v0.7.0 shipped 1 Oct 2026 (v1 launcher 8 Aug 2026) |
-| **Owner**    | Mitch Malone                                                        |
-| **Status**   | Revised 11 Sep 2026 — folded with scuttlarr, renamed; see DECISIONS |
-| **Platform** | macOS (Apple Silicon first; Intel if free)                          |
+|              |                                                                          |
+| ------------ | ------------------------------------------------------------------------ |
+| **Project**  | scuttlarr (always lowercase; launcharr until 11 Sep 2026)                |
+| **Version**  | living document; v0.8.0 shipped 1 Nov 2026 (v1 launcher 8 Aug 2026)      |
+| **Owner**    | Mitch Malone                                                             |
+| **Status**   | Revised 1 Nov 2026 (docs sweep); §1–§3 rewritten 11 Sep 2026 at the fold |
+| **Platform** | macOS (Apple Silicon first; Intel if free)                               |
 
 ---
 
@@ -178,7 +178,7 @@ Guiding split: **Rust owns the OS, TypeScript owns the experience.** Anything to
 
 - **Focus discipline** is the hardest native problem: non-activating panel that still receives keystrokes, and reliable focus restore on dismiss. Prove this in week one (see §9) before building anything else on top.
 - **`LSUIElement` / accessory activation policy**: no Dock icon. An `NSStatusItem` (template icon) plus, with the Bar rung on, one bar panel per display.
-- **IPC**: v1 started with a handful of typed Tauri commands (`get_index`, `record_launch`, `launch(item)`, `run_in_terminal(cmd)`, `read_config`). The bar, panels, plugins, desktop, theme and setup grew it to 82 registered in `lib.rs` (Oct 2026). Every command is still a future plugin-API liability and is recorded in DECISIONS when added.
+- **IPC**: v1 started with a handful of typed Tauri commands (`get_index`, `record_launch`, `launch(item)`, `run_in_terminal(cmd)`, `read_config`). The bar, panels, plugins, desktop, theme and setup grew it; the count and its justification live in AGENTS invariant 3 and the DECISIONS entry that last changed it. Every command is still a future plugin-API liability and is recorded in DECISIONS when added.
 - **No telemetry**: nothing phones home about the user. (v1's zero-network rule retired 2026-09-04.)
 
 ## 7. Performance budgets (requirements, not aspirations)
@@ -218,7 +218,7 @@ The differentiating bet — **scripts as first-class citizens** — shipped earl
 
 ## 11. Open questions
 
-1. ⌥Space collides with some keyboard layouts' non-breaking space and with Raycast's default — fine as default with easy remap, or pick something else out of the gate?
+1. ~~⌥Space as the default~~ — held: three months of daily use and the first-launch setup's hotkey screen (which lets a Raycast user remap in the first minute) settled it, 1 Nov 2026.
 2. ~~Reuse-current-session variant~~ — shipped as `bangNewWindow` (default new window).
 3. Empty-query panel: strictly blank (current spec) or show top-3 frecent apps after the database warms up?
 4. ~~Repo conventions~~ — settled 8 Aug 2026: pnpm, Lefthook, Vitest, ESLint 9, clippy (see `docs/DECISIONS.md`).

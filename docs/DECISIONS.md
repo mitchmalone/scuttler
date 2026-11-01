@@ -1897,3 +1897,19 @@ DiagnosticReports` and waits the full backoff instead of thrashing. One new comm
   with a trigger. The receipt baseline for v0.8.0 under this definition is taken at the
   next release build on the primary Mac; the daily footprint on 2026-11-01 was 131 MB for
   the app process and 501 MB with borders (268 MB), three Bun services and the BLE helper.
+
+### 2026-11-01 · One default bar layout: TypeScript's, mirrored in Rust and pinned by tests
+
+- **Decision.** `DEFAULT_BAR_LAYOUT` (`apps/desktop/src/lib/config.ts`: left workspaces,
+  agents, frontApp; center clock; right wifi, awake, usage, battery) is the default
+  arrangement. `BarConfig::default()` in `config.rs` writes the same lists into a fresh
+  `config.json`; a Rust test and a Vitest case pin the two equal, each naming the other.
+- **Why.** The Rust default had stayed at `wifi, battery` since v0.4 while the TS default
+  grew awake and usage. A fresh install wrote the short list, the renderer appended the
+  missing modules at the end of the zone, and the bar came up `wifi, battery, awake,
+usage` — an order no file in the repo says. Product opinion is the TS layer's (AGENTS
+  "Rust owns the OS, TypeScript owns the experience"); Rust mirrors it the way IPC types
+  are mirrored, pair kept adjacent by name and test.
+- **Effect.** Only fresh installs change; an existing `config.json` carries its own
+  layout. The legacy-migration sentinel (`layout == BarConfig::default().layout`) now
+  compares against the full list, which is what an untouched file deserialises to.

@@ -1,129 +1,30 @@
 # ROADMAP
 
-> Milestones and backlog. What we build next lives here; what's happening now lives in
-> `STATUS.md`; how a specific task gets built lives in `plans/`. Milestones and exit criteria
-> are from `PRD.md` §9 — this file tracks their state, the PRD stays the source for scope.
+> What we build next, and why not yet. Three lists: shipped (one line per release, the
+> notes hold the rest), open items with the trigger that starts each, and the non-goals.
+> What's happening now is `STATUS.md`; how a task gets built is `plans/`; scope truth is
+> `PRD.md`; the reasoning behind every entry here is in `DECISIONS.md` by date.
 
-## v1 milestones
+## Shipped
 
-All v1 milestones below are **code-complete as of 2026-08-08**.
+| Release                                | What it was                                                                                                                                                                      |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| v1 launcher (2026-08-08, as launcharr) | M0–M4: non-activating panel with exact focus restore, index + fuzzy + frecency, `!` bang mode to iTerm2, terminal-prompt identity, login item. Then v1.1 scripts and Sol parity. |
+| v0.2.0 (2026-08-09)                    | Release core: system commands, ⌥⏎ secondary actions, opt-in bookmarks, emoji picker, settings window, release pipeline. `releases/v0.2.0.md`                                     |
+| v0.3.0 / v0.3.1 (2026-08-12/13)        | Settings as a native surface, fourteen themes, signed and notarized. `releases/v0.3.0.md`, `v0.3.1.md`                                                                           |
+| v0.4.0 (2026-08-17)                    | The control surface: bar, TUI kit and workbench, panels (wifi, dns, audio, clipboard, awake, aerospace, help, screenshots), agent cells, wrapped AeroSpace desktop layer.        |
+| v0.5.0 (2026-08-19)                    | Multi-display (bar per screen, launcher on the mouse's screen), glyph-only bar strip, awake timer card. `releases/v0.5.0.md`                                                     |
+| v0.6.0 (2026-08-27)                    | Widgets (TypeScript files in `~/.config/scuttlarr/widgets/`), then plugins as code (`cell.tsx`, `panel.tsx`, Bun services); usage and calendar as plugins. `releases/v0.6.0.md`  |
+| v0.7.0 (2026-10-01)                    | The fold: launcharr + the scuttlarr distro → one product. Rungs: Desktop, Theme (Omarchy `colors.toml`, policy, live retint), Machine (the setup CLI). Ghostty hand-off. awake.  |
+| v0.8.0 (2026-11-01)                    | First-launch setup, the updates ledger (in-app upgrades, queue, dismiss), agent dots, defaults flipped (bar on, tiling off), the site in any app theme, scripted release.        |
+| v0.9.0 (planned)                       | The rename to scuttler at `www.scuttler.app`; `plans/active/2026-11-01-rename-to-scuttler.md`. The name and the docs, nothing else.                                              |
 
-- **M0 — Spike (the scary parts first).** done Tauri 2 + tauri-nspanel: hotkey summons a
-  non-activating panel with a text field; Esc restores focus correctly over a full-screen app.
-  _Exit: the focus dance works or the stack decision gets revisited._
-  → `plans/done/m0-nspanel-spike.md` (verified by Mitch, incl. full-screen + second display)
-- **M1 — Launcher.** done Index + fuzzy match + launch + System Settings panes. No frecency, ugly UI.
-  _Exit: Mitch can launch any app._
-- **M2 — Feel.** done (instrumented: cold start 163ms, summon 3.7ms) Frecency, keyboard bindings, terminal-prompt visual identity, performance
-  instrumentation against the budgets. _Exit: launcharr replaces the incumbent daily launcher._
-- **M3 — Bang mode.** done `!` grammar dispatch, iTerm2 hand-off, Terminal.app fallback, config file.
-  _Exit: `!git status ⏎` feels better than switching to iTerm2 by hand._
-- **M4 — Polish & daily use.** 🔄 Launch-at-login + first-run hint shipped; features and
-  fixes ship continuously. _Exit: launcharr is the incumbent and nothing broken survives
-  a week._
+## Open, with triggers
 
-## v1.1 — Sol parity, scripts-first done (2026-08-08, overnight)
+Not started until its trigger fires. "Touch" means the next plan that changes that
+surface absorbs the item.
 
-Script protocol (v2's flagship, pulled forward) + bundled lorem/json/ip scripts, clipboard
-history (copy-on-Enter, concealed-safe), inline math, custom links, custom shortcuts. Scope
-negotiation in DECISIONS (zero-network + zero-permissions held; Translate/Calendar/public-IP
-deferred). Record: `plans/done/v1.1-scripts-and-sol-parity.md`.
-
-## v1.2 — release core done (2026-08-09) — v0.2.0
-
-System commands, ⌥⏎ secondary actions, opt-in bookmarks, emoji picker, settings window,
-README/RELEASING. Ship blocked only on signing (Mitch's Apple Developer ID).
-Record: `plans/done/v1.2-release-core.md`. Deferred by choice: file search (mdfind route
-documented), dx pack (tmux/projects/ssh/ports — see 2026-08-09 brainstorm in git history).
-
-## v0.4 — the control surface done (released 2026-08-17)
-
-Decided 2026-08-15 as "v0.5 — the bar" (DECISIONS entry); renumbered at release because
-0.4 shipped it all: launcharr grows a menubar replacement, TUI panels, agent monitoring
-and a wrapped AeroSpace desktop layer; launcher, bar, and tiling are independently
-toggleable. Not a distro — bar + launcher + config only. Record: docs/releases/v0.4.0.md.
-
-- **B0 — TUI kit.** done (2026-08-15) `packages/tui`: Omarchy-inspired component library
-  with keyboard-nav logic TDD'd. _Exit met: bar + panels compose from the kit._
-- **B1 — Bar spike (gate).** done (2026-08-15) _Exit met: ~19 MB marginal (shared WebKit
-  pool) — gate PASSED; numbers in plans/done/v0.5-tui-kit-and-bar-spike.md._
-- **B2 — Bar core.** done Mitch's daily menubar (Sketchybar retired 2026-08-16); zones +
-  drag arranger, notch profiles, battery hover card, wifi SSID, awake cell; a bar per
-  display + launcher on the mouse's screen (2026-08-19). Left for v0.5: per-monitor
-  workspaces, app hints, event-driven front-app, bluetooth glyph.
-- **B3 — Desktop layer.** done (2026-08-17, was "Aerospace wrap") AeroSpace as a cask
-  dependency (never vendored), generated opinionated config with adopt-or-leave and a
-  managed/unmanaged switch (edit / use my own / save a copy), opt-in JankyBorders,
-  corner radius. _Exit met: fresh Mac gets working tiling without seeing a toml._
-- **B4 — Agents.** done Agent bar cells + `agents ⏎` + `usage ⏎` + `?` mode
-  (plans/done/agent-monitoring.md). Module API deferred to v0.5.
-- **P0 — Panel framework + wifi.** done (2026-08-16) `wifi ⏎`, `dns ⏎`; PANELS registry
-  makes tenants one-entry cheap.
-- **P1 — Panel tenants.** done audio, clipboard, awake, aerospace, help, **screenshots**
-  (`ss ⏎`, plans/done/screenshots-panel.md — first grid + scrolling panel). Settings
-  migration deferred to v0.5.
-- **W0 — tui workbench.** done (2026-08-16) Story-driven state coverage, no Storybook dep.
-
-## v0.5–v0.7 — plugins, scuttlarr (shipped; v0.7.0 on 2026-10-01)
-
-**Plugins landed 2026-08-27** (DECISIONS ×3, `plans/done/plugins-react-cells-and-panels.md`,
-`docs/PLUGINS.md`): plugins are code — `cell.tsx` / `panel.tsx` on `@scuttlarr/tui`,
-`service.ts` in Bun (stream or tick), manifest `kinds`, `bun build` + blob-URL loading with
-hot-swap, Settings → Menubar → Plugins (git install, on/off, restart), `plugins ⏎` gallery.
-First-party `usage` and `calendar` are plugins (`packages/plugins/`, native state
-providers); the reference `hello` plugin is `apps/desktop/plugins/hello/`. Omarchy QML
-plugins on macOS studied and rejected. **Rolling (slice G):** the remaining first-party
-panels (awake, agents, wifi, audio, battery) move to plugins as they are touched. The
-widget items below are absorbed.
-
-Carried over from v0.4; what is still open is marked "Left":
-
-- **Module API** — done **widgets** (2026-08-19, plans/done/widgets.md; DECISIONS
-  2026-08-19 ×2): TypeScript files in `~/.config/scuttlarr/widgets/` run under Bun
-  (`runtime.rs`; any executable works too), `manifest`/`tick` JSON, generic cell + card,
-  live dir watch, `triggers/widget.<id>`, Settings → Menubar → Custom widgets (install
-  from URL/file, tick, remove). Reference widgets uptime / github-actions / vercel /
-  trmnl in `apps/desktop/widgets/`; bundled scripts are TS too. Left: a curated widget
-  index for install-from-URL, `widgets ⏎` panel, custom SVG icons, event-driven
-  (`watch`) widgets, a left-zone card anchor, wifi glyph footprint fix.
-- **Multi-display** — done bar per display, launcher on the mouse's screen (2026-08-19,
-  plans/done/multi-display.md). Left: per-monitor workspace lists (aerospace
-  `--monitor`), a screen-parameters observer instead of the 5 s heartbeat.
-- **Bar polish** — glyph-only strip landed 2026-08-19 (DECISIONS: wifi arcs, battery
-  tiers by adjusted charge, awake timer card-side). Left: NSWorkspace-observer front-app,
-  bluetooth glyph; per-workspace app hints only as hover. (Vercel / GitHub Actions /
-  uptime landed as widgets, 2026-08-19.)
-- **Settings into panels** — the native window retires (re-decide: 0.4 invested in it).
-  Drill-down panel menu.
-- **awake loose ends** — done 2026-10-01 (`plans/done/awake.md`): slice F's `pmset
-disablesleep` hold replaced slice E's helper, lid-closed on AC and on battery both
-  proven. Left: hands-checks only (STATUS).
-- **Site/app single-source gaps** — `PANEL_INFO` is hand-mirrored in `apps/www`
-  (invariant 10 smell); extract to a package.
-- **PRD revision pass** — done: §1–§3 and §10 on 2026-09-11, §4–§9 swept to the code on
-  2026-10-19 (Ghostty bang target, light themes, Settings window, the bar, the IPC count).
-  DECISIONS 2026-08-15 remains the scope source for bar/panel questions.
-
-## Unification into scuttlarr (DECISIONS 2026-09-11)
-
-Done — released as v0.7.0 (2026-10-01). One repo, one product, renamed scuttlarr; the
-launcher is a feature. Plan and phases: `plans/done/2026-09-11-unify-into-scuttlarr.md` — record → rename → port setup →
-theme package (Omarchy model) → theme policy + switcher (macOS Focus, light/dark by
-system or schedule) → docs. Retires the "scuttlarr contract" below. Left: **light mode
-first-class** (plan step 3.7 — Solarized Light and Catppuccin Latte checked on every
-surface; nothing assumes dark), and the live proofs listed in STATUS.
-
-<details><summary>Retired: scuttlarr contract (DECISIONS 2026-08-25)</summary>
-
-- **Light mode** — now plan step 3.7 (Solarized Light + Catppuccin Latte render every surface).
-- **Ghostty hand-off** — done 2026-09-04 (DECISIONS, `plans/done/ghostty-handoff.md`). Left:
-  live-prove `!echo hi ⏎` and the updates `a` upgrade path against a running herdr server (Mitch).
-- **Typed `desktop` schema** — now plan step 3.3 (borders/aerospace rendered from the palette).
-- **Dark-mode delegation** — now plan step 4.4 ("Toggle Dark Mode" flips `appearance.mode`).
-
-</details>
-
-## Memory (open; the receipt is DECISIONS 2026-11-01)
+### Memory (the receipt is DECISIONS 2026-11-01)
 
 | Item                                                                                  | Trigger                                                                                   |
 | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
@@ -132,23 +33,57 @@ surface; nothing assumes dark), and the live proofs listed in STATUS.
 | Plugin services: lazy-load panels, measure each service's Bun cost in Settings        | The daily footprint's helper share passes the app's own                                   |
 | Borders (JankyBorders, 268–460 MB on the primary Mac) — third-party, Desktop rung off | Only if a lighter border tool appears; otherwise a documented cost of the rung            |
 
-## v2 horizon (recorded now, built later — PRD §10)
+### Bugs known, not chased
 
-| Item                                                      | Trigger                                                        |
-| --------------------------------------------------------- | -------------------------------------------------------------- |
-| Per-query learned bindings (schema already records query) | Frecency data shows repeated query→pick                        |
-| Richer bangs (`!!` repeat, project-scoped commands)       | Bang mode proves itself daily                                  |
-| Theming beyond the built-in look                          | done 2026-09-11 — the Theme rung (`THEMES.md`)                 |
-| Signing, notarization, public README                      | Releasing to the wild (auto-update done 2026-09-16, DECISIONS) |
-| Move matching to Rust                                     | R2 fires: WKWebView can't hold the 16 ms keystroke budget      |
+| Item                                                                                                                                                                                                                      | Trigger                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| Theme policy gate never holds: `config.appearance` is a plain struct so the webview always sees it; a fresh install in light mode flips to `solarized-light` (JOURNAL 2026-10-19; `it.fails` test in `lib/theme.test.ts`) | Light mode first-class, or the next `config.rs` touch |
+| Hotkeys bound to built-in `scuttlarr — …` rows do nothing (empty `path`; link `browser` ignored on that path)                                                                                                             | Touch of `indexer.rs` / custom shortcuts              |
+| 23 zombie children in a long-lived instance (JOURNAL 2026-08-26); amaran status replies arriving in one run of four                                                                                                       | Either recurs visibly                                 |
 
-## Explicitly not doing (non-goals — load-bearing, PRD §3, amended by v0.4)
+### Product
 
-File search, snippets, Windows/Linux. Still true for the **launcher core**: zero
-permissions (zero network was retired 2026-09-04 — DECISIONS). Amended by DECISIONS
-2026-08-15/16 for v0.4: window management arrives _wrapped_ (Aerospace, which brings its own
-Accessibility grant — scuttlarr itself still requests nothing), and bar **modules** may be
-credentialed + networked per-module, fail-visible (TRMNL was the first; pulled 2026-08-17
-pending the plugin API). **"Anything distro-shaped" left this list 2026-09-11** (DECISIONS):
-it was a separate repo from 2026-08-25, and is now the Machine rung (`SETUP.md`); light mode
-is a palette in the Theme rung (`THEMES.md`). The PRD's §1–§3 were revised the same day.
+| Item                                                                                                                                                                                                                                                                                                                             | Trigger                                                                     |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| **Light mode first-class** (unify step 3.7): Solarized Light and Catppuccin Latte checked on every surface; nothing assumes dark                                                                                                                                                                                                 | First light-theme complaint, or the policy-gate bug above                   |
+| **Plugins slice G**: awake, agents, wifi, audio, battery panels move to `packages/plugins/`; `widgets.rs` folds into `plugins.rs` (WIDGETS.md absorbed into PLUGINS.md first)                                                                                                                                                    | Touch of any of those panels; the fold when the last one moves              |
+| Plugin index on the site (curated install-from-URL list); per-plugin stderr in the logbook; the hello plugin's `import.meta.main` guard under Node                                                                                                                                                                               | A third-party plugin exists                                                 |
+| Theme gaps: bar theme cell, macOS accent colour, bat beyond `ansi`, plugin clones in the manifest                                                                                                                                                                                                                                | Touch of the Theme rung                                                     |
+| Kit: `ListRow` danger tone (updates error rows are plain text)                                                                                                                                                                                                                                                                   | Next kit touch                                                              |
+| Panels and bar: `sysinfo`; settings into panels with a drill-down menu (the native window retires — re-decide, 0.4 invested in it); per-workspace app hints as hover; bluetooth glyph; NSWorkspace front-app observer; per-monitor workspaces (aerospace `--monitor`); a screen-parameters observer instead of the 5 s heartbeat | Each on its own demand; the observers when the heartbeat shows in a profile |
+| Widgets left: curated index, `widgets ⏎`, custom SVG icons, event-driven (`watch`) widgets, left-zone card anchor; widget OAuth (dormant until an OAuth App client id exists)                                                                                                                                                    | Absorbed by slice G                                                         |
+| Richer bangs (`!!` repeat, project-scoped), per-query learned bindings (schema records the query already), script-declared rendering beyond rows                                                                                                                                                                                 | Bang mode or frecency data shows the pattern                                |
+| Move matching to Rust                                                                                                                                                                                                                                                                                                            | R2 fires: WKWebView can't hold the 16 ms keystroke budget                   |
+| Open-source readiness review (`plans/active/opensource-readiness-review.md`)                                                                                                                                                                                                                                                     | Before the first public announcement                                        |
+
+### Hands-checks owed from earlier releases (a surface's next plan picks up its line)
+
+- Theme: Ghostty windows outside tmux retint on a switch; VS Code and an editor retint
+  live; the Claude Code theme reads well; a Focus flip and a macOS appearance toggle
+  change the theme within a second; Solarized Light on every surface; `theme ⏎` Esc path.
+- awake: tray Quit stays quit; a hold survives `sudo fdesetup authrestart`; an agents hold
+  releases within ~1 min of the last agent idling; the "awake resumed" toast.
+- Terminal: `!echo hi ⏎` lands as a new tmux window in Ghostty; updates `a` too.
+- Agents and usage: both Claude accounts in Settings → Agents; usage limits against
+  claude.ai for both; the Codex tile includes the mirror plugin's sessions; cell click /
+  `agents ⏎` lands in the right tmux pane; `⌫` dismisses a row.
+- Plugins: hello cell + card + `hello ⏎` (`r` resets), `cal ⏎`, Settings → Plugins,
+  `plugins ⏎`; custom widgets sub-tab and install from URL.
+- Bar and displays: glyph sizes and legibility in every theme; ⌥Space with the mouse on
+  the built-in; hover cards on the second bar; unplug/replug; zone board drag, retire and
+  restore via the tray, notched vs external, bar off/on survives.
+- Launcher and panels: focus restore after `wifi ⏎` → connect → Esc, also over a
+  full-screen app; `colorpicker ⏎` both samplers; `lorem` toast; `?` keeps focus across
+  turns; wifi `s` scan and secured join; audio slider and device switch; clipboard
+  copy-on-Enter dismisses; help filter; Settings → Desktop "use my own config" / "save a
+  copy" dialogs; `ss ⏎` → ⌘V into claude.ai and Claude Code.
+
+## Explicitly not doing (non-goals — load-bearing, PRD §3)
+
+File search, snippets, Windows/Linux. Zero permissions for the launcher core (zero
+network was retired 2026-09-04 — DECISIONS). Window management arrives _wrapped_
+(AeroSpace brings its own Accessibility grant; scuttlarr itself still requests nothing).
+Nothing distro-shaped left the list on 2026-09-11: it is the Machine rung (`SETUP.md`);
+light mode is a palette in the Theme rung (`THEMES.md`). Credentialed, networked bar cells
+are per plugin, fail-visible, never telemetry. No native alerts, no emoji, no second copy
+of the app UI on the site (AGENTS invariants 13, 14, 10).

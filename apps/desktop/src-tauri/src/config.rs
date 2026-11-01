@@ -121,12 +121,19 @@ impl Default for BarConfig {
             id: id.into(),
             enabled: true,
         };
+        // Mirrors `DEFAULT_BAR_LAYOUT` in apps/desktop/src/lib/config.ts, the one
+        // source of the default arrangement (DECISIONS 2026-11-01). A fresh
+        // config.json must render exactly what the TS default says, so the two
+        // lists are pinned equal by `default_bar_layout_matches_the_ts_default`
+        // here and `DEFAULT_BAR_LAYOUT ids` in lib/config.test.ts.
         Self {
             enabled: true,
             layout: BarZones {
                 left: ["workspaces", "agents", "frontApp"].map(module).to_vec(),
                 center: vec![module("clock")],
-                right: ["wifi", "battery"].map(module).to_vec(),
+                right: ["wifi", "awake", "plugin:usage", "battery"]
+                    .map(module)
+                    .to_vec(),
             },
             notched_layout: None,
             modules: None,
@@ -675,6 +682,27 @@ mod tests {
                 .unwrap();
         assert_eq!(cfg.theme, "dracula");
         assert!(cfg.themes.contains_key("mine"));
+    }
+
+    #[test]
+    fn default_bar_layout_matches_the_ts_default() {
+        // The same three lists as DEFAULT_BAR_LAYOUT (lib/config.ts); change both.
+        fn ids(zone: &[BarModule]) -> Vec<&str> {
+            zone.iter().map(|m| m.id.as_str()).collect()
+        }
+        let layout = BarConfig::default().layout;
+        assert_eq!(ids(&layout.left), ["workspaces", "agents", "frontApp"]);
+        assert_eq!(ids(&layout.center), ["clock"]);
+        assert_eq!(
+            ids(&layout.right),
+            ["wifi", "awake", "plugin:usage", "battery"]
+        );
+        assert!(layout
+            .left
+            .iter()
+            .chain(&layout.center)
+            .chain(&layout.right)
+            .all(|m| m.enabled));
     }
 
     #[test]

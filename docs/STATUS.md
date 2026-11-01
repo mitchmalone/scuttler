@@ -1,214 +1,82 @@
 # STATUS
 
 > The cursor: where we are, what needs hands, what's next. A snapshot, not a history —
-> history lives in git, `plans/done/`, `releases/` and `JOURNAL.md`.
+> history lives in git, `plans/done/`, `releases/` and `JOURNAL.md`; the backlog with its
+> triggers lives in `ROADMAP.md`.
 >
-> Last updated: 2026-11-01 (docs sweep + rename planned; v0.8.0 released; release smoke tests scripted, a release is one command; updates: dismiss a package for a day, keyed to its version, bulk upgrades skip it; 2026-10-31: updates upgrade in the app: per package, per source, everything, through a queue; card and panel on the usage design; 2026-10-28: agent dots: states by shape, liveness fix, card redesign; v0.8.0 notes written, perf measured, ready to release; setup survives a launch toast; site copy matches the v0.8.0 defaults and first-launch setup; setup follows the theme; dmg step cause found; site theme picker; site pixel hero; defaults flip: bar on, tiling off; invariant 3 reworded)
+> Last updated: 2026-11-01 (docs sweep step 2: STATUS rewritten as a cursor, ROADMAP
+> collapsed, bar default decided; step 1 the memory receipt)
 
 ## Where we are
 
-- **Released: v0.7.0** (2026-10-01), the first release as scuttlarr
-  (`releases/v0.7.0.md`). Tap has `Casks/scuttlarr.rb`; `launcharr.rb` is the deprecated
-  alias.
-- **v0.8.0 released 2026-11-01** (`releases/v0.8.0.md`; GitHub Release with zip, dmg and
-  SHA256SUMS; fan-out all green: check, homebrew tap at 0.8.0, Notion, mitchmalone.com).
-  Everything below through the updates dismiss shipped in it. The smoke tests are
-  scripted since the same day (DECISIONS 2026-11-01), so the next release is one
-  command: `scripts/release.sh X.Y.Z`.
-- **In v0.8.0:** per-source update-check intervals (2026-10-18); cleanup pass 1
-  (`plans/done/2026-10-19-cleanup-bugs-and-guardrails.md`: bar off means off, one atomic
-  config writer, plugin panels keep identity, verify gate gains fmt, coverage floors,
-  layering, purity lint, shellcheck); the docs-truth pass
-  (`plans/done/2026-10-19-docs-truth-and-stories.md`: README/PRD/ROADMAP match the code,
-  defaults table in README, awake copy, v0.2.0 notes reconstructed, workbench stories);
-  the defaults flip (`plans/done/2026-10-19-defaults-flip.md`: the bar defaults on,
-  Desktop tiling off, upgraders pinned to what they had via `defaultsVersion`).
-  The site pixel hero (`plans/done/2026-10-19-site-pixel-hero.md`: a typing-reactive
-  pixel field in the demo's picked theme; hands-check pending). The site theme picker
-  (`plans/done/2026-10-20-site-theme-picker.md`: the whole site in any of the 14 app
-  themes, light/dark switch and next-themes gone; hands-checked).
-- **Updates upgrade in the app** (`plans/done/2026-10-31-updates-in-app-upgrades.md`,
-  DECISIONS 2026-10-31): a click or `↵` on a package row runs that package's upgrade
-  (`brew upgrade gcc`, `mas upgrade <id>`, …), a source's "Upgrade all" row the source,
-  `a` everything; jobs queue one at a time with a batch meter, rows read queued /
-  upgrading / upgraded / failed, `x` cancels and empties the queue. Panel and card are
-  the ledger: a band per manager with its own "upgrade all", packages under a gutter
-  rule (design asset `plans/assets/updates-panel-options.html`, option A). Hands-check
-  pending (below). 2026-11-01 (`plans/done/2026-11-01-updates-dismiss.md`, DECISIONS):
-  `d` or a failed row's "dismiss 24h" puts a package aside for a day — out of the count
-  and of every bulk upgrade (the source's job becomes its pending packages by name),
-  dim under its manager with its time left, back early if a newer version lands, `↵`
-  restores. State in `~/.local/state/scuttlarr/updates-dismissed.json`.
-- **Agent dots** (`plans/done/2026-10-28-agent-dots.md`, DECISIONS 2026-10-28): states
-  read by shape from one kit icon, attention in `warn`, a session stays while its pane or
-  process lives, `read` after a visit, the card rebuilt (doing line, crumbs, clocks),
-  subagent indicator retired, hook `boot` completes partial installs. Hands-check pending
-  (below).
-- **First-launch setup** (`plans/done/2026-10-19-first-launch-setup.md`, DECISIONS
-  2026-10-19): a fresh install opens the panel on a one-question-per-screen setup over
-  the pixel field; `setup ⏎` runs it again. Hands-check pending (below). Setup follows
-  the theme (`plans/done/2026-10-20-setup-theme-sync.md`, DECISIONS 2026-10-20): field
-  and panel stay one theme when it changes mid-setup, and apply never writes back a theme
-  you didn't pick; hands-checked. A toast at launch (a resumed awake hold) no longer
-  wipes the owed setup (`plans/done/2026-10-20-setup-launch-toast.md`; hands-check
-  pending).
+- **Released: v0.8.0** (2026-11-01, `releases/v0.8.0.md`): first-launch setup, the
+  updates ledger with in-app upgrades and dismissals, agent dots, defaults flipped (bar
+  on, tiling off), the site in any app theme. Fan-out green; the next release is one
+  command (`scripts/release.sh X.Y.Z`, smoke tests scripted).
+- **Active plan:** `plans/active/2026-11-01-docs-sweep.md` — every doc true against
+  v0.8.0, six commits; steps 1–2 landed. **Planned next:**
+  `plans/active/2026-11-01-rename-to-scuttler.md` — scuttlarr → scuttler at
+  `www.scuttler.app` as v0.9.0 (old domains already redirect there).
+- **Parked:** `plans/active/lights-plugin.md` (built; Nanoleaf waits on Mitch's Home.app
+  shortcuts), `plans/active/opensource-readiness-review.md` (not started; re-planned by
+  the sweep, step 5).
+- **Daily use on the primary Mac:** bar, launcher, panels, agents, usage, updates, awake,
+  the Desktop and Theme rungs (`appearance.everywhere`, `editors`, `ghostty` on).
+- **Memory:** one measurement, the receipt (DECISIONS 2026-11-01, `scripts/mem.sh
+--receipt`). The open task, growth with uptime, is ROADMAP "Memory".
 - **Workbench story titles are stable** (an external screenshot script keys on them):
   rename a story only with Mitch.
-- **Active plans:** `2026-11-01-docs-sweep.md` (every doc true against v0.8.0; the
-  memory receipt defined; six commits) then `2026-11-01-rename-to-scuttler.md` (planned:
-  scuttlarr → scuttler at www.scuttler.app as v0.9.0; old domains already redirect there).
-  Also `lights-plugin.md` (waiting on Mitch's Home.app shortcuts) and
-  `opensource-readiness-review.md` (not started) — both re-planned by the sweep.
-- **Daily use on the primary Mac:** bar, launcher, panels, agents, usage, updates, awake,
-  desktop layer and the theme rung (`appearance.everywhere`, `editors`, `ghostty` on).
-- **Memory:** the budget has one measurement now, the receipt (DECISIONS 2026-11-01,
-  `scripts/mem.sh --receipt`); the open task, growth with uptime, is in ROADMAP.
 
 ## Needs Mitch (decisions)
 
-- **Next tickets (decided, not started):** a launch toast (resumed awake hold) wipes
-  the owed setup on first summon (JOURNAL 2026-10-20); the theme policy gate never holds
-  (JOURNAL 2026-10-19; confirmed by the `it.fails` test in `lib/theme.test.ts`: a file
-  with no `appearance` key reaches the webview with one, so a fresh install in light mode
-  switches to `solarized-light`); hotkeys bound to built-in `scuttlarr — …` rows do
-  nothing (empty `path`; link `browser` also ignored on that path).
-- **apps/www demo retypes the launcher prompt** (invariant 10): the launcher view is now
-  in `packages/tui`; switch the demo to import it.
-- **Cleanup review steps 3–5**: memory target, shared helpers + god-file splits, where
-  away mode lives.
-- **Rust and TS bar default layouts differ** (`config.rs` right = wifi, battery;
-  `DEFAULT_BAR_LAYOUT` right = wifi, awake, usage, battery).
+- `opensource-readiness-review`: run before the first public announcement, or not.
 - Usage pace thresholds (±15/25 pts) and worst-across-accounts for the cell.
 - Whether "hidden when clean" is right for the updates cell.
 - p10k dir colour: follow the theme or the host?
-- Widget OAuth stays dormant until a scuttlarr OAuth App client id exists.
-- `opensource-readiness-review`: run before the next feature phase or not.
+- The `/docs` page's fate when the sweep reaches the site (step 6): a short map with
+  links, or a second copy of README kept in sync. Lean: the map.
 
-## Needs Mitch (hands-checks)
+## Needs Mitch (hands-checks, v0.8.0)
 
-Updates in the app (dev-installed 2026-10-31):
+Updates (dev-installed 2026-10-31; `plans/done/2026-10-31-updates-in-app-upgrades.md`,
+`2026-11-01-updates-dismiss.md`):
 
-- Hover the updates cell: the card lists Homebrew's outdated formula with its versions.
-- `updates ⏎` → click the formula row under Homebrew: it reads "upgrading…", the last
-  output line shows under the meter, then "upgraded"; the re-check drops the count. The
-  band's "upgrade all" and the head's "upgrade everything" buttons run on click.
-- `beeper/tap/cli` 0.6.3 fails to install (`bin/beeper` missing in the tap's formula, not
-  a scuttlarr bug). "upgrade everything" now reads "2 upgraded · Homebrew failed" with
-  brew's error line under the meter, and the row keeps its failed mark after the
-  re-check (JOURNAL 2026-10-31). Click a second row while one runs: it reads "queued"
-  and the meter says `1 of 2`.
-- Dismiss (2026-11-01): select `beeper/tap/cli` and press `d` (or click "dismiss 24h"
-  on its failed row): the count drops, the cell hides when nothing else is pending, the
-  row sits dim under Homebrew reading "dismissed · 23 h left", the head says
-  "… · 1 dismissed". "upgrade everything" now runs the other formulae by name and skips
-  it. `↵` on the dim row brings it back at once; relaunching keeps the dismissal.
-- `~/.local/bin/pnpm` was a dangling symlink after the mise node bump (JOURNAL
-  2026-10-31); repointed at the `24` alias dir on 2026-11-01 so it follows the next bump.
+- Hover the updates cell: the card lists Homebrew's outdated formula with versions.
+  `updates ⏎` → click a formula row: "upgrading…", the last output line under the meter,
+  then "upgraded"; the re-check drops the count. Band "upgrade all" and head "upgrade
+  everything" run on click. A second click while one runs reads "queued", meter `1 of 2`.
+- A failing package (`beeper/tap/cli`, the tap's bug) reads "… · Homebrew failed" with
+  brew's line under the meter and keeps its failed mark after the re-check. `d` on it:
+  count drops, cell hides when nothing else is pending, row dim under Homebrew reading
+  "dismissed · 23 h left", head says "· 1 dismissed", "upgrade everything" skips it; `↵`
+  brings it back; relaunch keeps the dismissal.
 
-Back from travel:
+Agent dots (`plans/done/2026-10-28-agent-dots.md`): all tmux agents on the bar after
+their next hook event; working ring spins, attention ring breathes in `warn`, done disc,
+read check after a jump, idle moon; the card's doing line reads `editing format.ts`;
+Reduce Motion stops both animations; amber and terminal themes keep the shapes legible;
+the site legend renders the same icons.
 
-- Turn Rapid Security Responses back on (`CriticalUpdateInstall`) and Tailscale
-  auto-update (JOURNAL 2026-10-19).
-- Dev-install main, then cleanup pass 1's unchecked acceptance items.
+First-launch setup (`plans/done/2026-10-19-first-launch-setup.md`,
+`2026-10-20-setup-launch-toast.md`): fresh-install path on a clean user account (setup
+opens on first launch, applies in under a minute, bar and launcher work without
+Settings); `setup ⏎` starts from the current config; the hotkey try; Esc on the theme
+screen restores the old theme; the field stops while hidden (idle CPU); with an awake
+hold armed, five fresh-config launches each open setup on first summon.
 
-First-launch setup:
+Release path: self-update live proof at v0.9.0 (`updates ⏎` offers it, `↵` installs,
+across the rename). Site: the workbench stories and the pixel hero in a browser.
 
-- Fresh-install path on a clean user account (setup opens on first launch, applies in
-  under a minute, the bar and launcher work without Settings); `setup ⏎` on this Mac
-  starts from the current config; the hotkey try (press it to hide, again to return);
-  Esc on the theme screen puts the old theme back; the field stops while the panel is
-  hidden (Activity Monitor CPU at idle).
-- With an awake hold armed, five fresh-config launches each open setup on the first
-  summon (`plans/done/2026-10-20-setup-launch-toast.md`).
+## Needs Mitch (elsewhere)
 
-Releases and update path:
-
-- Self-update live proof at the next signed release (`updates ⏎` offers it, `↵` installs).
-- The dmg step needs the building terminal allowed to control Finder (JOURNAL
-  2026-10-20); `release.sh` now checks it in preflight, and `dev-install.sh --build`
-  builds the .app only.
-
-Theme:
-
-- Ghostty windows outside tmux take the colours on a switch; VS Code retints live; the
-  Claude Code theme reads well; the tmux retint; an editor retint.
-- A Focus flip and a macOS appearance toggle change the theme within a second; "apply
-  now"; Solarized Light on every surface; `theme ⏎` Esc path.
-- The shell base on a real home — reconcile the chezmoi dotfiles first (the include lines
-  there are **uncommitted**), or the next `chezmoi apply` fights it.
-
-awake:
-
-- Tray Quit stays quit (exit 0 is not relaunched); a hold survives
-  `sudo fdesetup authrestart`; an agents hold releases within ~1 min of the last agent
-  idling; the "awake resumed" toast.
-
-Terminal and updates:
-
-- `!echo hi ⏎` lands as a new tmux window in Ghostty; updates `a` too.
-- `↵` on Homebrew in `updates ⏎` upgrades with live output and the count drops; the cell
-  count against `brew outdated`; the card and keys. Cell click → panel was reported dead
-  (`open_panel` now logs `panel: open_panel <id>`).
-
-Agents, usage, plugins:
-
-- Settings → Agents shows both Claude accounts registered; a Claude turn paints a cell.
-- Usage limits against claude.ai/settings/usage for both accounts; the Codex tile
-  includes beebee's sessions (mirror plugin).
-- Agent dots (2026-10-28): titles no longer read as `<task-notification>` tags (fixed same day, JOURNAL); all nine tmux agents on the bar after their next hook event
-  (the four silent psyke/gogogo sessions were pruned before the fix); working ring spins,
-  attention ring breathes in `warn`, done disc, read check after a jump, idle moon; the
-  card's doing line reads `editing format.ts` not `PostToolUse · Edit` (needs the
-  reinstalled hook, which `boot` writes); Reduce Motion stops both animations; the amber
-  and terminal themes keep the shapes legible; the site legend and spotlight render the
-  same icons.
-- Agent monitoring: cell click / `agents ⏎` Enter lands in the right tmux pane; `⌫`
-  dismisses a row (the 2026-08-18 orphan is still in the store).
-- hello cell + card + `hello ⏎` (`r` resets), `cal ⏎`, Settings → Plugins, `plugins ⏎`.
-- Custom widgets sub-tab and install from URL; trmnl hidden until its key resolves.
-
-Bar and displays:
-
-- The new workbench stories (launcher, bar, hover cards, Updates, Plugins) have not been
-  looked at in a browser: render check and clipping.
-
-- Battery/wifi glyphs at 17 px (or 16/18); a charging battery under 90 % readable; wifi
-  arcs at 14 px against the theme; bar icons legible in all themes.
-- ⌥Space with the mouse on the built-in; hover cards on the second bar; unplug/replug.
-- Zone board: drag between zones, retire/restore via the tray, notched vs external, bar
-  off/on survives.
-
-Launcher and panels:
-
-- Focus: summon → `wifi ⏎` → connect → Esc → Esc restores focus exactly, also over a
-  full-screen app.
-- `colorpicker ⏎` (Apple sampler by default; loupe after granting Screen Recording;
-  Esc copies nothing); `lorem` toast; `?` keeps the input focused across turns; Settings
-  → Agents sub-tabs and About links.
-- wifi `s` scan + secured join; audio slider steps + device switch; clipboard
-  copy-on-Enter dismisses; help filter.
-- 0.4.0 leftovers: Settings → Desktop "use my own config…" / "save a copy…" dialogs;
-  `ss ⏎` → ⌘V into claude.ai and Claude Code; a one-minute eyeball of the fresh profile.
-
-Waiting on Mitch elsewhere:
-
+- Back from travel (JOURNAL 2026-10-19): Rapid Security Responses (`CriticalUpdateInstall`)
+  and Tailscale auto-update back on.
+- Dotfiles: commit the aerospace.toml triggers change; prune the sketchybar config; the
+  shell base's include lines are uncommitted in chezmoi (or the next `apply` fights it).
 - lights plugin: create the `lights/<light>/…` shortcuts, then measure `shortcuts run`
   latency and slider drag in a card.
-- Dotfiles: commit the aerospace.toml triggers change; prune the sketchybar config.
 
 ## Next
 
-- **Light mode first-class** (ROADMAP, unify step 3.7).
-- **Memory**: ROADMAP "Memory" (growth with uptime; the receipt with the bar on).
-- **Plugins slice G** (rolling): awake, agents, wifi, audio, battery panels move to
-  `packages/plugins/` as they are touched. Also: fold `widgets.rs` into `plugins.rs`, a
-  curated plugin index on scuttlarr.com, per-plugin stderr in the logbook, the hello
-  plugin's `import.meta.main` guard under Node.
-- **Theme gaps**: bar theme cell, macOS accent colour, bat beyond `ansi`, plugin clones
-  in the manifest.
-- **Kit**: `ListRow` danger tone (updates error rows are plain text).
-- **Panels and bar** (ROADMAP v0.5 list): `sysinfo`; settings into panels + drill-down
-  menu; per-workspace app hints; bluetooth glyph; NSWorkspace front-app observer;
-  per-monitor workspaces; a screen-parameters observer instead of the 5 s heartbeat.
-- **Loose threads, not chased**: the 23 zombie children in a long-lived instance
-  (JOURNAL 2026-08-26); amaran status replies arriving in one run of four.
+In order: the sweep's steps 3–6 (SETUP and the standard; the extension docs; the logs; the
+site), then the rename. Everything else is in `ROADMAP.md` with a trigger.
