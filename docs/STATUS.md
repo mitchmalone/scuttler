@@ -4,8 +4,8 @@
 > history lives in git, `plans/done/`, `releases/` and `JOURNAL.md`; the backlog with its
 > triggers lives in `ROADMAP.md`.
 >
-> Last updated: 2026-11-01 (the rename to scuttler is coded and verified; v0.8.1 is one
-> `release.sh` run away, after the GitHub repo rename — Mitch's hands)
+> Last updated: 2026-11-02 (the rename to scuttler is coded, verified and live in the repo,
+> the site and this Mac; v0.8.1 is one `release.sh` run away, blocked on the notary profile)
 
 ## Where we are
 

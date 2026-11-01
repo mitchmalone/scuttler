@@ -176,10 +176,12 @@ Phase 2 — migration and shims (TDD in `rename.rs`, `hooks.rs`, `widget_secrets
       markers still recognised; `migrations/2026-11-01-rename-to-scuttler.zsh` re-renders
       the shell base, retires `scuttlarr.gitconfig`, removes the symlink when no owned
       file still imports the old path (`test/rename.test.zsh`).
-- [ ] (Mitch) Dev-install on the primary Mac over the live 0.8.0 profile: bar, launcher, theme
-      rung, agents, usage, updates, awake, lights plugin all up; terminals still themed
-      (symlink); `scuttler shell --apply` then `doctor` clean; symlink gone after the
-      setup migration.
+- [x] Dev-installed on the primary Mac over the live 0.8.0 profile (2026-11-01): config,
+      state, share, `scuttler.db`, hook paths and the login item migrated; bar and
+      launcher up; terminals themed through the symlink. Still open, Mitch's hands: the
+      Machine rung is off here, so `scuttler shell --apply` then `doctor`, and the
+      symlink going after the setup migration, were not exercised live (covered by
+      `test/rename.test.zsh`).
 
 Phase 3 — release v0.8.1
 
@@ -187,11 +189,12 @@ Phase 3 — release v0.8.1
       is a one-time pick again (`custom:scuttler`, `scuttler sudoers on`), what is left
       behind on purpose. Perf receipts per the memory-receipt definition (docs sweep
       finding 1, decided before this release).
-- [ ] `gh repo rename`; `origin` updated; `RELEASES_LATEST`, `REPO`, cask template, site
-      constants in the release commit.
+- [x] `gh repo rename` done 2026-11-01 (`mitchmalone/scuttler`); `origin` updated;
+      `RELEASES_LATEST`, `REPO`, cask template, site constants in the rename commit.
 - [ ] Workflow: `Casks/scuttler.rb` written; `scuttlarr.rb` deprecated once; fan-out
       green; Notion row renamed.
-- [ ] Site live at `www.scuttler.app`; `scuttlarr.com` and the apex redirect to it;
+- [ ] Site live at `www.scuttler.app` (the production deploy is `ab2174a`, 2026-11-01);
+      not yet checked from this seat: `scuttlarr.com` and the apex redirect to it;
       `curl -fsSL https://www.scuttler.app/install | sh` works, and the old URL follows the
       redirect (`curl -L`; check the installer's own `curl -fsSL` line too).
 - [ ] Hands-check the one cross-rename upgrade: a 0.8.0 install runs `updates ⏎` → `↵`,
@@ -232,8 +235,8 @@ Close
       URL redirects to it.
 - [ ] `pnpm verify` green; CI green; fan-out green; tap has `scuttler.rb` and a
       deprecated `scuttlarr.rb`.
-- [ ] Memory: `scripts/mem.sh --receipt` before → after on the primary Mac; the rename
-      adds no process.
+- [x] Memory: `scripts/mem.sh --receipt` 113 MB on the renamed build under the reference
+      config (2026-11-01, `releases/v0.8.1.md`); the rename adds no process.
 - [ ] Every current-state doc reads true on the release date; `og.png` shows scuttler.
 
 ## Out of scope

@@ -26,7 +26,7 @@ Daily footprint (unbudgeted, trend): _ MB app, _ MB with helpers, after _ h on <
 ## Install
 
 ```sh
-brew install --cask mitchmalone/tap/scuttlarr
+brew install --cask mitchmalone/tap/scuttler
 ```
 
 Or grab the dmg / zip below, or build from source (README).
