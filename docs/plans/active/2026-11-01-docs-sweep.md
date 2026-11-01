@@ -2,7 +2,7 @@
 title: Docs sweep — every doc true against v0.8.0, and a memory receipt that ends the argument
 status: active
 created: 2026-11-01
-updated: 2026-11-01 (steps 1–4 landed)
+updated: 2026-11-01 (steps 1–5 landed)
 links:
   - 2026-11-01-rename-to-scuttler.md # the follow-on; runs on the swept docs
   - ../done/2026-10-19-docs-truth-and-stories.md # the last truth pass (README/PRD/ROADMAP)
@@ -157,27 +157,27 @@ written.
 
 ### 5. Logs: JOURNAL, DECISIONS, LEARNINGS, plans
 
-- [ ] One re-sort of JOURNAL and DECISIONS to newest-first (move blocks, no edits); a
+- [x] One re-sort of JOURNAL and DECISIONS to newest-first (move blocks, no edits); a
       JOURNAL line recording that it happened.
-- [ ] Forward markers: each superseded DECISIONS entry gets one line "Superseded by
+- [x] Forward markers: each superseded DECISIONS entry gets one line "Superseded by
       YYYY-MM-DD <title>" (the fourteen in the audit, plus the two-repo entries the fold
       superseded implicitly). JOURNAL duplicates merged or marked (10-01 locale ×2, 10-20
       launch toast, 10-18 ignored build step, 09-04 Ghostty AppleScript, 08-17 loupe,
       08-19 awake resume, 08-26 list-panes, 08-27 memory pointer).
-- [ ] JOURNAL 2026-09-11 theme-policy vs 2026-10-19: the bug is still open
+- [x] JOURNAL 2026-09-11 theme-policy vs 2026-10-19: the bug is still open
       (`config.rs:267` not an `Option`); it becomes a ROADMAP row, not a sweep fix.
-- [ ] LEARNINGS: fix the two false www entries and the Info.plist path; promote the
+- [x] LEARNINGS: fix the two false www entries and the Info.plist path; promote the
       durable gotchas (launchd/TCC group, WKWebView timers in never-focused windows,
       NSPanel destroy aborts, CoreGraphics for displays, Claude keychain naming, the
       rename-sed keep-list, RSC imports kit leaves, Vercel `ignoreCommand` cap, agents
       liveness evidence-before-age). Target: every section one screen, each entry one or
       two lines with a date pointer.
-- [ ] plans/done: frontmatter added to `bar-zones-and-arranger.md` and
+- [x] plans/done: frontmatter added to `bar-zones-and-arranger.md` and
       `omarchy-panels-and-polish.md`; moot checklists struck with one closing line
       (`awake.md` slice E, `config-home-and-themes.md` ~/.launcharr, `project-restructure`
       launcharr-web, `v0.4-desktop-aerospace-borders.md`, `widget-settings.md`); the rest
       left, since STATUS/ROADMAP now carry them.
-- [ ] plans/active: `lights-plugin.md` → done with "Nanoleaf blocked on Mitch's
+- [x] plans/active: `lights-plugin.md` → done with "Nanoleaf blocked on Mitch's
       shortcuts"; `opensource-readiness-review.md` → `planned`, rewritten for the current
       scope (theme, setup, plugin runtime, self-updater), moved to a ROADMAP row with the
       trigger "before the first public announcement".

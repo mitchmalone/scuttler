@@ -47,9 +47,9 @@ blue/pink. Both windows read config and listen to `config-changed`.
 
 ## Acceptance criteria
 
-- [ ] Fresh run with only `~/.config/launcharr` present ends up with `~/.launcharr` and works
-- [ ] `theme: "dracula"` (or "terminal") restyles panel + settings live on save
-- [ ] A `themes` entry in config.json defines a selectable custom theme
+- ~~Fresh run with only `~/.config/launcharr` present ends up with `~/.launcharr` and works~~
+- ~~`theme: "dracula"` (or "terminal") restyles panel + settings live on save~~
+- ~~A `themes` entry in config.json defines a selectable custom theme~~
 - [x] All checks green (pnpm typecheck/lint/test, cargo test/clippy)
 
 ## Out of scope
@@ -63,3 +63,7 @@ blue/pink. Both windows read config and listen to `config-changed`.
   express that — built-ins keep the panel translucency.
 - Users with hand-built tooling pointing at `~/.config/launcharr` — release notes must call
   out the move.
+
+## Closed (2026-11-01, docs sweep)
+
+The `~/.launcharr` home was reversed the same day (DECISIONS 2026-08-10 "Reversal"), so the first acceptance item is moot; themes shipped in v0.3.0 and are in daily use. Struck rather than ticked: nobody ran the list.

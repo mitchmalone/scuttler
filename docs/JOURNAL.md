@@ -6,6 +6,16 @@
 
 ---
 
+### 2026-11-01 · Both logs had been appended at the bottom for two months; one re-sort
+
+JOURNAL and DECISIONS each say "newest first", and both were, until 2026-09-10: every entry
+since was appended at the bottom (JOURNAL 957–1133, DECISIONS 1355–1865 before the sort),
+so the top of each file read as September. The docs sweep sorted both by date once, in a
+commit of their own so `git log -L` on an entry still finds its history, and added forward
+markers (`_Superseded by …_`, `_History: …_`) to entries a later decision reversed or that
+describe the two-repo world as current. Two identical 2026-10-01 locale entries were merged.
+Rule: a new entry goes under the `---` at the top; the sort key is the date in the heading.
+
 ### 2026-11-01 · The site had not deployed for four days, and nothing said so
 
 Every production deploy of scuttlarr.com since 2026-10-28 failed: `page.tsx`, a Server
@@ -57,6 +67,8 @@ only `24.22.0`, so `pnpm` is "command not found" in any shell that does not reso
 some other way (agent shells). Workaround used: run
 `node ~/.local/share/mise/installs/node/24/lib/node_modules/corepack/dist/pnpm.js`. The
 durable fix is to point the shims at the `24` alias dir, not a pinned version.
+
+_Durable fix applied 2026-11-01: the shim points at mise's `24` alias dir, so it follows the next bump (STATUS at the time)._
 
 ### 2026-10-28 · A prompt hook hears the harness too
 
@@ -114,6 +126,125 @@ prompts again. Aside, for the Gatekeeper ticket: the same log shows the dev buil
 AppleEvents refused, "hardened runtime … requires entitlement
 com.apple.security.automation.apple-events but it is missing".
 
+### 2026-10-20 · A launch toast wipes the owed setup
+
+Hands-checking the setup theme fix with a fresh `config.json`: `setupPending` was true
+but the first summon showed the plain prompt. The resumed awake hold flashes a launch
+toast (`lib.rs` `power::resume_toast` → `panel::flash` → `toast`), and App's `toast`
+handler does `setPanelMode(null)`, clearing the setup mode the config had just set. Only
+hits a machine with a hold to resume, so not a true fresh install, but any launch toast
+would do it. Fix: the `toast` handler should keep `SETUP_PANEL`, as `panel-shown` does.
+Not fixed in that branch (out of scope).
+
+_Resolved 2026-10-20 (the entry "A launch toast wiped the owed first-launch setup", `plans/done/2026-10-20-setup-launch-toast.md`)._
+
+### 2026-10-19 · Agent worktrees branch from a stale `origin/main`
+
+`git fetch` over SSH fails from agent shells (1Password agent), so the local
+`origin/main` ref lags whatever was pushed over the gh HTTPS helper. Worktree-isolated
+subagents were cut from that ref (8909b80), two commits behind local main: they could not
+see a plan committed minutes earlier, and their test counts came out lower. Merging was
+clean, but pass plans in the prompt (or refresh the ref first:
+`git -c credential.helper='!gh auth git-credential' fetch https://github.com/mitchmalone/scuttlarr.git main:refs/remotes/origin/main`).
+
+### 2026-10-19 · Travel setup for two weeks unattended (moved out of STATUS)
+
+From 2026-10-02 the MacBook Pro sat lid-closed on AC at the desk, held by `awake` with
+away mode (BetterDisplay `iPad` screen at 1600x1200 HiDPI, sleep off via
+`sleep_override.rs`), on ethernet with Wi-Fi off, reached over Tailscale (`mitch`) by
+mosh/SSH/Screens. Proven overnight first. To stop an unattended restart: Software Update
+Rapid Security Responses off (`CriticalUpdateInstall=0`) and Tailscale auto-update off
+(`tailscale set --auto-update=false` plus the app's Sparkle keys). Both need turning back
+on once home. Residual risk accepted: a reboot stops at the FileVault pre-boot screen,
+which nothing remote gets past.
+
+_Temporary. The two settings to turn back on are tracked in STATUS "Needs Mitch (elsewhere)" until confirmed._
+
+### 2026-10-19 · `config.appearance` is never absent, so the theme policy gate can't hold
+
+The 2026-09-11 fix made the policy engine inert "until `config.appearance` exists on
+disk". But `Config.appearance` in config.rs is a plain struct with `serde(default)`, and
+`read_config` returns the Rust struct, so the frontend always sees the key and
+`policyConfigured()` is always true; the seeding in `appearanceOf` never runs. A fresh
+install in macOS light mode should resolve to the default pair's `solarized-light`.
+Found by reading the code during the docs-truth pass, not reproduced. Lesson: a "key is
+absent" gate across IPC needs the Rust side to model absence (`Option` +
+`skip_serializing_if`), or it is a gate in name only.
+
+### 2026-10-18 · The site's Ignored Build Step diffed `HEAD^`, so a multi-commit push could skip a site change
+
+The step lived only in the Vercel dashboard as `git diff --quiet HEAD^ HEAD -- <site
+inputs>`. Vercel checks only the pushed head, so a push whose site change sat in an earlier
+commit exited 0 and left scuttlarr.com stale. It now lives in `apps/www/vercel.json`
+(`ignoreCommand`, which overrides the dashboard) and diffs against
+`$VERCEL_GIT_PREVIOUS_SHA`, the last successful deploy. Exit 0 skips; an unset SHA (first
+deploy) or one outside the shallow clone (git exits 128) builds. Vercel caps the command at
+256 characters, so the path list stays inline.
+
+_Superseded 2026-11-01: the command now lives in `apps/www/scripts/ignore-build.sh` (the 256-character cap is why), see that day's entry._
+
+### 2026-10-18 · One `mas` timeout sat in the updates cell for six hours
+
+At 10:34 `mas outdated` ran past the 60 s check timeout, probably on a Mac just woken with
+the network not yet up; run again it takes 0.2 s. The report was cached whole for 6 h with
+no error handling, so the error stayed in the bar until the TTL ran out. Rows are now
+cached per source, an errored row retries in 5 min, and the clock is wall time
+(`checked_at`), not `Instant`: macOS's monotonic clock stops while the Mac sleeps, so an
+`Instant`-based TTL would keep serving last night's results after waking.
+
+### 2026-10-01 · launchd reads a LaunchAgent plist only at login or bootstrap
+
+Patching `~/Library/LaunchAgents/scuttlarr.plist` changes nothing for the job already
+loaded: `launchctl print gui/$UID/scuttlarr` keeps showing the old properties until a
+`bootout` + `bootstrap` (or the next login). So the first `dev-install.sh` after the
+KeepAlive change writes the file, and the second one is the one launchd obeys. Also: an
+app started with `open` is not the job's process, even with the job loaded, so launchd
+never relaunches it — that's why the relaunch paths go through `launchctl bootstrap` /
+`kickstart`. Proven: `kill -9` on the launchd-run app, back in 7 s, hold resumed (from an
+`awake.json` in the old format, with `bootEpochSecs`).
+
+### 2026-10-01 · launchd runs the app with no locale, and tmux mangles `-F` output
+
+Once the login item became the app's launchd job (KeepAlive), its environment shrank to
+`PATH=/usr/bin:/bin:/usr/sbin:/sbin`, `HOME`, `TMPDIR` — no `LANG`/`LC_*`. In the C
+locale tmux escapes every non-ASCII byte **and the tab** in `list-panes -F` output to
+`_`, so `parse_panes` read zero panes, the layout was untrusted, and every agent fell
+into one ungrouped cell. Fix: every tmux spawn goes through `agents::tmux_command`,
+which adds `-u`; `theme.rs` called bare `tmux`, which isn't on launchd's PATH at all,
+and now uses the same Homebrew fallbacks. Any other child that reads the locale runs in
+C under launchd too.
+
+_The same gotcha was journaled twice on 2026-10-01; the second entry (the `LANG` plist fix, 1c235c6) was folded into this one on 2026-11-01._ Second half of the fix: `EnvironmentVariables { LANG }` in the login item plist, read from `AppleLocale` at patch time, so every child gets the locale it had before. Lesson: changing _how_ a process is launched changes its environment — diff `ps eww` before and after.
+
+### 2026-10-01 · Vercel CLI 61 moved its credential store
+
+The CLI now writes `~/.local/share/com.vercel.cli/auth.json` (XDG data dir) and leaves
+`~/Library/Application Support/com.vercel.cli/auth.json` untouched, so the widget kept
+sending an Aug 25 token and `vercel whoami` couldn't fix it. `widgets/vercel.ts` reads
+both and uses the token that expires last.
+
+### 2026-10-01 · BetterDisplay's CLI: trust `system_profiler`, pick modes by name, physical displays won't disconnect
+
+Learned building away mode (and by the dotfiles `remote-mode` script before it). The CLI
+is the app binary (`BetterDisplay.app/Contents/MacOS/BetterDisplay get|set|create`).
+`get -connected` answers an ambiguous `on,off` — `system_profiler SPDisplaysDataType
+-json` is the truth (`_name`, `_spdisplays_pixels`, ~0.3 s). Mode numbers shift between
+connects, so the mode is chosen by its label (`1366x1024 HiDPI`) from
+`-displayModeList`. `set -connected=off` returns `Failed.` for every physical display,
+built-in included: the Studio Display has to be unplugged. With no display at all macOS
+invents a 1920x1080 `Display` placeholder, and with the lid closed and nothing else it
+lights the built-in `Color LCD` anyway — so the iPad screen is never disconnected unless
+a real display is there to take over. A display change can lock the session.
+
+### 2026-10-01 · zsh `read -q` reads the terminal, not stdin — tests passed in agent shells, prompted in Ghostty
+
+`scripts/release.sh`'s gate failed in a real terminal: `remove.test.zsh` declines the
+`remove? [y/N]` question by feeding stdin from `/dev/null`, but `read -q` reads the
+controlling terminal, so in Ghostty the test asked Mitch and took the answer. Agent shells
+have no terminal, so it always passed there. The CLI now asks through `sc_confirm`, which
+treats a non-terminal stdin as no. Lesson: run the gate under a pty
+(`python3 -c 'import pty; pty.spawn(["pnpm","verify"])'`) before a release.
+
 ### 2026-09-16 · A first `tell application` blocks inside tccd until the consent dialog is answered — bound every osascript
 
 The first live theme switch with `appearance.ghostty` on wrote the state dir, retinted
@@ -129,6 +260,37 @@ same helper covers them. Ghostty's `perform action` needs a target even for app-
 actions: `on first terminal` works, the bare form errors `-1701`.
 
 ---
+
+### 2026-09-16 · The corpus's first run: five rankings nobody had noticed
+
+Fifty-seven queries over 202 real entries, and five came back wrong on the untouched
+scorer: `quit` → QuickTime Player (a scattered q-u-i…t outscored the exact `quit` alias
+on scuttlarr — Quit), `ical` → Notion Calendar (i…cal across a word boundary beat
+Calendar's `iCal` keyword), `sms` → System Settings (s…m…s beat Messages' `MobileSMS`),
+`bt` → Battery, `hn` → HandBrake. The first three share a cause: fzf's `-4` gap-start
+penalty is too gentle against the `+12` consecutive bonus, so three scattered letters plus
+one run can outscore a shorter exact hit. `PENALTY_GAP_START` is `-8` now and every
+matcher test still holds. `bt` and `hn` are honest — two-letter abbreviations lose to a
+closer gap, as they do in fzf — so the cases became `blue` and `hacker`. Lesson: a fixture
+of five apps proves the scorer's shape; only a dense corpus proves its judgement.
+
+### 2026-09-16 · First `scripts/mem.sh` reading: 157 MB, plus a 460 MB borders
+
+The app's own resident is 157 MB with the panel hidden — over the 120 MB ceiling — and the
+supervised JankyBorders child sits at 460 MB, which is not ours to shrink but is on the
+machine because of us. Two Bun plugin services at 31 and 39 MB, the Bluetooth helper at 8.
+Nothing was measured before, so nothing was regressed; but the ceiling has been a wish, not
+a number, since the bar landed. Recorded here as the baseline every plan from now on
+compares against; the shrink is its own task.
+
+_Superseded by DECISIONS 2026-11-01 "the memory receipt": one measurement definition, and the earlier receipts (v0.2–v0.6, 90–118 MB main-process RSS) were measurements too — "nothing was measured before" was wrong. Later readings: v0.7.0 169 MB, v0.8.0 114 MB (light config) / 158 MB (daily), growth with uptime in `plans/done/2026-10-19-defaults-flip.md`._
+
+### 2026-09-16 · Keywords cost nothing the budget notices
+
+Reading three plist strings per app (bundle id, `CFBundleName`, executable) during the
+index scan: the scan of ~140 bundles stays under the 500 ms budget with room to spare
+(`indexer::tests::scan_is_inside_the_index_budget_with_keywords` asserts it). `plist`
+was already a dependency; `icons.rs` reads the same files for the icon name.
 
 ### 2026-09-14 · Home.app lights from a Mac: only Shortcuts gets in
 
@@ -190,6 +352,8 @@ current theme on both halves, so the first "turn it on" changes nothing until a 
 or dark theme is actually chosen. Rule: any engine whose output is a _write to the
 user's config_ needs an explicit opt-in that survives upgrades — a `serde(default)`
 is not consent.
+
+_Still open as of 2026-11-01: the 2026-10-19 entry shows the gate never held (`config.appearance` is a plain struct, never absent). ROADMAP "Bugs known, not chased"._
 
 ### 2026-09-11 · Ghostty 1.3 grew an AppleScript dictionary — and SIGUSR2 reload is Linux-only
 
@@ -263,6 +427,34 @@ includes the light's own unicast; timing between subscribe and the filter handsh
 plugin treats status as a bonus (`synced`), never a requirement. Chase it if the cell ever
 drifts from the dial.
 
+### 2026-09-10 · updates checks die on the LaunchAgent's bare PATH
+
+The installed app (launched by `~/Library/LaunchAgents/launcharr.plist`) inherits the bare
+macOS PATH. `updates::locate` still found pnpm/npm via its known-dirs fallback — but both
+are `#!/usr/bin/env node` scripts, so the child died with `env: node: No such file or
+directory`. Dev-mode runs inherit the terminal's PATH, which is why the bug hid. Fix:
+`run_check` now sets the child's PATH (app PATH + the binary's dir + Homebrew + `~/.local/bin`
+
+- mise shims + `$PNPM_HOME/bin`). Second trap: pnpm's global store is purely env-driven —
+  without `PNPM_HOME` it reads an empty default store and reports `{}` as if nothing were
+  installed, and refuses `-g` commands unless `$PNPM_HOME/bin` is on PATH. `pnpm_home()`
+  infers it from pnpm's own conventions when the app wasn't handed one. A login shell
+  (`zsh -lc`) is no help here: Mitch's `PNPM_HOME` export lives in `.zshrc`, which
+  non-interactive shells never read. npm was dropped as a source at the same time: its only
+  globals are node's bundled `npm`/`corepack`, which mise owns.
+
+### 2026-09-10 · tmux hand-off: bare PATH again, and the wrong session
+
+`tmux new-window -t <session> '<cmd>; exec zsh -l'` runs `<cmd>` with the _caller's_
+environment — launcharr's bare PATH — so `brew upgrade` printed `brew: not found`, then the
+`exec zsh -l` gave a clean prompt and the theme wiped the evidence: "a terminal opens and
+nothing happens". Same as the checks bug above, different door; bang mode had it too. Fix:
+the argv is now `exec $SHELL -lic '<cmd>; exec $SHELL -l'` (the shape the fresh-instance
+path already used). Second half: the window went to the tmux client with the latest
+`client_activity`, which with two Ghostty windows is a coin flip. `#{client_focused}` (tmux
+≥ 3.2, `focus-events on`) is preferred now, activity as the fallback — the flag is empty
+when the terminal isn't reporting focus, so treat empty as unknown, not unfocused.
+
 ### 2026-09-04 · `open -na Ghostty --args -e …` while one is already running starts a second, unusable instance
 
 Ghostty has no AppleScript dictionary and `ghostty +new-window` prints "not supported on
@@ -275,6 +467,8 @@ activate-only open. The only way into a running Ghostty without Accessibility is
 whatever multiplexer its window is already showing: herdr's socket API or `tmux
 new-window`. `-na` is safe only as the very first launch, when no Ghostty process exists
 yet at all (`terminal.rs::plan_ghostty`, `HandOff::OpenNewInstance`).
+
+_Corrected 2026-09-11: Ghostty 1.3 grew an AppleScript dictionary (that day's entry); the multiplexer route stayed the default._
 
 ### 2026-08-28 · A plugin card with no variant class hung off the display
 
@@ -312,6 +506,8 @@ Three things learned building the plugin runtime (`plans/done/plugins-react-cell
 - **Agent shells: `pnpm` is not on disk.** Node comes from mise, pnpm from corepack via
   `packageManager`; nested `pnpm` calls in scripts need a shim on PATH
   (`exec corepack pnpm "$@"`) and `pnpm install` wants `CI=true`. Recorded in memory.
+
+_"Where the resident memory went is in STATUS" no longer holds; the memory story is DECISIONS 2026-11-01 and ROADMAP "Memory"._
 
 ### 2026-08-27 · Claude Code's keychain item name follows `CLAUDE_CONFIG_DIR`
 
@@ -354,6 +550,8 @@ brought it back. Scanning `%0`–`%24` reaped all 25.
   life (and still costs no `ps` sweep), but a missing pane now asks the pid before reaping.
   Plus `trusted_layout()` — a zero-pane success is a broken read, never an empty world.
   DECISIONS 2026-08-26, `plans/done/agent-liveness-pid-first.md`.
+
+_Liveness rules revised again 2026-10-28 (evidence before age; that day's entry and DECISIONS)._
 
 ### 2026-08-19 · Settings opened from the panel sat behind the front app; `tauri build` flashes Finder
 
@@ -409,6 +607,8 @@ stamped in the file). Rust peeks at the spec exactly once, for `until.kind == "m
 to apply the cap; the spec's meaning stays TypeScript's. `CoreWLAN rssiValue` also
 landed today for the Wi-Fi strength glyph — RSSI needs no Location Services, unlike the
 SSID; the SSID text left the strip (minimal is the theme) and lives in the card.
+
+_The resume rules here (age cap) were replaced by DECISIONS 2026-10-01: a hold lasts until it ends, across reboots._
 
 ### 2026-08-19 · Claude's background daemon runs your hooks too — with `TMUX_PANE` scrubbed
 
@@ -523,6 +723,8 @@ height. Bytes come out via a `CGBitmapContextCreate(RGBA8, ByteOrder32Big)` draw
 Vec — `tauri::ipc::Response` ships them binary (~80 KB/frame at 2×, fine at 60 Hz).
 Deprecated-in-14 API, still present in 26; ScreenCaptureKit is the eventual replacement.
 Screen Recording (TCC) is required; without it the call returns an image of nothing.
+
+_Superseded the same day by "Loupe capture v2" (display framebuffer + `sharingType = None`)._
 
 ### 2026-08-17 · Driving the panel from an agent shell: tray "Summon panel" works, keystrokes don't land
 
@@ -657,6 +859,8 @@ themes module, so it reads like a component problem when it's a barrel problem. 
 directly. Same trap waits for any other pure module in the kit (`nav/*`); split an entry
 point when a server-side consumer appears, not before — `./bar` became the second instance
 within hours, when the bar's pure formatters were needed by a server component.
+
+_Bitten again 2026-11-01 (that day's entry: the page imported the kit root); promoted to LEARNINGS._
 
 ### 2026-08-16 · The demo bar's colors are in bar.css, and the design export was already stale
 
@@ -953,181 +1157,3 @@ beat Safari's clean prefix run. Near-tie flips still work at 1.5.
 `pnpm install` hard-fails on ignored build scripts (esbuild, lefthook). The fix is
 `allowBuilds:` in `pnpm-workspace.yaml` — pnpm 11 writes the stanza template for you on
 failure; `onlyBuiltDependencies` in package.json is no longer enough.
-
-### 2026-09-10 · updates checks die on the LaunchAgent's bare PATH
-
-The installed app (launched by `~/Library/LaunchAgents/launcharr.plist`) inherits the bare
-macOS PATH. `updates::locate` still found pnpm/npm via its known-dirs fallback — but both
-are `#!/usr/bin/env node` scripts, so the child died with `env: node: No such file or
-directory`. Dev-mode runs inherit the terminal's PATH, which is why the bug hid. Fix:
-`run_check` now sets the child's PATH (app PATH + the binary's dir + Homebrew + `~/.local/bin`
-
-- mise shims + `$PNPM_HOME/bin`). Second trap: pnpm's global store is purely env-driven —
-  without `PNPM_HOME` it reads an empty default store and reports `{}` as if nothing were
-  installed, and refuses `-g` commands unless `$PNPM_HOME/bin` is on PATH. `pnpm_home()`
-  infers it from pnpm's own conventions when the app wasn't handed one. A login shell
-  (`zsh -lc`) is no help here: Mitch's `PNPM_HOME` export lives in `.zshrc`, which
-  non-interactive shells never read. npm was dropped as a source at the same time: its only
-  globals are node's bundled `npm`/`corepack`, which mise owns.
-
-### 2026-09-10 · tmux hand-off: bare PATH again, and the wrong session
-
-`tmux new-window -t <session> '<cmd>; exec zsh -l'` runs `<cmd>` with the _caller's_
-environment — launcharr's bare PATH — so `brew upgrade` printed `brew: not found`, then the
-`exec zsh -l` gave a clean prompt and the theme wiped the evidence: "a terminal opens and
-nothing happens". Same as the checks bug above, different door; bang mode had it too. Fix:
-the argv is now `exec $SHELL -lic '<cmd>; exec $SHELL -l'` (the shape the fresh-instance
-path already used). Second half: the window went to the tmux client with the latest
-`client_activity`, which with two Ghostty windows is a coin flip. `#{client_focused}` (tmux
-≥ 3.2, `focus-events on`) is preferred now, activity as the fallback — the flag is empty
-when the terminal isn't reporting focus, so treat empty as unknown, not unfocused.
-
-### 2026-09-16 · The corpus's first run: five rankings nobody had noticed
-
-Fifty-seven queries over 202 real entries, and five came back wrong on the untouched
-scorer: `quit` → QuickTime Player (a scattered q-u-i…t outscored the exact `quit` alias
-on scuttlarr — Quit), `ical` → Notion Calendar (i…cal across a word boundary beat
-Calendar's `iCal` keyword), `sms` → System Settings (s…m…s beat Messages' `MobileSMS`),
-`bt` → Battery, `hn` → HandBrake. The first three share a cause: fzf's `-4` gap-start
-penalty is too gentle against the `+12` consecutive bonus, so three scattered letters plus
-one run can outscore a shorter exact hit. `PENALTY_GAP_START` is `-8` now and every
-matcher test still holds. `bt` and `hn` are honest — two-letter abbreviations lose to a
-closer gap, as they do in fzf — so the cases became `blue` and `hacker`. Lesson: a fixture
-of five apps proves the scorer's shape; only a dense corpus proves its judgement.
-
-### 2026-09-16 · First `scripts/mem.sh` reading: 157 MB, plus a 460 MB borders
-
-The app's own resident is 157 MB with the panel hidden — over the 120 MB ceiling — and the
-supervised JankyBorders child sits at 460 MB, which is not ours to shrink but is on the
-machine because of us. Two Bun plugin services at 31 and 39 MB, the Bluetooth helper at 8.
-Nothing was measured before, so nothing was regressed; but the ceiling has been a wish, not
-a number, since the bar landed. Recorded here as the baseline every plan from now on
-compares against; the shrink is its own task.
-
-### 2026-09-16 · Keywords cost nothing the budget notices
-
-Reading three plist strings per app (bundle id, `CFBundleName`, executable) during the
-index scan: the scan of ~140 bundles stays under the 500 ms budget with room to spare
-(`indexer::tests::scan_is_inside_the_index_budget_with_keywords` asserts it). `plist`
-was already a dependency; `icons.rs` reads the same files for the icon name.
-
-### 2026-10-01 · launchd reads a LaunchAgent plist only at login or bootstrap
-
-Patching `~/Library/LaunchAgents/scuttlarr.plist` changes nothing for the job already
-loaded: `launchctl print gui/$UID/scuttlarr` keeps showing the old properties until a
-`bootout` + `bootstrap` (or the next login). So the first `dev-install.sh` after the
-KeepAlive change writes the file, and the second one is the one launchd obeys. Also: an
-app started with `open` is not the job's process, even with the job loaded, so launchd
-never relaunches it — that's why the relaunch paths go through `launchctl bootstrap` /
-`kickstart`. Proven: `kill -9` on the launchd-run app, back in 7 s, hold resumed (from an
-`awake.json` in the old format, with `bootEpochSecs`).
-
-### 2026-10-01 · launchd runs the app with no locale, and tmux mangles `-F` output
-
-Once the login item became the app's launchd job (KeepAlive), its environment shrank to
-`PATH=/usr/bin:/bin:/usr/sbin:/sbin`, `HOME`, `TMPDIR` — no `LANG`/`LC_*`. In the C
-locale tmux escapes every non-ASCII byte **and the tab** in `list-panes -F` output to
-`_`, so `parse_panes` read zero panes, the layout was untrusted, and every agent fell
-into one ungrouped cell. Fix: every tmux spawn goes through `agents::tmux_command`,
-which adds `-u`; `theme.rs` called bare `tmux`, which isn't on launchd's PATH at all,
-and now uses the same Homebrew fallbacks. Any other child that reads the locale runs in
-C under launchd too.
-
-### 2026-10-01 · Vercel CLI 61 moved its credential store
-
-The CLI now writes `~/.local/share/com.vercel.cli/auth.json` (XDG data dir) and leaves
-`~/Library/Application Support/com.vercel.cli/auth.json` untouched, so the widget kept
-sending an Aug 25 token and `vercel whoami` couldn't fix it. `widgets/vercel.ts` reads
-both and uses the token that expires last.
-
-### 2026-10-01 · launchd starts jobs with no locale; tmux mangles `-F` output without one
-
-The first launchd-run build collapsed every agent into one group. launchd gives a job no
-`LANG`/`LC_*` (an `open`-launched app had one), and tmux in the C locale escapes the tabs
-in `list-panes -F` output to `_`, so the pane parse came back empty. Fixed twice: `tmux -u`
-in `agents.rs` (1c235c6), and `EnvironmentVariables { LANG }` in the login item plist,
-read from `AppleLocale` at patch time, so every child gets the locale it had before.
-Lesson: changing _how_ a process is launched changes its environment — diff `ps eww`
-before and after.
-
-### 2026-10-01 · BetterDisplay's CLI: trust `system_profiler`, pick modes by name, physical displays won't disconnect
-
-Learned building away mode (and by the dotfiles `remote-mode` script before it). The CLI
-is the app binary (`BetterDisplay.app/Contents/MacOS/BetterDisplay get|set|create`).
-`get -connected` answers an ambiguous `on,off` — `system_profiler SPDisplaysDataType
--json` is the truth (`_name`, `_spdisplays_pixels`, ~0.3 s). Mode numbers shift between
-connects, so the mode is chosen by its label (`1366x1024 HiDPI`) from
-`-displayModeList`. `set -connected=off` returns `Failed.` for every physical display,
-built-in included: the Studio Display has to be unplugged. With no display at all macOS
-invents a 1920x1080 `Display` placeholder, and with the lid closed and nothing else it
-lights the built-in `Color LCD` anyway — so the iPad screen is never disconnected unless
-a real display is there to take over. A display change can lock the session.
-
-### 2026-10-01 · zsh `read -q` reads the terminal, not stdin — tests passed in agent shells, prompted in Ghostty
-
-`scripts/release.sh`'s gate failed in a real terminal: `remove.test.zsh` declines the
-`remove? [y/N]` question by feeding stdin from `/dev/null`, but `read -q` reads the
-controlling terminal, so in Ghostty the test asked Mitch and took the answer. Agent shells
-have no terminal, so it always passed there. The CLI now asks through `sc_confirm`, which
-treats a non-terminal stdin as no. Lesson: run the gate under a pty
-(`python3 -c 'import pty; pty.spawn(["pnpm","verify"])'`) before a release.
-
-### 2026-10-18 · The site's Ignored Build Step diffed `HEAD^`, so a multi-commit push could skip a site change
-
-The step lived only in the Vercel dashboard as `git diff --quiet HEAD^ HEAD -- <site
-inputs>`. Vercel checks only the pushed head, so a push whose site change sat in an earlier
-commit exited 0 and left scuttlarr.com stale. It now lives in `apps/www/vercel.json`
-(`ignoreCommand`, which overrides the dashboard) and diffs against
-`$VERCEL_GIT_PREVIOUS_SHA`, the last successful deploy. Exit 0 skips; an unset SHA (first
-deploy) or one outside the shallow clone (git exits 128) builds. Vercel caps the command at
-256 characters, so the path list stays inline.
-
-### 2026-10-18 · One `mas` timeout sat in the updates cell for six hours
-
-At 10:34 `mas outdated` ran past the 60 s check timeout, probably on a Mac just woken with
-the network not yet up; run again it takes 0.2 s. The report was cached whole for 6 h with
-no error handling, so the error stayed in the bar until the TTL ran out. Rows are now
-cached per source, an errored row retries in 5 min, and the clock is wall time
-(`checked_at`), not `Instant`: macOS's monotonic clock stops while the Mac sleeps, so an
-`Instant`-based TTL would keep serving last night's results after waking.
-
-### 2026-10-19 · Agent worktrees branch from a stale `origin/main`
-
-`git fetch` over SSH fails from agent shells (1Password agent), so the local
-`origin/main` ref lags whatever was pushed over the gh HTTPS helper. Worktree-isolated
-subagents were cut from that ref (8909b80), two commits behind local main: they could not
-see a plan committed minutes earlier, and their test counts came out lower. Merging was
-clean, but pass plans in the prompt (or refresh the ref first:
-`git -c credential.helper='!gh auth git-credential' fetch https://github.com/mitchmalone/scuttlarr.git main:refs/remotes/origin/main`).
-
-### 2026-10-19 · Travel setup for two weeks unattended (moved out of STATUS)
-
-From 2026-10-02 the MacBook Pro sat lid-closed on AC at the desk, held by `awake` with
-away mode (BetterDisplay `iPad` screen at 1600x1200 HiDPI, sleep off via
-`sleep_override.rs`), on ethernet with Wi-Fi off, reached over Tailscale (`mitch`) by
-mosh/SSH/Screens. Proven overnight first. To stop an unattended restart: Software Update
-Rapid Security Responses off (`CriticalUpdateInstall=0`) and Tailscale auto-update off
-(`tailscale set --auto-update=false` plus the app's Sparkle keys). Both need turning back
-on once home. Residual risk accepted: a reboot stops at the FileVault pre-boot screen,
-which nothing remote gets past.
-
-### 2026-10-19 · `config.appearance` is never absent, so the theme policy gate can't hold
-
-The 2026-09-11 fix made the policy engine inert "until `config.appearance` exists on
-disk". But `Config.appearance` in config.rs is a plain struct with `serde(default)`, and
-`read_config` returns the Rust struct, so the frontend always sees the key and
-`policyConfigured()` is always true; the seeding in `appearanceOf` never runs. A fresh
-install in macOS light mode should resolve to the default pair's `solarized-light`.
-Found by reading the code during the docs-truth pass, not reproduced. Lesson: a "key is
-absent" gate across IPC needs the Rust side to model absence (`Option` +
-`skip_serializing_if`), or it is a gate in name only.
-
-### 2026-10-20 · A launch toast wipes the owed setup
-
-Hands-checking the setup theme fix with a fresh `config.json`: `setupPending` was true
-but the first summon showed the plain prompt. The resumed awake hold flashes a launch
-toast (`lib.rs` `power::resume_toast` → `panel::flash` → `toast`), and App's `toast`
-handler does `setPanelMode(null)`, clearing the setup mode the config had just set. Only
-hits a machine with a hold to resume, so not a true fresh install, but any launch toast
-would do it. Fix: the `toast` handler should keep `SETUP_PANEL`, as `panel-shown` does.
-Not fixed in that branch (out of scope).

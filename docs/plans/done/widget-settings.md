@@ -56,25 +56,25 @@ launcharr stays a store + env injector and never talks to a provider itself.
 
 ## Steps
 
-- [ ] Rust: manifest `settings`/`auth` parse + validation (tests); `widget_secrets.rs`
-      (Keychain); env injection; required-gate → `needs` on state; `auth` runner + events;
-      four commands; `Config.widgets`.
-- [ ] tui: `WidgetSetting`/`BarWidget.settings/auth/needs` types; needs-setup cell.
-- [ ] Settings UI: per-widget settings fields (secret: set/clear, plain: bound to config);
-      Sign in button + code/url panel; needs-setup line.
-- [ ] Widgets: vercel.ts settings + 401/403 hint; github-actions.ts rewrite + device
-      flow; Vitest on the pure halves.
-- [ ] docs/WIDGETS.md (settings + auth sections), DECISIONS, STATUS; copy widgets into
-      `~/.config/launcharr/widgets/`.
+- ~~Rust: manifest `settings`/`auth` parse + validation (tests); `widget_secrets.rs`~~
+  (Keychain); env injection; required-gate → `needs` on state; `auth` runner + events;
+  four commands; `Config.widgets`.
+- ~~tui: `WidgetSetting`/`BarWidget.settings/auth/needs` types; needs-setup cell.~~
+- ~~Settings UI: per-widget settings fields (secret: set/clear, plain: bound to config);~~
+  Sign in button + code/url panel; needs-setup line.
+- ~~Widgets: vercel.ts settings + 401/403 hint; github-actions.ts rewrite + device~~
+  flow; Vitest on the pure halves.
+- ~~docs/WIDGETS.md (settings + auth sections), DECISIONS, STATUS; copy widgets into~~
+  `~/.config/launcharr/widgets/`.
 
 ## Acceptance criteria
 
-- [ ] Vercel: paste a token in Settings → cell goes green without the CLI logged in;
-      clear it → falls back to CLI store / hidden.
-- [ ] GitHub: set client id → Sign in → code shown → approve in browser → token stored →
-      cell shows runs. Token never appears in the webview or config.json.
-- [ ] `pnpm verify` green; Rust unit tests for manifest/settings parsing and the
-      required-gate; Vitest for both widgets' `view()`.
+- ~~Vercel: paste a token in Settings → cell goes green without the CLI logged in;~~
+  clear it → falls back to CLI store / hidden.
+- ~~GitHub: set client id → Sign in → code shown → approve in browser → token stored →~~
+  cell shows runs. Token never appears in the webview or config.json.
+- ~~`pnpm verify` green; Rust unit tests for manifest/settings parsing and the~~
+  required-gate; Vitest for both widgets' `view()`.
 
 ## Out of scope
 
@@ -97,3 +97,7 @@ DECISIONS 2026-08-19 + 2026-08-20.
   it's a plain setting so no code edit, but it's the first external-account tie.
 - `security-framework` is one more crate (+ -sys); the alternative (`/usr/bin/security`
   on argv) leaks secrets to `ps`. Chosen crate; revisit if the tree bites.
+
+## Closed (2026-11-01, docs sweep)
+
+The Outcome section (2026-08-20) records what shipped in v0.6.0; the step list above it was never ticked. Struck. Widget OAuth stays dormant (ROADMAP).

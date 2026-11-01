@@ -1,8 +1,8 @@
 ---
 title: lights plugin — amaran + Home.app lights under one
-status: active
+status: done # parked: built and in daily use (amaran); Nanoleaf waits on shortcuts outside the repo
 created: 2026-09-14
-updated: 2026-10-19 (still waiting on the Home.app shortcuts)
+updated: 2026-11-01 (closed as parked; the plugin lives outside the repo)
 links:
   - ../done/amaran-plugin-bluetooth.md
   - ../../PLUGINS.md
@@ -82,3 +82,11 @@ Matter controller.
 Unchanged since 2026-09-14: built and dev-installed, amaran works; open items are Mitch
 creating the `lights/<light>/…` shortcuts, then measuring `shortcuts run` latency and
 slider drag in a card. The plugin lives outside the repo.
+
+## Closed (2026-11-01, parked)
+
+Built and dev-installed since 2026-09-14; the amaran driver is in daily use. The two open
+steps need Mitch to create the `lights/<light>/…` shortcuts in Home.app, then measure
+`shortcuts run` latency and slider drag in a card — tracked in STATUS "Needs Mitch
+(elsewhere)". The plugin is a user plugin outside this repo
+(`~/.config/scuttlarr/plugins/lights/`), so nothing here blocks the repo.

@@ -17,9 +17,9 @@
   v0.8.0, six commits; steps 1–2 landed. **Planned next:**
   `plans/active/2026-11-01-rename-to-scuttler.md` — scuttlarr → scuttler at
   `www.scuttler.app` as v0.9.0 (old domains already redirect there).
-- **Parked:** `plans/active/lights-plugin.md` (built; Nanoleaf waits on Mitch's Home.app
-  shortcuts), `plans/active/opensource-readiness-review.md` (not started; re-planned by
-  the sweep, step 5).
+- **Parked:** `plans/done/lights-plugin.md` (built, in daily use; Nanoleaf waits on
+  Mitch's Home.app shortcuts, outside the repo); `plans/active/opensource-readiness-review.md`
+  (`planned`, rewritten for the current scope; ROADMAP carries its trigger).
 - **Daily use on the primary Mac:** bar, launcher, panels, agents, usage, updates, awake,
   the Desktop and Theme rungs (`appearance.everywhere`, `editors`, `ghostty` on).
 - **Memory:** one measurement, the receipt (DECISIONS 2026-11-01, `scripts/mem.sh

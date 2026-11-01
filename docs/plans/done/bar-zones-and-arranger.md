@@ -1,3 +1,12 @@
+---
+title: Bar zones, notch profiles, and the settings zone board
+status: done
+created: 2026-08-16
+updated: 2026-11-01 (frontmatter added; written up at close on 2026-08-16)
+links:
+  - ../../DECISIONS.md
+---
+
 # Bar zones, notch profiles, and the settings zone board
 
 > 2026-08-16, three feedback rounds in one session (written up at close — the work

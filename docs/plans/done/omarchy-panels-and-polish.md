@@ -1,3 +1,12 @@
+---
+title: Omarchy panels and polish
+status: done
+created: 2026-08-16
+updated: 2026-11-01 (frontmatter added; written up at close on 2026-08-16)
+links:
+  - ../../DECISIONS.md
+---
+
 # Omarchy panels and polish (colors, icons, clipboard/audio/help panels, wifi scan, fuzzy keywords, 5-day ranking)
 
 > One AFK session, 2026-08-16. Eight asks from Mitch, Omarchy screenshots as inspiration

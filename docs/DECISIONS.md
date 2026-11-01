@@ -5,6 +5,517 @@
 
 ---
 
+### 2026-11-01 · Release smoke tests are scripted, not two `[y/N]` prompts
+
+- **Decision.** `scripts/release.sh` step 6 no longer stops for a human. The fresh-profile
+  test unpacks the release zip and launches it with an empty `HOME` (every path the app
+  uses hangs off `$HOME`), reading its own stderr: cold start under the 1 s budget, hotkey
+  registered, a config written that owes the first-launch setup, no panic. The
+  upgrade-path test installs the build over the running one through `dev-install.sh` and
+  checks the new version came up and reported its plugins, that nothing under
+  `~/.config/scuttlarr` changed (a tree checksum) and that the frecency db did not
+  shrink. A release is one command end to end and can run unattended.
+- **Why.** The 2026-08-10/11 split kept these manual as "the two things a script can't
+  feel". The gate had become a person typing `y`, which proved less than the checks
+  above and made every release a terminal errand (the first 0.8.0 run on 2026-11-01 died
+  at the prompt because it was started without a tty). The app reports enough about
+  itself now that the script can feel both.
+- **Kept local.** Signing, notarization and the smoke tests still need this Mac; the
+  split with the CI fan-out is unchanged.
+
+### 2026-11-01 · Updates: a package can be dismissed for a day, keyed to its version
+
+- **Decision.** `d` in `updates ⏎` (or "dismiss 24h" on a failed row) puts one outdated
+  package aside for 24 hours: out of the count, the cell, the card and every bulk
+  upgrade, listed dim under its manager with its time left, `↵` to bring it back. The
+  dismissal is keyed to the version it was made against (`brew:beeper/tap/cli` →
+  `0.6.3`, until): a newer version returns the row early, since the fix may have landed.
+  State is `~/.local/state/scuttlarr/updates-dismissed.json`, applied to the cached
+  report on read, so it takes effect at once and lapses on its own. No new Tauri
+  command: `{"dismiss":…,"item":…,"hours":24}` / `{"restore":…}` ride `plugin_send`.
+- **Bulk respects it.** `brew upgrade` upgrades everything brew knows, so a dismissed
+  formula would fail again on every "upgrade all" and poison the batch. A source with
+  any dismissed package therefore gets its pending packages' own commands as its
+  command (`brew upgrade gcc && brew upgrade vips`), the in-app runner expands its bulk
+  job into one job per pending package, and "upgrade everything" recurses per source.
+  A source with everything dismissed contributes nothing.
+- **Why not `brew pin`.** It is the native, permanent version for brew alone; the
+  checker already honours it. The dismissal covers all four managers and expires, which
+  is the shape of "this one is broken today".
+- **Not done.** No automatic dismissal after a failure (see the error once, decide), no
+  second duration yet (the store holds an until-timestamp; adding one is a field).
+  Plan: `plans/done/2026-11-01-updates-dismiss.md`.
+
+### 2026-11-01 · The memory receipt: one measurement definition for the 120 MB budget
+
+- **Problem.** Every release re-argued what "idle memory < 120 MB" meant. Receipts
+  v0.2–v0.6 were main-process RSS (90–118 MB); `scripts/mem.sh` (2026-09-16) sums the app
+  and its helpers (157 MB); v0.7.0 reported 169 MB on the author's daily config; v0.8.0's
+  table read 114 MB on a light config while its prose gave 158 MB for the like-for-like.
+  STATUS carried the September number for six weeks. Four metrics, one table cell, and a
+  budget that was "undecided" in STATUS while AGENTS, the PRD and the release template all
+  said 120.
+- **Decision (the receipt).** The number compared with 120 MB is **the receipt**:
+  `scripts/mem.sh --receipt` on a release build, panel hidden, **bar on, agents monitor
+  off, no plugin services, Desktop rung off, one display**, a minute after launch; three
+  readings 10 s apart, the median; the app process plus any helper that is always on under
+  that config (none today). The notes name the Mac. `--receipt` prints a warning and calls
+  the reading a daily footprint when helpers are running or `agents.monitor` is on, so the
+  number produced is the number claimed.
+- **Decision (the footprint).** Release notes carry a second, unbudgeted line: the
+  **daily footprint**, the author's real config (agents monitor, plugin services, the
+  Desktop rung) with the uptime stated. Trend only; it is what the product costs a heavy
+  user, and it is allowed to be 500 MB with borders in it without failing a release.
+- **Decision (definition of done).** The before/after rule narrows to changes that add
+  something resident (a process, window, watcher or cache): they record the receipt in the
+  plan file. Everything else is covered by the release receipt.
+- **Why the app alone.** The budget is for what we control: the app's own resident set
+  under the install defaults. Plugin services are opt-in Bun processes whose cost belongs
+  to the plugin; borders is a third-party binary behind a rung that is off by default.
+  Budgeting the daily config at a higher ceiling was considered and rejected: it would
+  move with the author's plugin list, not with the app.
+- **What is open.** Growth with uptime (120 MB after a restart, 240 MB after 25 h,
+  `plans/done/2026-10-19-defaults-flip.md`) is the real memory task; ROADMAP carries it
+  with a trigger. The receipt baseline for v0.8.0 under this definition is taken at the
+  next release build on the primary Mac; the daily footprint on 2026-11-01 was 131 MB for
+  the app process and 501 MB with borders (268 MB), three Bun services and the BLE helper.
+
+### 2026-11-01 · One default bar layout: TypeScript's, mirrored in Rust and pinned by tests
+
+- **Decision.** `DEFAULT_BAR_LAYOUT` (`apps/desktop/src/lib/config.ts`: left workspaces,
+  agents, frontApp; center clock; right wifi, awake, usage, battery) is the default
+  arrangement. `BarConfig::default()` in `config.rs` writes the same lists into a fresh
+  `config.json`; a Rust test and a Vitest case pin the two equal, each naming the other.
+- **Why.** The Rust default had stayed at `wifi, battery` since v0.4 while the TS default
+  grew awake and usage. A fresh install wrote the short list, the renderer appended the
+  missing modules at the end of the zone, and the bar came up `wifi, battery, awake,
+usage` — an order no file in the repo says. Product opinion is the TS layer's (AGENTS
+  "Rust owns the OS, TypeScript owns the experience"); Rust mirrors it the way IPC types
+  are mirrored, pair kept adjacent by name and test.
+- **Effect.** Only fresh installs change; an existing `config.json` carries its own
+  layout. The legacy-migration sentinel (`layout == BarConfig::default().layout`) now
+  compares against the full list, which is what an untouched file deserialises to.
+
+### 2026-10-31 · Updates upgrade in the app, per package or in bulk, through a queue
+
+- **Decision.** `updates ⏎` upgrades without leaving scuttlarr. Every `UpdateItem` carries
+  its own `upgrade_command` (`brew upgrade gcc`, `brew upgrade --cask repobar`,
+  `mas upgrade <id>`, `pnpm update -g <name>`, `mise upgrade <tool>`), computed by the
+  parser that read it. `updates::upgrade(source, item)` queues a job instead of refusing
+  while one runs: one child at a time, in order; `"all"` expands to one job per present
+  package manager so a failure in one does not stop the rest; a job already running or
+  waiting is not queued twice; the queue draining kicks the re-check. The report gains
+  `queue`, `recent` (finished runs this session, bounded) and `batch` (`done`/`total`
+  since the runner was last idle), from which the UI derives each row's state — queued,
+  upgrading, upgraded, failed — until the source is re-checked. `cancel_upgrade` kills
+  the child and empties the queue. No new Tauri command: the panel speaks through
+  `plugin_send` (`{"upgrade":"brew","item":"gcc"}`, `{"upgradeInTerminal":…,"item":…}`).
+- **UI.** The ledger (design asset `plans/assets/updates-panel-options.html`, option A,
+  picked 2026-10-31 over a two-pane sidebar and framed cards). One list, no view
+  switching: a band per package manager with its name, a count chip, its command and its
+  own "upgrade all"; its packages under a gutter rule, each a click or `↵` from
+  upgrading; a clean manager folds to one dim band; a long group caps at eight rows with
+  a "+N more" row that expands. "Upgrade everything" sits in the panel head (`Panel`
+  gains a `right` slot). The run block is one meter line (headline · progress · batch)
+  and the last output line. The hover card is the same bands, compact, with packages
+  listed under each. The first cut of the day borrowed the usage panel's segmented
+  control and tiles; Mitch found the managers blurred together, hence the asset.
+  Before this a click copied the source's command, which is why "nothing happened"
+  (JOURNAL 2026-10-31). `t` keeps the terminal hand-off for a sudo'ing cask, now per
+  package too.
+- **Why a queue.** Package-at-a-time only works if clicking a second package while the
+  first runs does something sensible; refusing it (the 2026-09-10 shape) made the panel
+  feel broken. One child at a time keeps brew's own locks out of the picture.
+- **Alternatives.** Running jobs in parallel (rejected: brew serialises on its own lock,
+  and interleaved tails are unreadable). Multi-select before starting (rejected for now:
+  a queue of clicks is the same thing with no mode). A pty for sudo (unchanged: `t`).
+
+### 2026-10-28 · Agent states are read by shape; liveness outranks silence; the subagent indicator is retired
+
+- **Decision.** Each agent state has its own shape, drawn once in `packages/tui`
+  (`AgentStateIcon`, lucide geometry at `ICON_PROPS`) and imported by the bar cell, the
+  hover card, `agents ⏎` and the site's legend: working is a three-quarter ring that
+  spins, attention a ring with a still centre dot whose ring breathes, done · unread a
+  filled disc with a check, done · read a bare check, idle a moon, anything else a dotted
+  ring. The 2026-08-19 colour rule stands — fg is fine, accent is busy — with one change:
+  attention moves from `danger` to `warn`; a question is not a failure, and `danger` is
+  kept for an adapter reporting one. Only those two shapes move, and both stop under
+  Reduce Motion. The hover card is restructured around the same icon: state and age, the
+  title, a verb-plus-object "doing" line built from the hook's new `Tool object` detail
+  (`Edit format.ts` → pencil, "editing", `format.ts`; past tense once quiet), location as
+  crumbs, and a meta line with the two clocks the store now keeps (`started_at`,
+  `state_since`). Visiting a done session marks it `read`, a state only the store writes.
+  Design: Claude Design "scuttlarr agent dots", v2.
+- **Liveness.** `reap()` no longer sweeps by age before looking: a session whose pane the
+  layout lists, or whose pid is alive with the same command, stays however long it has
+  been silent. `pruneHours` is a backstop for sessions nothing can vouch for (no pane and
+  no pid, or a pane in a layout we couldn't read). `apply()` prunes nothing. Field report
+  2026-10-28: nine Claude sessions in tmux panes, five on the bar — the four silent for
+  over 12 h had been swept while tmux still listed every pane. Idle is a state, not a
+  death.
+- **Retired.** The subagent indicator — shoulder count on the cell, lines in the card,
+  `Subagent` on the wire and in the store. It never reported reliably and read as noise
+  on the site. `SubagentStart`/`SubagentStop` are still registered: they keep a session
+  `working` while a fork runs.
+- **Hooks.** `boot()` now completes the event set in a Claude config dir where our hook
+  is already registered (`mend`): it still adds nothing where we were never installed.
+  The psyke dir had sat at 7 of 10 events since `Notification` and the subagent events
+  were added.
+- **Alternatives.** Reconciling the store against tmux panes running an agent command
+  (rejected for now: needs a list of agent names, which 2026-08-18 deliberately avoided;
+  missing agents return on their next hook event). Named group boxes and a group hover
+  card (designed, parked). Spending colour on done · unread again (rejected: shape now
+  carries the distinction colour was failing at).
+
+### 2026-10-20 · The site wears the picked app theme, whole
+
+- **Decision.** scuttlarr.com drops its light/system/dark switch (and `next-themes`). One
+  picker in the header lists all 14 app themes; the page, the hero field and the demo
+  all wear the chosen one. scuttlarr is the default; the choice is kept per browser in
+  `localStorage` and applied by an inline `<head>` script before first paint. The demo's
+  own dropdown stays and is the same store, so either retints both. Chosen as option 1a
+  in the Claude Design file "Theme Selector", with Mitch's changes: the closed chip shows
+  the palette and no name; the menu gives every theme its full name (title-cased slug, scuttlarr lowercase); with a mouse it opens on hover
+  and stays open while picking, by touch a tap opens and a pick or outside tap closes.
+- **Mapping.** `lib/page-theme.ts` derives every page token from the theme's tokens
+  (`--cta` is the theme accent, `--chip` its surface, `--panel` its glass, light or dark
+  from the ground; light themes' fg is darkened 30% for headline contrast). The boot
+  script carries the precomputed result, so the mapping exists once. `globals.css` no
+  longer holds a palette. Supersedes the hero's band-scoped tokens (2026-10-19).
+- **Alternatives.** A two-tone chip strip in the nav (1b, too wide for mobile); a
+  typeahead field (1c); keeping a light/dark switch beside the theme (rejected: the
+  theme already decides it, and two controls for one look is confusing).
+
+### 2026-10-20 · Setup owns the panel theme while it is open; an unpicked theme follows config
+
+- **Decision.** While the `setup` tenant is open, App does not apply `config.theme` to
+  the panel; setup does, from `choices.theme`, which also colours the pixel field. Until
+  a theme is picked on the theme screen (`SetupChoices.themePicked`, set by
+  `chooseSetup`, cleared by Esc on that screen), `choices.theme` follows every
+  `config-changed` (`followConfig`), so a macOS appearance flip, a Focus, Settings or a
+  hand edit moves the field and the panel together. `applySetup` writes the theme only
+  when it was picked; otherwise the config's current theme stands and `pickTheme` never
+  runs. When setup closes, App takes the panel theme back.
+- **Why.** The field read the theme once on open while App re-applied the config theme
+  on every change, so the two split (cream plates on a navy field), and apply wrote the
+  stale opening theme over the policy's choice. A fresh install on a light-mode Mac hit
+  both unprompted. One owner per surface beats re-applying after App: React runs child
+  effects before the parent's, so "the preview re-applies after App" can't be ordered.
+- **Alternatives.** Pass App's config into the tenant as a prop (rejected: tenants take
+  only `onClose`, and setup already reads config itself); snapshot the theme and ignore
+  changes until apply (rejected: the field and panel would still disagree mid-setup).
+
+### 2026-10-19 · The gate checks the layering, purity and coverage it used to trust
+
+- **Decision.** `pnpm verify` (and so CI) gains `cargo fmt --check`, `verify:coverage`
+  (`@vitest/coverage-v8`, floors for `packages/core` and `packages/theme` at the measured
+  numbers rounded down), `verify:deps` (dependency-cruiser: core and theme are leaves, tui
+  → core/theme, plugins → core/tui/theme, packages never import apps, www and desktop
+  never import each other, no runtime cycles) and `verify:sh` (shellcheck on the bash
+  scripts). The core purity lint extends to the clock and randomness, and `packages/theme/src`
+  gets the same rules. CI builds `apps/www`. New devDependencies: dependency-cruiser,
+  coverage-v8 (dev only, nothing ships).
+- **Why.** A 2026-10-19 review found the rules held by convention only: rustfmt ran in a
+  pre-commit hook agent shells skip, the layer rules had one ESLint pattern, nothing
+  measured "the most-tested code", and invariant 7 was checked only by Vercel.
+- **Alternatives.** knip, fast-check, cargo-deny/machete, gitleaks in CI (deferred to a
+  later pass, not rejected). Type-only cycles count as cycles (rejected for now: two exist
+  and are erased at build; a runtime cycle still fails).
+
+### 2026-10-19 · Install gets the bar and the launcher: the bar defaults on, Desktop tiling off; upgraders keep theirs
+
+- **Decision.** `bar.enabled` defaults to `true` (config.rs) and
+  `desktop.tiling.enabled` to `false` (`DEFAULT_DESKTOP`, core). Desktop, Theme and
+  Machine are all opt-in. A fresh install writes no `aerospace.toml` and never probes for
+  AeroSpace (`applyDesktop` skips `desktop_status` while tiling is off, invariant 12).
+  `config.json` gains `defaultsVersion` (now 2). On load, a file without it is from
+  before this change: `migrate_defaults` writes the old effective values into it for
+  any key the user never set (`bar.enabled: false`, `desktop.tiling.enabled: true`),
+  stamps 2 and saves the file once, adding only those keys. Every other defaults-filled
+  key is unchanged. A Settings write that omits the key takes the current version, so it
+  can't re-trigger the pin.
+- **Why.** AGENTS.md, the PRD and the README all state the product as "install gets the
+  bar and the launcher; everything else is a rung", and the code said the opposite on
+  both counts (found by the docs-truth pass, same day). Defaults only fill missing keys,
+  so without the pin an upgrader with no explicit key would have silently gained a bar
+  and lost tiling.
+- **Cost.** The bar now runs on every install, so its webview counts against the 120 MB
+  idle ceiling everywhere (measurement in `plans/done/2026-10-19-defaults-flip.md`).
+- **Alternatives.** Flip without a migration (rejected: silent change on upgrade). Pin
+  by detecting "old defaults" without a version marker (rejected: a fresh file and an
+  old file both lack `desktop.tiling`, so a fresh install would be pinned to tiling on at
+  its second launch).
+
+### 2026-10-19 · Invariant 3 is "a deliberate IPC surface", not "a handful"
+
+- **Decision.** Invariant 3 now reads: every Tauri command is thin, typed and recorded
+  here when added; the count is a liability to justify; a command that could be an
+  event, a snapshot field or a plugin `host.send` message should be that.
+- **Why.** `generate_handler!` registers **82** commands (counted 2026-10-19). "A handful"
+  stopped being true around v0.4, and an invariant the code openly breaks teaches that
+  invariants are optional. The new wording keeps the intent — every command is a future
+  plugin-API liability — and makes it checkable.
+- **Alternatives.** Cut the surface back to a handful (rejected for now: most commands
+  are panel actions with no event-shaped equivalent; worth an audit pass, not a rule
+  change). Drop the invariant (rejected: the pressure toward events and snapshots is the
+  point).
+
+### 2026-10-19 · The site hero is a pixel field in the picked app theme
+
+- **Decision.** The landing hero is a full-height band: a dithered pixel field on a
+  canvas behind the headline, calm in the centre and busy at the edges, that answers the
+  keyboard. With the pointer over it, each key pulses along the prompt row and Enter
+  fires a ring; when nobody types, it types its own brand lines. Chosen as option 2c in
+  the Claude Design project ("Pixel Hero"), after a round where a centred pixel wordmark
+  read as too close to its reference. The long hero paragraph and the video slot move
+  below the band.
+- **Colour.** The band takes the active app theme, not the page palette: the field's six
+  steps are mixed from `bg`, `accent` and `fg`, and the band scopes `--bg`, `--fg`,
+  `--border`, `--accent` and `--dim2` to that theme so the copy and outline button follow
+  it. The demo's theme picker drives it through one shared store (`lib/app-theme.ts`).
+  Invariant 8 gains this as a second named exception, alongside the demo.
+- **Shape.** All drawing is pure (`lib/hero-field.ts`: time and randomness arrive as
+  parameters, tested); `components/hero-field.tsx` owns the canvas, clock and listeners.
+  About 33 fps, paused off-screen, one still frame under reduced motion. Keys are only
+  taken while the pointer is on the band and focus isn't in a field; no page shortcuts.
+- **Alternatives.** The centred pixel wordmark (1a, rejected as derivative); contours,
+  glyph and wave-sim fields (2a, 2b, 2d); a jolly roger cursor (3a, 3b, not taken).
+
+_Superseded by 2026-10-20 "The site wears the picked app theme, whole" (the band-scoped tokens; the field stays)._
+
+### 2026-10-19 · First-launch setup replaces the first-run hint and "no onboarding wizard"
+
+- **Decision.** A fresh install opens the launcher panel on a short setup (`setup` panel
+  tenant, `apps/desktop/src/onboarding/`): welcome, hotkey, bar, agents, theme, tiling,
+  a recap, then one Enter applies. It writes exactly the keys Settings writes
+  (`lib/onboarding.ts` `applySetup`: `hotkey`, `bar.enabled`, `agents.monitor`,
+  `agents.usage` + `agents.claudeCreds` only when usage limits are ticked, `pickTheme`,
+  `appearance.everywhere` + `editors`, `desktop.tiling.enabled`) and nothing before that
+  Enter. Esc skips a step (keeps its starting answer); Esc on the welcome or recap screen
+  puts setup off. It stays in the panel (640 x 500, no window, no dialog: invariant 13)
+  and survives hide/show so the hotkey step can be tried for real. `setup ⏎` runs it
+  again from the current config.
+- **How first run reaches the webview.** `config.json` gains `setupPending`. Only a
+  freshly created file says true (`load_or_create_at`); `Config::default()` says false,
+  so a missing key (every upgrader) and a broken hand-edit's in-memory fallback never
+  open it. The webview clears it on apply or put-off. No new Tauri command (invariant 3):
+  the flag rides the config the webview already reads, and the hotkey try is
+  `panel-hidden` then `panel-shown`.
+- **Consent.** Every rung stays opt-in; setup is the place you opt in. Watching agents
+  registers the Claude hook (`hooks_install`, as Settings → Agents does), because boot
+  only mends it when the monitor was already on. The Keychain read is its own checkbox,
+  off by default, and macOS asks later, on the first usage scan, never during setup.
+  Tiling never installs AeroSpace; setup says so when it's missing.
+- **The real bar.** The bar and agents screens render `barZoneNodes` over the Bar
+  stories' sample data (moved to `bar/fixtures.ts`), not a drawing.
+- **Why.** First run was an empty prompt; every rung, the hotkey and agent tracking were
+  found by reading docs or digging through Settings. The design went through three
+  turns (Claude Design "scuttlarr first-launch setup"): settings-shaped screens read as
+  settings, not onboarding; one question per screen with the result shown above it did.
+- **Alternatives.** A separate onboarding window, as Raycast does (rejected: the ticket
+  keeps it in the panel, and a second window is weight). Detect first run with a new
+  event from `lib.rs` (rejected: the webview may not be listening yet at first show, and
+  a flag survives a quit mid-setup). Derive "fresh" from `defaultsVersion` (rejected:
+  after first launch a fresh install and a migrated upgrader both read 2).
+
+### 2026-10-01 · A keep-awake hold lasts until it ends — no age cap, across reboots; the login item relaunches a crash
+
+- **Decision.** Supersedes the resume rules of 2026-08-19. `resume()` re-arms every
+  persisted hold except a deadline already past: `manual` no longer expires after 12 h,
+  and the `kern.boottime` stamp is gone, so a hold survives a reboot too. Only the user,
+  a deadline, a condition, or the battery floor ends one. `awake until <date>` joins the
+  grammar (`oct 16`, `16 oct 2026`, `2026-10-16`, optional `[at] 9am`; no time = the end
+  of that day), a deadline Rust already enforces. The login item's plist gains
+  `KeepAlive { SuccessfulExit = false }` after each registration (`login_item.rs`), so
+  launchd relaunches a crashed or killed app and its hold resumes; Quit exits 0 and
+  stays quit. Self-update and `scripts/dev-install.sh` relaunch through the launchd job
+  when it's loaded, so the new instance stays supervised.
+- **Why.** "Until I turn it off" meant "until about lunchtime tomorrow, or the next
+  crash": a two-week unattended Mac (Mitch travelling, reaching it over Screens) loses its
+  hold to any relaunch after 12 h, any crash, or any authrestart. The cap and the reboot
+  rule guarded against a forgotten hold; the bar cell already makes an armed hold
+  unmissable, and the battery floor protects an unplugged Mac.
+- **Alternatives.** A separate supervisor process (rejected: a second resident thing for
+  what launchd already does). An "indefinite" flag beside `manual` (rejected: manual
+  already says it). Leaving crash recovery to `pmset disablesleep` (complementary, not a
+  replacement: that's root, machine-wide, and outside the app).
+
+### 2026-10-01 · No emoji, anywhere we author
+
+- **Decision.** No emoji in anything scuttlarr authors: UI glyphs (app, bar, plugins,
+  site), docs, comments, commit messages, copy. Glyphs are lucide or `packages/tui`
+  icons with `ICON_PROPS` and theme colours. The emoji picker's results are the one
+  place emoji appear — they are the user's content, not ours. AGENTS.md invariant 14.
+- **Why.** An emoji is a full-colour picture the theme can't retint and the icon set
+  can't match; the lightbulb emoji the lights cell carried (allowed as an exception
+  2026-09-14) sat visibly apart from every other cell. That exception is withdrawn.
+- **Alternatives.** Per-cell exceptions (rejected: the one we made was the one that
+  looked wrong).
+
+### 2026-10-01 · awake switches macOS sleep off while it holds — via a two-command sudoers rule, not a helper (yet)
+
+- **Decision.** While a hold is armed, `sleep_override.rs` runs
+  `sudo -n /usr/bin/pmset -a disablesleep 1`, and `0` when it ends — on release, a rail,
+  an orderly quit, or a launch with nothing to resume. A crash keeps it (the gap before
+  launchd's relaunch is exactly what it covers). Ownership is a `sleep-override` marker
+  beside `awake.json`; sleep someone else disabled is never re-enabled by us. `sudo -n`
+  only succeeds under a passwordless rule, installed once by `scuttlarr sudoers on`
+  (`/etc/sudoers.d/scuttlarr`, 0444, this user, those two commands; manifest mode
+  `root`; `off` and `remove` sudo-delete it). Without the rule nothing prompts and the
+  hold runs on assertions alone; the panel says which. AGENTS.md invariant 1 names the
+  carve-out. The login item also gains `LANG` (from `AppleLocale`), since launchd
+  starts jobs without one.
+- **Why.** "Awake modes aren't useful if they don't take care of everything" (Mitch).
+  Assertions can't cover lid close on battery or the seconds after a crash with the lid
+  shut; `disablesleep` covers both and is root. A sudoers rule is the smallest root:
+  hours not days, works from ad-hoc dev builds, and the exact shape Amphetamine ships.
+- **Alternatives.** The slice E `SMAppService` helper (deferred, not rejected: replaces
+  the rule once releases are signed — needs signing, an XPC surface and days). A password
+  dialog per arm (rejected: invariant 13, and an unattended Mac can't type). Asking the
+  user to run `pmset` by hand (rejected: that's the gap this closes).
+
+### 2026-10-01 · Away mode is a checkbox on `awake`: BetterDisplay's iPad screen held as the display; `awake_arm` gains `away`
+
+- **Decision.** The awake panel's "What stays on" gains **Away mode — remote in from the
+  iPad**. Ticked, the hold also keeps a BetterDisplay virtual screen named `iPad` (4:3,
+  1366x1024 HiDPI on a 2732x2048 backing) connected as this Mac's display, re-checked
+  every 60 s by `away.rs` (create once, connect, pick the mode by name). Ending the hold
+  disconnects it when a real display is back to take over; an orderly quit or crash
+  leaves it for the resumed hold. `awake_arm` gains an optional `away: bool` (a
+  parameter on an existing command, not a new command); `AwakeState.away`,
+  `AwakeStatus.away: AwayReading { installed, screenReady, others }` mirrored in
+  `@scuttlarr/core`. The panel line (`awayNote`) says what Screens will show and the one
+  thing to do when it isn't only the iPad screen (unplug the external, close the lid).
+  Retires the dotfiles `remote-mode` script, its LaunchAgent and its `caffeinate`.
+- **Why.** Screens streams every framebuffer at its own size and can't resize the Mac;
+  with the Studio Display attached the iPad gets a letterboxed 5K desktop. One
+  iPad-shaped screen as the only display fixes it (proven over Screens, 2026-10-01). A
+  hold already owns "stay up while I'm away"; the display is the same intent, so it's one
+  checkbox, not a second tool with its own keep-awake.
+- **Alternatives.** Our own `CGVirtualDisplay` (rejected: private API; BetterDisplay owns
+  that hack and ships a CLI). A separate `remote` panel or command (rejected: two places
+  to arm one intent). Disconnecting the Studio Display in software (impossible:
+  BetterDisplay's `set -connected=off` fails for physical displays — unplug it).
+
+_Superseded by 2026-10-01 "Away mode's screen is 1600x1200 HiDPI" (the resolution only)._
+
+### 2026-10-01 · Away mode's screen is 1600x1200 HiDPI, not the iPad's 1366x1024
+
+- **Decision.** The iPad virtual screen is held at 1600x1200 points (3200x2400 backing),
+  still 4:3; Screens scales it to the iPad's 2752x2064 panel. The resolution list gains
+  1600x1200 and 2048x1536, and `away.rs` pushes the list onto a screen created before
+  either existed.
+- **Why.** 1366x1024 is the iPad's own scale: crisp, but a cramped Mac desktop. Tried live
+  over Screens: 1600x1200 "looked really good" (Mitch) — MacBook-sized workspace, still
+  sharp after the downscale.
+- **Alternatives.** A setting for the size (deferred: one size has been asked for; add it
+  when a second iPad or taste does). 2048x1536 (too dense to read at iPad distance).
+
+### 2026-09-30 · The usage cell shows pace, not percent
+
+- **Decision.** The bar's usage cell drops its percent and is coloured by **pace**: each
+  window's percent used against how far through the window "now" is (`windowPace` in
+  `packages/tui/src/components/usage.tsx`). `alert` (red) when used runs ≥ 15 points
+  ahead of elapsed or sits ≥ 90%; in a window's first 15% only a 40-point sprint (or
+  the 90% wall) alerts, since a burst right after a reset is ordinary. `go` (green, the
+  new `good` theme token = palette green) when used trails by ≥ 25 points; `normal`
+  otherwise. Worst judged window wins, per account and across accounts for the cell;
+  windows that can't be judged — unknown length, or a reset already past (a stale
+  reading) — sit out, so they can't hold the cell off green. The glyph fills whole once
+  data lands: its colour is the signal, and a part-fill would contradict it. The card
+  and panel draw a tick at "now" on every track; the card shows reset countdowns, no
+  percents; the panel keeps its percents as the detail view.
+- **Why.** 80% used an hour before reset is fine; 80% a day into the week is not. The
+  question the cell answers is "will I run out before it resets", not "how much is
+  spent". `LimitWindow.windowSecs` (usage.rs) carries the length that makes it
+  answerable — fixed for Claude's flat fields, read off `group`/`kind` for `limits[]`,
+  `limit_window_seconds` for Codex.
+- **Alternatives.** Projecting used/elapsed to a run-out ratio (rejected: explodes in the
+  first minutes of a window); keeping the 70/90 absolute tiers beside pace (rejected:
+  two colour systems on one cell disagree).
+
+### 2026-09-16 · The ranking corpus, naming roles, an enforced pure layer, off-means-off, no alerts, memory numbers
+
+- **Decision (ranking corpus).** `packages/core/src/corpus.json` is a dense index shaped
+  like the real payload — the apps of a working Mac with their derived keywords, every
+  settings pane, the system commands, links, panel triggers, scuttlarr's own rows — plus
+  cases pinning the row that must come first for a query, cold or warm. **A ranking
+  complaint is a new case first**; the scorer moves second and every earlier case is
+  re-checked at once. First run found five (JOURNAL).
+- **Decision (naming roles).** Every string an item can be found by has one of three
+  roles: the _name_ (shown, factor 1), a curated _alias_ (`preferences`, factor 0.9), or a
+  derived _keyword_ (bundle id tail, `CFBundleName`, executable — factor 0.8, and it only
+  counts contiguously at a word start). Ranking is keyed on role and match strength, never
+  on which field supplied the text. `IndexItem.keywords` is optional across IPC so plugins
+  and the site's demo index need nothing. Derivation lives once in `indexer::keywords_for`
+  and is mirrored by the corpus generator.
+- **Decision (pure layer, enforced).** Invariant 5 is now an ESLint failure: nothing in
+  `packages/core/src` may import Tauri, React, Node I/O or the kit, or touch `window`,
+  `fetch`, timers and friends. A lint rule is the cheapest mechanical guard TypeScript offers and
+  runs in `pnpm verify`.
+- **Decision (memory numbers).** `scripts/mem.sh` prints resident memory of the app and
+  its helpers; the definition of done asks for before/after idle numbers on any change that
+  adds a process, window, watcher or cache. First reading (JOURNAL) is over budget.
+- **Decision (invariants 12 and 13).** Off means off; no native alerts. Both were already
+  the practice; now they are written down so a future toggle that merely hides, or a
+  `display dialog` for a yes/no, is a reviewable violation.
+- **Alternatives.** Raycast extension compatibility (rejected: drags in Raycast's design
+  language and API surface, competes with our plugin protocol); window management in the
+  launcher (rejected: needs Accessibility, AeroSpace owns tiling); localised names and CJK
+  romanisation as keywords (deferred, no demand — the role model is ready for them).
+
+### 2026-09-16 · Reversal: scuttlarr updates itself, from `updates ⏎`
+
+- **Decision.** The `updates` plugin gains a `scuttlarr` source (`selfupdate.rs`). Every
+  6 h, on the same cadence as the package managers, the app reads GitHub's public
+  `releases/latest` — the feed `release.json` is cut from — and, when a newer stable
+  release exists, shows `scuttlarr 0.6.0 → 0.7.0`. `↵` on that row downloads the release
+  zip, checks its sha256 against the release's `SHA256SUMS`, expands it, verifies the
+  bundle's signature against the _running_ app's team (`codesign --verify --deep --strict
+-R 'anchor apple generic and certificate leaf[subject.OU] = "<team>"'`), refuses a
+  quarantined file rather than stripping the flag, swaps the bundle by two renames, and
+  relaunches with `open -g` after the same teardown quitting runs. Nothing is installed
+  unless every check passes; the running app survives any failure untouched, and a failure
+  is the run's exit line with `t` (`brew upgrade --cask scuttlarr`) as the tty route. A
+  dev or ad-hoc-signed build never offers it. `config.updates.checkSelf` (Settings →
+  General, default on) is the switch: off means no request is ever made. `all` upgrades
+  the package managers only; the app's own update relaunches and would cut a chain short.
+- **Why.** The 2026-08-10 "no in-app updater, ever" rested on the zero-network invariant,
+  retired 2026-09-04. What invariant 2 still bans is a request that exists to tell someone
+  about the user; this one carries the app's name and nothing else, and is on the user's
+  side of the line the way the favicon fetch is. `brew upgrade` stays the advertised
+  channel; this is for the person who never runs it (Mitch, 2026-09-16). Verification is stronger than an appcast signature: the download must be
+  code we signed, which the release pipeline already guarantees.
+- **Alternatives.** `tauri-plugin-updater` (rejected: a new crate, a minisign key pair to
+  mint and keep, a `latest.json` to generate, and it verifies less than `codesign` does);
+  a Sparkle-style appcast (rejected: a second release fact to author — invariant 9);
+  reading `scuttlarr.com/release.json` (rejected: the site deploys after the release commit
+  lands, so it can briefly name an asset that does not exist yet).
+- **Consequence for the tap.** The cask must declare `auto_updates true` so `brew outdated`
+  stops reporting a self-updated app as stale (RELEASING.md); until `Casks/scuttlarr.rb`
+  exists (plan step 1.5) there is nothing to change.
+
+### 2026-09-16 · Live terminal retint is OSC into every pty; the Ghostty reload is an opt-in
+
+- **Decision.** At `theme set`, the OSC colour payload goes into every `/dev/ttysNNN` the
+  user owns (owner = `$HOME`'s uid, no libc binding) plus tmux's pane ttys — not tmux
+  panes only. That is the baseline: every open shell, in Ghostty, Terminal.app or
+  anything else, changes on the spot with no permission, because writing to a tty you
+  own is ordinary Unix. On top, `appearance.ghostty` (off by default, "Also reload
+  Ghostty's config" in Settings) sends `tell application "Ghostty" to perform action
+"reload_config" on first terminal` so open Ghostty windows take the whole rendered
+  file, not just colours — one Automation consent, first time. It runs only when a
+  Ghostty process exists (`tell application` would launch one), and after the OSC, which
+  still covers whatever the reload cannot reach.
+- **Why.** The Omarchy moment is the terminal changing under you; on Linux that is
+  `SIGUSR2`, which on macOS kills Ghostty (JOURNAL 2026-09-11). Gating the headline on an
+  Automation prompt would invert invariant 1, so the consent-free route is the default
+  and the prompt buys fidelity, not function.
+- **Alternatives.** AppleScript only (rejected: prompt-gated, Ghostty-only, Terminal.app
+  untouched); `SIGUSR2` (rejected: kills the process); Accessibility-driven menu clicks
+  (rejected: invariant 1). Terminal.app profile colours over its own dictionary:
+  deferred, the OSC already reaches its open windows.
+
 ### 2026-09-11 · Theme policy: pure TS resolves, Rust reports inputs, a manual pick sticks, `system` mode owns light/dark
 
 - **Decision.** _Which_ theme is active is a policy layered on top of the theme rung,
@@ -112,6 +623,65 @@
   rejected on product grounds above. (c) Rename last — rejected: every migration,
   decision, and file written in between would carry the wrong name.
 
+### 2026-09-10 · Updates: upgrades run in the panel; the terminal is the fallback
+
+- **Decision.** `↵`/`a` in `updates ⏎` run the source's upgrade command inside the app
+  (`updates::upgrade`: `/bin/sh -c`, the checks' environment, stdin closed, output tail on the
+  report, `x` cancels). `t` keeps the terminal hand-off. npm is dropped as a source.
+- **Why.** The terminal hand-off failed invisibly twice over (bare PATH, wrong tmux session)
+  and even when it works the user has to go find the window. A run the panel can watch is
+  the honest UI. stdin closed means anything needing a tty (a sudo'ing cask) fails fast with
+  a visible exit line and the `t` hint rather than hanging a background process. Not a PTY:
+  interactive prompts are the terminal's job, and the weight budget says no to a second
+  terminal emulator.
+- **Alternatives.** Fix only the hand-off (done too — bang mode needed it); a PTY in the
+  panel (rejected, above).
+
+_Superseded by 2026-10-31 "Updates upgrade in the app, per package or in bulk, through a queue"._
+
+### 2026-09-10 · Bluetooth usage string in the bundle, for plugins — still zero granted permissions
+
+- **Decision.** `apps/desktop/src-tauri/Info.plist` carries `NSBluetoothAlwaysUsageDescription`.
+  launcharr's own code never opens CoreBluetooth; the string exists so a plugin's service
+  (a Bun child of launcharr.app, which macOS holds responsible) can. First user: the
+  `amaran` plugin in `~/.config/launcharr/plugins/`, a Swift GATT bridge + a TypeScript
+  Bluetooth Mesh stack driving a studio light with no vendor app.
+- **Why.** TCC attributes a child process to the responsible app and, when that app's
+  Info.plist lacks the usage string, kills the child outright — no prompt, no `.unauthorized`
+  state, only a DiagnosticReports entry (proven 2026-09-10, `ble-helper-*.ips`). Invariant 1
+  holds: nothing prompts until a plugin actually opens the radio, and the prompt names it.
+  Same shape as the loupe's Screen Recording opt-in.
+- **Alternatives.** A Rust Bluetooth command (product opinion for one plugin in core —
+  rejected, invariant 3); the plugin bundling its own `.app` for the helper (a second
+  responsible process to sign, notarise, and explain — rejected).
+
+### 2026-09-10 · Plugins declare permissions; launcharr asks first, blocks on denial, never dies silently
+
+- **Decision.** `manifest.permissions` names the privacy classes a service touches
+  (`bluetooth`, `camera`, `microphone`, `location`, `contacts`, `calendars`, `reminders`,
+  `photos`, `local-network`). `src-tauri/Info.plist` ships a usage string for every one of
+  them. `permissions.rs` (raw `msg_send!` in one place, one framework per class) reads the
+  bundle's own plist and TCC, **requests** at service start whatever macOS has not decided,
+  and the supervisor treats a denied class — or a bundle missing the string — like an unset
+  required setting: the service does not run, the cell dims, Settings → Plugins shows
+  "uses: Bluetooth · denied" with a button (`plugin_permission_fix`: ask, or open the
+  Privacy pane). A service the OS kills by signal reports `service killed (SIGABRT) — see
+DiagnosticReports` and waits the full backoff instead of thrashing. One new command.
+- **Why.** The first hardware plugin was killed on start with nothing but a crash file to
+  explain it (JOURNAL 2026-09-10). Plugins will want all kinds of permissions; the app
+  must recover gracefully rather than fail per class (Mitch, 2026-09-10). A usage string
+  can only live in the bundle at build time, so "recover" means: the bundle is never the
+  reason, the ask happens at a predictable moment in launcharr's name, and a denial is a
+  visible state with a fix — not a restart loop. Invariant 1 holds: strings prompt nothing
+  until code uses the API, and only a plugin the user installed does.
+- **Alternatives.** Prompt lazily on first use (rejected: the prompt lands mid-service
+  with a helper half-started, and a denial looks like a crash); ship only the strings
+  plugins currently need (rejected: every new class would need a release before a plugin
+  could exist); a Rust command per device class (rejected, invariant 3 — the helper
+  pattern keeps hardware out of core).
+
+_History: written when launcharr (the app) and scuttlarr (the distro) were two repos; one product named scuttlarr since 2026-09-11, and `@launcharr/tui` is an alias for `@scuttlarr/tui`._
+
 ### 2026-09-04 · Ghostty is the default terminal, reached through its multiplexer (herdr/tmux), never AppleScript
 
 - **Decision.** `Terminal::Ghostty` (`"Ghostty"` on the wire) is a new bang-mode/agent-jump
@@ -170,6 +740,8 @@ launcharr`; scuttlarr's theme/update/doctor skip files carrying that prefix, and
   build here; the contract is now written down on both sides
   (scuttlarr `docs/ARCHITECTURE.md`, DECISIONS 2026-08-28).
 
+_Superseded by 2026-09-11 "launcharr and scuttlarr fold into one product" — one owner, the app's `desktop.rs`._
+
 ### 2026-08-28 · The Claude hook adapter lives at a stable path launcharr installs — never a checkout
 
 - **Decision.** `hooks/claude-status.py` is compiled into the app (`include_str!`) and
@@ -191,6 +763,8 @@ launcharr`; scuttlarr's theme/update/doctor skip files carrying that prefix, and
   someone's Claude settings is a consent the settings button gives. Plan:
   `plans/done/hooks-owned-by-launcharr.md`.
 
+_History: written when launcharr (the app) and scuttlarr (the distro) were two repos; one product named scuttlarr since 2026-09-11, and `@launcharr/tui` is an alias for `@scuttlarr/tui`._
+
 ### 2026-08-28 · Mirrored journals are a directory convention, pulled by a plugin
 
 - **Decision.** The usage monitor also scans
@@ -209,6 +783,8 @@ launcharr`; scuttlarr's theme/update/doctor skip files carrying that prefix, and
   pushing from the remote instead of pulling; Claude journals from a machine on a
   different subscription (they would land in the wrong account — label them, or don't
   mirror Claude from it).
+
+_History: written when launcharr (the app) and scuttlarr (the distro) were two repos; one product named scuttlarr since 2026-09-11, and `@launcharr/tui` is an alias for `@scuttlarr/tui`._
 
 ### 2026-08-27 · Plugin host API: four calls, blob-loaded modules, native providers for bundled plugins
 
@@ -240,6 +816,8 @@ useState = m.useState…`) as a blob: URL, rewrites the plugin's shared specifie
 - **Deviation from the plan.** Slice D said "service.ts (moved out of usage.rs)". Not
   done — see above; recorded in the plan.
 
+_History: written when launcharr (the app) and scuttlarr (the distro) were two repos; one product named scuttlarr since 2026-09-11, and `@launcharr/tui` is an alias for `@scuttlarr/tui`._
+
 ### 2026-08-27 · Plugins are code: cells and panels as React on `@launcharr/tui`, service in Bun
 
 - **Decision.** "Widgets are data, never code" (2026-08-19) is **superseded**. A plugin is
@@ -265,6 +843,8 @@ useState = m.useState…`) as a blob: URL, rewrites the plugin's shared specifie
 - **Rejected.** A richer declarative layout JSON (a worse React with a schema we own
   forever); a second component system; per-cell iframes (cells must be cheap; revisit on a
   real need).
+
+_History: written when launcharr (the app) and scuttlarr (the distro) were two repos; one product named scuttlarr since 2026-09-11, and `@launcharr/tui` is an alias for `@scuttlarr/tui`._
 
 ### 2026-08-27 · Omarchy plugins on macOS: rejected (a Quickshell backend, not a proxy)
 
@@ -336,6 +916,8 @@ useState = m.useState…`) as a blob: URL, rewrites the plugin's shared specifie
   all-tmux case. Trusting an empty layout after N consecutive empties: more machinery, same
   answer, and the honest reading of zero panes on a running server is "the read is broken".
 
+_Superseded by 2026-10-28 "Agent states are read by shape; liveness outranks silence" (refines, does not reverse)._
+
 ### 2026-08-25 · scuttlarr is the distro; launcharr is the runtime — the contract, and what it costs us
 
 - **Decision.** The "anything distro-shaped" non-goal gets a name: it's
@@ -360,6 +942,8 @@ useState = m.useState…`) as a blob: URL, rewrites the plugin's shared specifie
   is that user. The theme tokens become a contract (documented in `packages/tui` `./themes`).
 
 ---
+
+_Superseded by 2026-09-11 "launcharr and scuttlarr fold into one product"._
 
 ### 2026-08-20 · Widgets piggyback CLI credentials first, and say so: `requires` + `setup`
 
@@ -412,6 +996,8 @@ required?}]` and `auth: {label}`. launcharr renders the fields in Settings → M
   to judge on use; not a commitment to the final shape.
 - **Not decided.** Cross-widget shared secrets (namespaced per widget for now), a
   launcharr-hosted OAuth app, refresh tokens (the widget re-auths), non-secret auth results.
+
+_History: written when launcharr (the app) and scuttlarr (the distro) were two repos; one product named scuttlarr since 2026-09-11, and `@launcharr/tui` is an alias for `@scuttlarr/tui`._
 
 ### 2026-08-19 · Bar colours are theme tokens only; "fine" is fg, `warn` joins the theme
 
@@ -487,6 +1073,8 @@ oven-sh/bun/bun`; a script is skipped with a log line. Any executable in any lan
   `lucide-react/dynamic` — ~1,700 tiny chunks in the bundle, only the used ones load;
   custom SVG icons wait for a real need.
 
+_Superseded by 2026-08-27 "Plugins are code" — a widget is now the single-file form of a plugin (WIDGETS.md)._
+
 ### 2026-08-19 · The strip is glyph-only: information lives in the hover, not the bar
 
 - **Decision.** Bar cells carry a glyph and a colour, nothing else, unless a value is an
@@ -519,6 +1107,8 @@ oven-sh/bun/bun`; a script is skipped with a log line. Any executable in any lan
   Persisting at quit would miss exactly the paths that lose it (kill, crash, reinstall over
   the running app). Proved the same day: an "until agents idle" hold armed 13:06 resumed
   13:11 across a relaunch.
+
+_Superseded by 2026-10-01 "A keep-awake hold lasts until it ends — no age cap"._
 
 ### 2026-08-18 · herdr is a second agent _store_, not a second hook source; the monitor goes multiplexer-agnostic
 
@@ -580,6 +1170,8 @@ oven-sh/bun/bun`; a script is skipped with a log line. Any executable in any lan
   thinks for a long time; with a pid we can know instead of guess, so the short window is
   the last resort, not the first.
 
+_Superseded by 2026-08-26 "Liveness comes from the process", then 2026-10-28 "Agent states are read by shape; liveness outranks silence"._
+
 ### 2026-08-17 · The launcharr loupe (2×, Screen Recording opt-in) fronts the color picker; the system sampler stays as fallback
 
 - **Decision.** Same-day feedback: Apple's sampler zooms too hard to aim ("decrease
@@ -598,6 +1190,8 @@ Access` once and Apple's `NSColorSampler` handles that pick, so nothing is lost 
   drawing it in the webview keeps the opinion (zoom, ring, label) in TypeScript and Rust to
   byte-moving. The window is created once and hidden after (destroying nspanel-converted
   windows aborts, JOURNAL 2026-08-16), so idle memory only grows after the first pick.
+
+_History: written when launcharr (the app) and scuttlarr (the distro) were two repos; one product named scuttlarr since 2026-09-11, and `@launcharr/tui` is an alias for `@scuttlarr/tui`._
 
 ### 2026-08-17 · Unfocused JankyBorders ring: a solid mid tone (border→fg 57%), not translucent dim
 
@@ -671,6 +1265,8 @@ Access` once and Apple's `NSColorSampler` handles that pick, so nothing is lost 
 - **Why.** Notion "Agent Mode Feedback". Images in answers were **declined**: rendering
   remote images means the desktop app fetching over the network (invariant 2), and the
   caged CLI has no fetch tools anyway — needs an invariant discussion, not a ticket.
+
+_History: written when launcharr (the app) and scuttlarr (the distro) were two repos; one product named scuttlarr since 2026-09-11, and `@launcharr/tui` is an alias for `@scuttlarr/tui`._
 
 ### 2026-08-17 · Settings: Agents split into sub-tabs; Shortcuts tab removed; About fleshed out
 
@@ -922,6 +1518,8 @@ Access` once and Apple's `NSColorSampler` handles that pick, so nothing is lost 
   is a typecheck failure in `pnpm verify`, which is exactly the signal a drifted hand-copy
   never gave us.
 
+_History: written when launcharr (the app) and scuttlarr (the distro) were two repos; one product named scuttlarr since 2026-09-11, and `@launcharr/tui` is an alias for `@scuttlarr/tui`._
+
 ### 2026-08-16 · Bar layout becomes explicit zones (left / center / right)
 
 - **Decision.** The clock-anchored flat module list (same day, below) lasted hours:
@@ -1065,6 +1663,8 @@ macOS consent prompt)`, Codex `off | authFile (~/.codex/auth.json)`. **launcharr
   local-only means the panel works offline and adds zero attack surface. Providers are
   data-driven; more can join without new architecture.
 
+_Superseded by 2026-08-16 "Account limits join the usage monitor: opt-in HTTPS" (same day; journals stay the default)._
+
 ### 2026-08-16 · Agent monitoring absorbed: launcharr owns the agent-status socket
 
 - **Decision.** launcharr replaces `sketchybar-agent-status` (Go daemon + sketchybar
@@ -1082,6 +1682,8 @@ macOS consent prompt)`, Codex `off | authFile (~/.codex/auth.json)`. **launcharr
   last holdout, and its socket→state→push shape is exactly the bar's architecture. Keeping
   the wire protocol means any future adapter (Codex etc., B4) is just another emitter.
   The socket is local IPC, not network — invariant 2 holds.
+
+_History: written when launcharr (the app) and scuttlarr (the distro) were two repos; one product named scuttlarr since 2026-09-11, and `@launcharr/tui` is an alias for `@scuttlarr/tui`._
 
 ### 2026-08-16 · Panel framework: trigger words open TUI panels; four wifi commands
 
@@ -1113,6 +1715,8 @@ macOS consent prompt)`, Codex `off | authFile (~/.codex/auth.json)`. **launcharr
   user provisioned a credential for exactly this purpose — that provisioning is the
   consent. Vercel/GitHub/uptime modules (deliberately saved for later) will follow the
   same shape: credentialed, cadenced, fail-visible.
+
+_Superseded by 2026-09-04 "Zero-network retired"; the TRMNL cell itself became a widget 2026-08-19._
 
 ### 2026-08-15 · v0.5 direction: launcharr grows a menubar replacement — own bar, wrapped Aerospace, TUI kit
 
@@ -1149,6 +1753,8 @@ macOS consent prompt)`, Codex `off | authFile (~/.codex/auth.json)`. **launcharr
   will be renegotiated per-module when a module demands it (wifi SSID → Location Services,
   calendar → EventKit), as visible opt-ins — recorded then, not now.
 
+_Superseded by 2026-09-11 "launcharr and scuttlarr fold into one product" for the "not a distro" line; the bar, panels and wrapped desktop stand (shipped as v0.4)._
+
 ### 2026-08-12 · One shared Homebrew tap for all projects — homebrew-launcharr retired
 
 - **Decision.** launcharr's cask moves into `mitchmalone/homebrew-tap` (beside beeptui's
@@ -1157,6 +1763,8 @@ macOS consent prompt)`, Codex `off | authFile (~/.codex/auth.json)`. **launcharr
   one satellite repo and one push credential (`HOMEBREW_TAP_TOKEN`, shared value, stored
   per app repo); per-project taps were an accident of history. Historical docs/release
   notes keep the old command — they record what was true at the time.
+
+_History: written when launcharr (the app) and scuttlarr (the distro) were two repos; one product named scuttlarr since 2026-09-11, and `@launcharr/tui` is an alias for `@scuttlarr/tui`._
 
 ### 2026-08-11 · One monorepo per product (jig reconciliation) — supersedes the two-repo layout
 
@@ -1202,6 +1810,8 @@ macOS consent prompt)`, Codex `off | authFile (~/.codex/auth.json)`. **launcharr
   install + only update channel), build from source. No curl|sh installer — CLI idiom,
   second script to trust, brew already serves that crowd.
 
+_Superseded by 2026-08-11 "One monorepo per product" (the layout half; the release-is-a-script half stands)._
+
 ### 2026-08-10 · Release channel: sign with the personal Developer ID now; Homebrew tap is the installer and the updater
 
 - **Decision (signing).** Releases are signed + notarized with Mitch's existing paid
@@ -1220,6 +1830,8 @@ macOS consent prompt)`, Codex `off | authFile (~/.codex/auth.json)`. **launcharr
   users to strip quarantine (`xattr`/`--no-quarantine`).
 - **Changelog.** Human-written release notes in the GitHub Release body ("what this
   version is"), `git log` as appendix. No CHANGELOG.md file until someone asks.
+
+_Superseded by 2026-09-16 "Reversal: scuttlarr updates itself" (the no-in-app-updater half; signing and the tap stand)._
 
 ### 2026-08-10 · Reversal: home stays ~/.config/launcharr (XDG)
 
@@ -1251,6 +1863,8 @@ macOS consent prompt)`, Codex `off | authFile (~/.codex/auth.json)`. **launcharr
 - **Why.** Mitch wants config at `~/.launcharr` and settings as the single gateway (tray
   stays lean); themes were the natural next step after the brand-color pass, and doing them
   as config-resident JSON keeps the hackable value — your theme is a text edit, not a plugin.
+
+_Superseded by 2026-08-10 "Reversal: home stays ~/.config/launcharr (XDG)"._
 
 ### 2026-08-10 · Settings goes native-structured: autosave, toolbar tabs, hidden titlebar, hotkey recorder
 
@@ -1285,6 +1899,8 @@ macOS consent prompt)`, Codex `off | authFile (~/.codex/auth.json)`. **launcharr
   scanner, cached as `link-<hash>.png` beside app icons. Browser choice stored per link
   (`open -a`).
 
+_Superseded by 2026-09-04 "Zero-network retired" (carve-outs are no longer needed; the favicon fetch stays)._
+
 ### 2026-08-09 · launcharr gets a menubar icon (accessory policy stays)
 
 - **Decision.** A single NSStatusItem with a template pirate-flag icon (⌘ cut-out) and a
@@ -1296,6 +1912,8 @@ macOS consent prompt)`, Codex `off | authFile (~/.codex/auth.json)`. **launcharr
   can't reach — the panel stays the product.
 - **Mechanics.** Icon generated from `design/menubar-icon-source.png` by
   `cargo run --example make_tray_icon` (threshold → crop → 44×44 template PNG).
+
+_History: written when launcharr (the app) and scuttlarr (the distro) were two repos; one product named scuttlarr since 2026-09-11, and `@launcharr/tui` is an alias for `@scuttlarr/tui`._
 
 ### 2026-08-08 · v1.1: scripts-first Sol parity; invariants hold; three features deferred
 
@@ -1351,565 +1969,3 @@ macOS consent prompt)`, Codex `off | authFile (~/.codex/auth.json)`. **launcharr
   deep-link IDs for the current macOS version. (PRD §5.1, risk R4.)
 - **Why.** Programmatic enumeration of panes is unreliable and the IDs are undocumented. A
   broken pane link is low-severity; a curated table is greppable and fixable in one line.
-
-### 2026-09-10 · Updates: upgrades run in the panel; the terminal is the fallback
-
-- **Decision.** `↵`/`a` in `updates ⏎` run the source's upgrade command inside the app
-  (`updates::upgrade`: `/bin/sh -c`, the checks' environment, stdin closed, output tail on the
-  report, `x` cancels). `t` keeps the terminal hand-off. npm is dropped as a source.
-- **Why.** The terminal hand-off failed invisibly twice over (bare PATH, wrong tmux session)
-  and even when it works the user has to go find the window. A run the panel can watch is
-  the honest UI. stdin closed means anything needing a tty (a sudo'ing cask) fails fast with
-  a visible exit line and the `t` hint rather than hanging a background process. Not a PTY:
-  interactive prompts are the terminal's job, and the weight budget says no to a second
-  terminal emulator.
-- **Alternatives.** Fix only the hand-off (done too — bang mode needed it); a PTY in the
-  panel (rejected, above).
-
-### 2026-09-10 · Bluetooth usage string in the bundle, for plugins — still zero granted permissions
-
-- **Decision.** `apps/desktop/src-tauri/Info.plist` carries `NSBluetoothAlwaysUsageDescription`.
-  launcharr's own code never opens CoreBluetooth; the string exists so a plugin's service
-  (a Bun child of launcharr.app, which macOS holds responsible) can. First user: the
-  `amaran` plugin in `~/.config/launcharr/plugins/`, a Swift GATT bridge + a TypeScript
-  Bluetooth Mesh stack driving a studio light with no vendor app.
-- **Why.** TCC attributes a child process to the responsible app and, when that app's
-  Info.plist lacks the usage string, kills the child outright — no prompt, no `.unauthorized`
-  state, only a DiagnosticReports entry (proven 2026-09-10, `ble-helper-*.ips`). Invariant 1
-  holds: nothing prompts until a plugin actually opens the radio, and the prompt names it.
-  Same shape as the loupe's Screen Recording opt-in.
-- **Alternatives.** A Rust Bluetooth command (product opinion for one plugin in core —
-  rejected, invariant 3); the plugin bundling its own `.app` for the helper (a second
-  responsible process to sign, notarise, and explain — rejected).
-
-### 2026-09-10 · Plugins declare permissions; launcharr asks first, blocks on denial, never dies silently
-
-- **Decision.** `manifest.permissions` names the privacy classes a service touches
-  (`bluetooth`, `camera`, `microphone`, `location`, `contacts`, `calendars`, `reminders`,
-  `photos`, `local-network`). `src-tauri/Info.plist` ships a usage string for every one of
-  them. `permissions.rs` (raw `msg_send!` in one place, one framework per class) reads the
-  bundle's own plist and TCC, **requests** at service start whatever macOS has not decided,
-  and the supervisor treats a denied class — or a bundle missing the string — like an unset
-  required setting: the service does not run, the cell dims, Settings → Plugins shows
-  "uses: Bluetooth · denied" with a button (`plugin_permission_fix`: ask, or open the
-  Privacy pane). A service the OS kills by signal reports `service killed (SIGABRT) — see
-DiagnosticReports` and waits the full backoff instead of thrashing. One new command.
-- **Why.** The first hardware plugin was killed on start with nothing but a crash file to
-  explain it (JOURNAL 2026-09-10). Plugins will want all kinds of permissions; the app
-  must recover gracefully rather than fail per class (Mitch, 2026-09-10). A usage string
-  can only live in the bundle at build time, so "recover" means: the bundle is never the
-  reason, the ask happens at a predictable moment in launcharr's name, and a denial is a
-  visible state with a fix — not a restart loop. Invariant 1 holds: strings prompt nothing
-  until code uses the API, and only a plugin the user installed does.
-- **Alternatives.** Prompt lazily on first use (rejected: the prompt lands mid-service
-  with a helper half-started, and a denial looks like a crash); ship only the strings
-  plugins currently need (rejected: every new class would need a release before a plugin
-  could exist); a Rust command per device class (rejected, invariant 3 — the helper
-  pattern keeps hardware out of core).
-
-### 2026-09-16 · The ranking corpus, naming roles, an enforced pure layer, off-means-off, no alerts, memory numbers
-
-- **Decision (ranking corpus).** `packages/core/src/corpus.json` is a dense index shaped
-  like the real payload — the apps of a working Mac with their derived keywords, every
-  settings pane, the system commands, links, panel triggers, scuttlarr's own rows — plus
-  cases pinning the row that must come first for a query, cold or warm. **A ranking
-  complaint is a new case first**; the scorer moves second and every earlier case is
-  re-checked at once. First run found five (JOURNAL).
-- **Decision (naming roles).** Every string an item can be found by has one of three
-  roles: the _name_ (shown, factor 1), a curated _alias_ (`preferences`, factor 0.9), or a
-  derived _keyword_ (bundle id tail, `CFBundleName`, executable — factor 0.8, and it only
-  counts contiguously at a word start). Ranking is keyed on role and match strength, never
-  on which field supplied the text. `IndexItem.keywords` is optional across IPC so plugins
-  and the site's demo index need nothing. Derivation lives once in `indexer::keywords_for`
-  and is mirrored by the corpus generator.
-- **Decision (pure layer, enforced).** Invariant 5 is now an ESLint failure: nothing in
-  `packages/core/src` may import Tauri, React, Node I/O or the kit, or touch `window`,
-  `fetch`, timers and friends. A lint rule is the cheapest mechanical guard TypeScript offers and
-  runs in `pnpm verify`.
-- **Decision (memory numbers).** `scripts/mem.sh` prints resident memory of the app and
-  its helpers; the definition of done asks for before/after idle numbers on any change that
-  adds a process, window, watcher or cache. First reading (JOURNAL) is over budget.
-- **Decision (invariants 12 and 13).** Off means off; no native alerts. Both were already
-  the practice; now they are written down so a future toggle that merely hides, or a
-  `display dialog` for a yes/no, is a reviewable violation.
-- **Alternatives.** Raycast extension compatibility (rejected: drags in Raycast's design
-  language and API surface, competes with our plugin protocol); window management in the
-  launcher (rejected: needs Accessibility, AeroSpace owns tiling); localised names and CJK
-  romanisation as keywords (deferred, no demand — the role model is ready for them).
-
-### 2026-09-16 · Reversal: scuttlarr updates itself, from `updates ⏎`
-
-- **Decision.** The `updates` plugin gains a `scuttlarr` source (`selfupdate.rs`). Every
-  6 h, on the same cadence as the package managers, the app reads GitHub's public
-  `releases/latest` — the feed `release.json` is cut from — and, when a newer stable
-  release exists, shows `scuttlarr 0.6.0 → 0.7.0`. `↵` on that row downloads the release
-  zip, checks its sha256 against the release's `SHA256SUMS`, expands it, verifies the
-  bundle's signature against the _running_ app's team (`codesign --verify --deep --strict
--R 'anchor apple generic and certificate leaf[subject.OU] = "<team>"'`), refuses a
-  quarantined file rather than stripping the flag, swaps the bundle by two renames, and
-  relaunches with `open -g` after the same teardown quitting runs. Nothing is installed
-  unless every check passes; the running app survives any failure untouched, and a failure
-  is the run's exit line with `t` (`brew upgrade --cask scuttlarr`) as the tty route. A
-  dev or ad-hoc-signed build never offers it. `config.updates.checkSelf` (Settings →
-  General, default on) is the switch: off means no request is ever made. `all` upgrades
-  the package managers only; the app's own update relaunches and would cut a chain short.
-- **Why.** The 2026-08-10 "no in-app updater, ever" rested on the zero-network invariant,
-  retired 2026-09-04. What invariant 2 still bans is a request that exists to tell someone
-  about the user; this one carries the app's name and nothing else, and is on the user's
-  side of the line the way the favicon fetch is. `brew upgrade` stays the advertised
-  channel; this is for the person who never runs it (Mitch, 2026-09-16). Verification is stronger than an appcast signature: the download must be
-  code we signed, which the release pipeline already guarantees.
-- **Alternatives.** `tauri-plugin-updater` (rejected: a new crate, a minisign key pair to
-  mint and keep, a `latest.json` to generate, and it verifies less than `codesign` does);
-  a Sparkle-style appcast (rejected: a second release fact to author — invariant 9);
-  reading `scuttlarr.com/release.json` (rejected: the site deploys after the release commit
-  lands, so it can briefly name an asset that does not exist yet).
-- **Consequence for the tap.** The cask must declare `auto_updates true` so `brew outdated`
-  stops reporting a self-updated app as stale (RELEASING.md); until `Casks/scuttlarr.rb`
-  exists (plan step 1.5) there is nothing to change.
-
-### 2026-09-16 · Live terminal retint is OSC into every pty; the Ghostty reload is an opt-in
-
-- **Decision.** At `theme set`, the OSC colour payload goes into every `/dev/ttysNNN` the
-  user owns (owner = `$HOME`'s uid, no libc binding) plus tmux's pane ttys — not tmux
-  panes only. That is the baseline: every open shell, in Ghostty, Terminal.app or
-  anything else, changes on the spot with no permission, because writing to a tty you
-  own is ordinary Unix. On top, `appearance.ghostty` (off by default, "Also reload
-  Ghostty's config" in Settings) sends `tell application "Ghostty" to perform action
-"reload_config" on first terminal` so open Ghostty windows take the whole rendered
-  file, not just colours — one Automation consent, first time. It runs only when a
-  Ghostty process exists (`tell application` would launch one), and after the OSC, which
-  still covers whatever the reload cannot reach.
-- **Why.** The Omarchy moment is the terminal changing under you; on Linux that is
-  `SIGUSR2`, which on macOS kills Ghostty (JOURNAL 2026-09-11). Gating the headline on an
-  Automation prompt would invert invariant 1, so the consent-free route is the default
-  and the prompt buys fidelity, not function.
-- **Alternatives.** AppleScript only (rejected: prompt-gated, Ghostty-only, Terminal.app
-  untouched); `SIGUSR2` (rejected: kills the process); Accessibility-driven menu clicks
-  (rejected: invariant 1). Terminal.app profile colours over its own dictionary:
-  deferred, the OSC already reaches its open windows.
-
-### 2026-09-30 · The usage cell shows pace, not percent
-
-- **Decision.** The bar's usage cell drops its percent and is coloured by **pace**: each
-  window's percent used against how far through the window "now" is (`windowPace` in
-  `packages/tui/src/components/usage.tsx`). `alert` (red) when used runs ≥ 15 points
-  ahead of elapsed or sits ≥ 90%; in a window's first 15% only a 40-point sprint (or
-  the 90% wall) alerts, since a burst right after a reset is ordinary. `go` (green, the
-  new `good` theme token = palette green) when used trails by ≥ 25 points; `normal`
-  otherwise. Worst judged window wins, per account and across accounts for the cell;
-  windows that can't be judged — unknown length, or a reset already past (a stale
-  reading) — sit out, so they can't hold the cell off green. The glyph fills whole once
-  data lands: its colour is the signal, and a part-fill would contradict it. The card
-  and panel draw a tick at "now" on every track; the card shows reset countdowns, no
-  percents; the panel keeps its percents as the detail view.
-- **Why.** 80% used an hour before reset is fine; 80% a day into the week is not. The
-  question the cell answers is "will I run out before it resets", not "how much is
-  spent". `LimitWindow.windowSecs` (usage.rs) carries the length that makes it
-  answerable — fixed for Claude's flat fields, read off `group`/`kind` for `limits[]`,
-  `limit_window_seconds` for Codex.
-- **Alternatives.** Projecting used/elapsed to a run-out ratio (rejected: explodes in the
-  first minutes of a window); keeping the 70/90 absolute tiers beside pace (rejected:
-  two colour systems on one cell disagree).
-
-### 2026-10-01 · A keep-awake hold lasts until it ends — no age cap, across reboots; the login item relaunches a crash
-
-- **Decision.** Supersedes the resume rules of 2026-08-19. `resume()` re-arms every
-  persisted hold except a deadline already past: `manual` no longer expires after 12 h,
-  and the `kern.boottime` stamp is gone, so a hold survives a reboot too. Only the user,
-  a deadline, a condition, or the battery floor ends one. `awake until <date>` joins the
-  grammar (`oct 16`, `16 oct 2026`, `2026-10-16`, optional `[at] 9am`; no time = the end
-  of that day), a deadline Rust already enforces. The login item's plist gains
-  `KeepAlive { SuccessfulExit = false }` after each registration (`login_item.rs`), so
-  launchd relaunches a crashed or killed app and its hold resumes; Quit exits 0 and
-  stays quit. Self-update and `scripts/dev-install.sh` relaunch through the launchd job
-  when it's loaded, so the new instance stays supervised.
-- **Why.** "Until I turn it off" meant "until about lunchtime tomorrow, or the next
-  crash": a two-week unattended Mac (Mitch travelling, reaching it over Screens) loses its
-  hold to any relaunch after 12 h, any crash, or any authrestart. The cap and the reboot
-  rule guarded against a forgotten hold; the bar cell already makes an armed hold
-  unmissable, and the battery floor protects an unplugged Mac.
-- **Alternatives.** A separate supervisor process (rejected: a second resident thing for
-  what launchd already does). An "indefinite" flag beside `manual` (rejected: manual
-  already says it). Leaving crash recovery to `pmset disablesleep` (complementary, not a
-  replacement: that's root, machine-wide, and outside the app).
-
-### 2026-10-01 · No emoji, anywhere we author
-
-- **Decision.** No emoji in anything scuttlarr authors: UI glyphs (app, bar, plugins,
-  site), docs, comments, commit messages, copy. Glyphs are lucide or `packages/tui`
-  icons with `ICON_PROPS` and theme colours. The emoji picker's results are the one
-  place emoji appear — they are the user's content, not ours. AGENTS.md invariant 14.
-- **Why.** An emoji is a full-colour picture the theme can't retint and the icon set
-  can't match; the lightbulb emoji the lights cell carried (allowed as an exception
-  2026-09-14) sat visibly apart from every other cell. That exception is withdrawn.
-- **Alternatives.** Per-cell exceptions (rejected: the one we made was the one that
-  looked wrong).
-
-### 2026-10-01 · awake switches macOS sleep off while it holds — via a two-command sudoers rule, not a helper (yet)
-
-- **Decision.** While a hold is armed, `sleep_override.rs` runs
-  `sudo -n /usr/bin/pmset -a disablesleep 1`, and `0` when it ends — on release, a rail,
-  an orderly quit, or a launch with nothing to resume. A crash keeps it (the gap before
-  launchd's relaunch is exactly what it covers). Ownership is a `sleep-override` marker
-  beside `awake.json`; sleep someone else disabled is never re-enabled by us. `sudo -n`
-  only succeeds under a passwordless rule, installed once by `scuttlarr sudoers on`
-  (`/etc/sudoers.d/scuttlarr`, 0444, this user, those two commands; manifest mode
-  `root`; `off` and `remove` sudo-delete it). Without the rule nothing prompts and the
-  hold runs on assertions alone; the panel says which. AGENTS.md invariant 1 names the
-  carve-out. The login item also gains `LANG` (from `AppleLocale`), since launchd
-  starts jobs without one.
-- **Why.** "Awake modes aren't useful if they don't take care of everything" (Mitch).
-  Assertions can't cover lid close on battery or the seconds after a crash with the lid
-  shut; `disablesleep` covers both and is root. A sudoers rule is the smallest root:
-  hours not days, works from ad-hoc dev builds, and the exact shape Amphetamine ships.
-- **Alternatives.** The slice E `SMAppService` helper (deferred, not rejected: replaces
-  the rule once releases are signed — needs signing, an XPC surface and days). A password
-  dialog per arm (rejected: invariant 13, and an unattended Mac can't type). Asking the
-  user to run `pmset` by hand (rejected: that's the gap this closes).
-
-### 2026-10-01 · Away mode is a checkbox on `awake`: BetterDisplay's iPad screen held as the display; `awake_arm` gains `away`
-
-- **Decision.** The awake panel's "What stays on" gains **Away mode — remote in from the
-  iPad**. Ticked, the hold also keeps a BetterDisplay virtual screen named `iPad` (4:3,
-  1366x1024 HiDPI on a 2732x2048 backing) connected as this Mac's display, re-checked
-  every 60 s by `away.rs` (create once, connect, pick the mode by name). Ending the hold
-  disconnects it when a real display is back to take over; an orderly quit or crash
-  leaves it for the resumed hold. `awake_arm` gains an optional `away: bool` (a
-  parameter on an existing command, not a new command); `AwakeState.away`,
-  `AwakeStatus.away: AwayReading { installed, screenReady, others }` mirrored in
-  `@scuttlarr/core`. The panel line (`awayNote`) says what Screens will show and the one
-  thing to do when it isn't only the iPad screen (unplug the external, close the lid).
-  Retires the dotfiles `remote-mode` script, its LaunchAgent and its `caffeinate`.
-- **Why.** Screens streams every framebuffer at its own size and can't resize the Mac;
-  with the Studio Display attached the iPad gets a letterboxed 5K desktop. One
-  iPad-shaped screen as the only display fixes it (proven over Screens, 2026-10-01). A
-  hold already owns "stay up while I'm away"; the display is the same intent, so it's one
-  checkbox, not a second tool with its own keep-awake.
-- **Alternatives.** Our own `CGVirtualDisplay` (rejected: private API; BetterDisplay owns
-  that hack and ships a CLI). A separate `remote` panel or command (rejected: two places
-  to arm one intent). Disconnecting the Studio Display in software (impossible:
-  BetterDisplay's `set -connected=off` fails for physical displays — unplug it).
-
-### 2026-10-01 · Away mode's screen is 1600x1200 HiDPI, not the iPad's 1366x1024
-
-- **Decision.** The iPad virtual screen is held at 1600x1200 points (3200x2400 backing),
-  still 4:3; Screens scales it to the iPad's 2752x2064 panel. The resolution list gains
-  1600x1200 and 2048x1536, and `away.rs` pushes the list onto a screen created before
-  either existed.
-- **Why.** 1366x1024 is the iPad's own scale: crisp, but a cramped Mac desktop. Tried live
-  over Screens: 1600x1200 "looked really good" (Mitch) — MacBook-sized workspace, still
-  sharp after the downscale.
-- **Alternatives.** A setting for the size (deferred: one size has been asked for; add it
-  when a second iPad or taste does). 2048x1536 (too dense to read at iPad distance).
-
-### 2026-10-19 · The gate checks the layering, purity and coverage it used to trust
-
-- **Decision.** `pnpm verify` (and so CI) gains `cargo fmt --check`, `verify:coverage`
-  (`@vitest/coverage-v8`, floors for `packages/core` and `packages/theme` at the measured
-  numbers rounded down), `verify:deps` (dependency-cruiser: core and theme are leaves, tui
-  → core/theme, plugins → core/tui/theme, packages never import apps, www and desktop
-  never import each other, no runtime cycles) and `verify:sh` (shellcheck on the bash
-  scripts). The core purity lint extends to the clock and randomness, and `packages/theme/src`
-  gets the same rules. CI builds `apps/www`. New devDependencies: dependency-cruiser,
-  coverage-v8 (dev only, nothing ships).
-- **Why.** A 2026-10-19 review found the rules held by convention only: rustfmt ran in a
-  pre-commit hook agent shells skip, the layer rules had one ESLint pattern, nothing
-  measured "the most-tested code", and invariant 7 was checked only by Vercel.
-- **Alternatives.** knip, fast-check, cargo-deny/machete, gitleaks in CI (deferred to a
-  later pass, not rejected). Type-only cycles count as cycles (rejected for now: two exist
-  and are erased at build; a runtime cycle still fails).
-
-### 2026-10-19 · Install gets the bar and the launcher: the bar defaults on, Desktop tiling off; upgraders keep theirs
-
-- **Decision.** `bar.enabled` defaults to `true` (config.rs) and
-  `desktop.tiling.enabled` to `false` (`DEFAULT_DESKTOP`, core). Desktop, Theme and
-  Machine are all opt-in. A fresh install writes no `aerospace.toml` and never probes for
-  AeroSpace (`applyDesktop` skips `desktop_status` while tiling is off, invariant 12).
-  `config.json` gains `defaultsVersion` (now 2). On load, a file without it is from
-  before this change: `migrate_defaults` writes the old effective values into it for
-  any key the user never set (`bar.enabled: false`, `desktop.tiling.enabled: true`),
-  stamps 2 and saves the file once, adding only those keys. Every other defaults-filled
-  key is unchanged. A Settings write that omits the key takes the current version, so it
-  can't re-trigger the pin.
-- **Why.** AGENTS.md, the PRD and the README all state the product as "install gets the
-  bar and the launcher; everything else is a rung", and the code said the opposite on
-  both counts (found by the docs-truth pass, same day). Defaults only fill missing keys,
-  so without the pin an upgrader with no explicit key would have silently gained a bar
-  and lost tiling.
-- **Cost.** The bar now runs on every install, so its webview counts against the 120 MB
-  idle ceiling everywhere (measurement in `plans/done/2026-10-19-defaults-flip.md`).
-- **Alternatives.** Flip without a migration (rejected: silent change on upgrade). Pin
-  by detecting "old defaults" without a version marker (rejected: a fresh file and an
-  old file both lack `desktop.tiling`, so a fresh install would be pinned to tiling on at
-  its second launch).
-
-### 2026-10-19 · Invariant 3 is "a deliberate IPC surface", not "a handful"
-
-- **Decision.** Invariant 3 now reads: every Tauri command is thin, typed and recorded
-  here when added; the count is a liability to justify; a command that could be an
-  event, a snapshot field or a plugin `host.send` message should be that.
-- **Why.** `generate_handler!` registers **82** commands (counted 2026-10-19). "A handful"
-  stopped being true around v0.4, and an invariant the code openly breaks teaches that
-  invariants are optional. The new wording keeps the intent — every command is a future
-  plugin-API liability — and makes it checkable.
-- **Alternatives.** Cut the surface back to a handful (rejected for now: most commands
-  are panel actions with no event-shaped equivalent; worth an audit pass, not a rule
-  change). Drop the invariant (rejected: the pressure toward events and snapshots is the
-  point).
-
-### 2026-10-19 · The site hero is a pixel field in the picked app theme
-
-- **Decision.** The landing hero is a full-height band: a dithered pixel field on a
-  canvas behind the headline, calm in the centre and busy at the edges, that answers the
-  keyboard. With the pointer over it, each key pulses along the prompt row and Enter
-  fires a ring; when nobody types, it types its own brand lines. Chosen as option 2c in
-  the Claude Design project ("Pixel Hero"), after a round where a centred pixel wordmark
-  read as too close to its reference. The long hero paragraph and the video slot move
-  below the band.
-- **Colour.** The band takes the active app theme, not the page palette: the field's six
-  steps are mixed from `bg`, `accent` and `fg`, and the band scopes `--bg`, `--fg`,
-  `--border`, `--accent` and `--dim2` to that theme so the copy and outline button follow
-  it. The demo's theme picker drives it through one shared store (`lib/app-theme.ts`).
-  Invariant 8 gains this as a second named exception, alongside the demo.
-- **Shape.** All drawing is pure (`lib/hero-field.ts`: time and randomness arrive as
-  parameters, tested); `components/hero-field.tsx` owns the canvas, clock and listeners.
-  About 33 fps, paused off-screen, one still frame under reduced motion. Keys are only
-  taken while the pointer is on the band and focus isn't in a field; no page shortcuts.
-- **Alternatives.** The centred pixel wordmark (1a, rejected as derivative); contours,
-  glyph and wave-sim fields (2a, 2b, 2d); a jolly roger cursor (3a, 3b, not taken).
-
-### 2026-10-20 · The site wears the picked app theme, whole
-
-- **Decision.** scuttlarr.com drops its light/system/dark switch (and `next-themes`). One
-  picker in the header lists all 14 app themes; the page, the hero field and the demo
-  all wear the chosen one. scuttlarr is the default; the choice is kept per browser in
-  `localStorage` and applied by an inline `<head>` script before first paint. The demo's
-  own dropdown stays and is the same store, so either retints both. Chosen as option 1a
-  in the Claude Design file "Theme Selector", with Mitch's changes: the closed chip shows
-  the palette and no name; the menu gives every theme its full name (title-cased slug, scuttlarr lowercase); with a mouse it opens on hover
-  and stays open while picking, by touch a tap opens and a pick or outside tap closes.
-- **Mapping.** `lib/page-theme.ts` derives every page token from the theme's tokens
-  (`--cta` is the theme accent, `--chip` its surface, `--panel` its glass, light or dark
-  from the ground; light themes' fg is darkened 30% for headline contrast). The boot
-  script carries the precomputed result, so the mapping exists once. `globals.css` no
-  longer holds a palette. Supersedes the hero's band-scoped tokens (2026-10-19).
-- **Alternatives.** A two-tone chip strip in the nav (1b, too wide for mobile); a
-  typeahead field (1c); keeping a light/dark switch beside the theme (rejected: the
-  theme already decides it, and two controls for one look is confusing).
-
-### 2026-10-19 · First-launch setup replaces the first-run hint and "no onboarding wizard"
-
-- **Decision.** A fresh install opens the launcher panel on a short setup (`setup` panel
-  tenant, `apps/desktop/src/onboarding/`): welcome, hotkey, bar, agents, theme, tiling,
-  a recap, then one Enter applies. It writes exactly the keys Settings writes
-  (`lib/onboarding.ts` `applySetup`: `hotkey`, `bar.enabled`, `agents.monitor`,
-  `agents.usage` + `agents.claudeCreds` only when usage limits are ticked, `pickTheme`,
-  `appearance.everywhere` + `editors`, `desktop.tiling.enabled`) and nothing before that
-  Enter. Esc skips a step (keeps its starting answer); Esc on the welcome or recap screen
-  puts setup off. It stays in the panel (640 x 500, no window, no dialog: invariant 13)
-  and survives hide/show so the hotkey step can be tried for real. `setup ⏎` runs it
-  again from the current config.
-- **How first run reaches the webview.** `config.json` gains `setupPending`. Only a
-  freshly created file says true (`load_or_create_at`); `Config::default()` says false,
-  so a missing key (every upgrader) and a broken hand-edit's in-memory fallback never
-  open it. The webview clears it on apply or put-off. No new Tauri command (invariant 3):
-  the flag rides the config the webview already reads, and the hotkey try is
-  `panel-hidden` then `panel-shown`.
-- **Consent.** Every rung stays opt-in; setup is the place you opt in. Watching agents
-  registers the Claude hook (`hooks_install`, as Settings → Agents does), because boot
-  only mends it when the monitor was already on. The Keychain read is its own checkbox,
-  off by default, and macOS asks later, on the first usage scan, never during setup.
-  Tiling never installs AeroSpace; setup says so when it's missing.
-- **The real bar.** The bar and agents screens render `barZoneNodes` over the Bar
-  stories' sample data (moved to `bar/fixtures.ts`), not a drawing.
-- **Why.** First run was an empty prompt; every rung, the hotkey and agent tracking were
-  found by reading docs or digging through Settings. The design went through three
-  turns (Claude Design "scuttlarr first-launch setup"): settings-shaped screens read as
-  settings, not onboarding; one question per screen with the result shown above it did.
-- **Alternatives.** A separate onboarding window, as Raycast does (rejected: the ticket
-  keeps it in the panel, and a second window is weight). Detect first run with a new
-  event from `lib.rs` (rejected: the webview may not be listening yet at first show, and
-  a flag survives a quit mid-setup). Derive "fresh" from `defaultsVersion` (rejected:
-  after first launch a fresh install and a migrated upgrader both read 2).
-
-### 2026-10-20 · Setup owns the panel theme while it is open; an unpicked theme follows config
-
-- **Decision.** While the `setup` tenant is open, App does not apply `config.theme` to
-  the panel; setup does, from `choices.theme`, which also colours the pixel field. Until
-  a theme is picked on the theme screen (`SetupChoices.themePicked`, set by
-  `chooseSetup`, cleared by Esc on that screen), `choices.theme` follows every
-  `config-changed` (`followConfig`), so a macOS appearance flip, a Focus, Settings or a
-  hand edit moves the field and the panel together. `applySetup` writes the theme only
-  when it was picked; otherwise the config's current theme stands and `pickTheme` never
-  runs. When setup closes, App takes the panel theme back.
-- **Why.** The field read the theme once on open while App re-applied the config theme
-  on every change, so the two split (cream plates on a navy field), and apply wrote the
-  stale opening theme over the policy's choice. A fresh install on a light-mode Mac hit
-  both unprompted. One owner per surface beats re-applying after App: React runs child
-  effects before the parent's, so "the preview re-applies after App" can't be ordered.
-- **Alternatives.** Pass App's config into the tenant as a prop (rejected: tenants take
-  only `onClose`, and setup already reads config itself); snapshot the theme and ignore
-  changes until apply (rejected: the field and panel would still disagree mid-setup).
-
-### 2026-10-28 · Agent states are read by shape; liveness outranks silence; the subagent indicator is retired
-
-- **Decision.** Each agent state has its own shape, drawn once in `packages/tui`
-  (`AgentStateIcon`, lucide geometry at `ICON_PROPS`) and imported by the bar cell, the
-  hover card, `agents ⏎` and the site's legend: working is a three-quarter ring that
-  spins, attention a ring with a still centre dot whose ring breathes, done · unread a
-  filled disc with a check, done · read a bare check, idle a moon, anything else a dotted
-  ring. The 2026-08-19 colour rule stands — fg is fine, accent is busy — with one change:
-  attention moves from `danger` to `warn`; a question is not a failure, and `danger` is
-  kept for an adapter reporting one. Only those two shapes move, and both stop under
-  Reduce Motion. The hover card is restructured around the same icon: state and age, the
-  title, a verb-plus-object "doing" line built from the hook's new `Tool object` detail
-  (`Edit format.ts` → pencil, "editing", `format.ts`; past tense once quiet), location as
-  crumbs, and a meta line with the two clocks the store now keeps (`started_at`,
-  `state_since`). Visiting a done session marks it `read`, a state only the store writes.
-  Design: Claude Design "scuttlarr agent dots", v2.
-- **Liveness.** `reap()` no longer sweeps by age before looking: a session whose pane the
-  layout lists, or whose pid is alive with the same command, stays however long it has
-  been silent. `pruneHours` is a backstop for sessions nothing can vouch for (no pane and
-  no pid, or a pane in a layout we couldn't read). `apply()` prunes nothing. Field report
-  2026-10-28: nine Claude sessions in tmux panes, five on the bar — the four silent for
-  over 12 h had been swept while tmux still listed every pane. Idle is a state, not a
-  death.
-- **Retired.** The subagent indicator — shoulder count on the cell, lines in the card,
-  `Subagent` on the wire and in the store. It never reported reliably and read as noise
-  on the site. `SubagentStart`/`SubagentStop` are still registered: they keep a session
-  `working` while a fork runs.
-- **Hooks.** `boot()` now completes the event set in a Claude config dir where our hook
-  is already registered (`mend`): it still adds nothing where we were never installed.
-  The psyke dir had sat at 7 of 10 events since `Notification` and the subagent events
-  were added.
-- **Alternatives.** Reconciling the store against tmux panes running an agent command
-  (rejected for now: needs a list of agent names, which 2026-08-18 deliberately avoided;
-  missing agents return on their next hook event). Named group boxes and a group hover
-  card (designed, parked). Spending colour on done · unread again (rejected: shape now
-  carries the distinction colour was failing at).
-
-### 2026-11-01 · Release smoke tests are scripted, not two `[y/N]` prompts
-
-- **Decision.** `scripts/release.sh` step 6 no longer stops for a human. The fresh-profile
-  test unpacks the release zip and launches it with an empty `HOME` (every path the app
-  uses hangs off `$HOME`), reading its own stderr: cold start under the 1 s budget, hotkey
-  registered, a config written that owes the first-launch setup, no panic. The
-  upgrade-path test installs the build over the running one through `dev-install.sh` and
-  checks the new version came up and reported its plugins, that nothing under
-  `~/.config/scuttlarr` changed (a tree checksum) and that the frecency db did not
-  shrink. A release is one command end to end and can run unattended.
-- **Why.** The 2026-08-10/11 split kept these manual as "the two things a script can't
-  feel". The gate had become a person typing `y`, which proved less than the checks
-  above and made every release a terminal errand (the first 0.8.0 run on 2026-11-01 died
-  at the prompt because it was started without a tty). The app reports enough about
-  itself now that the script can feel both.
-- **Kept local.** Signing, notarization and the smoke tests still need this Mac; the
-  split with the CI fan-out is unchanged.
-
-### 2026-11-01 · Updates: a package can be dismissed for a day, keyed to its version
-
-- **Decision.** `d` in `updates ⏎` (or "dismiss 24h" on a failed row) puts one outdated
-  package aside for 24 hours: out of the count, the cell, the card and every bulk
-  upgrade, listed dim under its manager with its time left, `↵` to bring it back. The
-  dismissal is keyed to the version it was made against (`brew:beeper/tap/cli` →
-  `0.6.3`, until): a newer version returns the row early, since the fix may have landed.
-  State is `~/.local/state/scuttlarr/updates-dismissed.json`, applied to the cached
-  report on read, so it takes effect at once and lapses on its own. No new Tauri
-  command: `{"dismiss":…,"item":…,"hours":24}` / `{"restore":…}` ride `plugin_send`.
-- **Bulk respects it.** `brew upgrade` upgrades everything brew knows, so a dismissed
-  formula would fail again on every "upgrade all" and poison the batch. A source with
-  any dismissed package therefore gets its pending packages' own commands as its
-  command (`brew upgrade gcc && brew upgrade vips`), the in-app runner expands its bulk
-  job into one job per pending package, and "upgrade everything" recurses per source.
-  A source with everything dismissed contributes nothing.
-- **Why not `brew pin`.** It is the native, permanent version for brew alone; the
-  checker already honours it. The dismissal covers all four managers and expires, which
-  is the shape of "this one is broken today".
-- **Not done.** No automatic dismissal after a failure (see the error once, decide), no
-  second duration yet (the store holds an until-timestamp; adding one is a field).
-  Plan: `plans/done/2026-11-01-updates-dismiss.md`.
-
-### 2026-10-31 · Updates upgrade in the app, per package or in bulk, through a queue
-
-- **Decision.** `updates ⏎` upgrades without leaving scuttlarr. Every `UpdateItem` carries
-  its own `upgrade_command` (`brew upgrade gcc`, `brew upgrade --cask repobar`,
-  `mas upgrade <id>`, `pnpm update -g <name>`, `mise upgrade <tool>`), computed by the
-  parser that read it. `updates::upgrade(source, item)` queues a job instead of refusing
-  while one runs: one child at a time, in order; `"all"` expands to one job per present
-  package manager so a failure in one does not stop the rest; a job already running or
-  waiting is not queued twice; the queue draining kicks the re-check. The report gains
-  `queue`, `recent` (finished runs this session, bounded) and `batch` (`done`/`total`
-  since the runner was last idle), from which the UI derives each row's state — queued,
-  upgrading, upgraded, failed — until the source is re-checked. `cancel_upgrade` kills
-  the child and empties the queue. No new Tauri command: the panel speaks through
-  `plugin_send` (`{"upgrade":"brew","item":"gcc"}`, `{"upgradeInTerminal":…,"item":…}`).
-- **UI.** The ledger (design asset `plans/assets/updates-panel-options.html`, option A,
-  picked 2026-10-31 over a two-pane sidebar and framed cards). One list, no view
-  switching: a band per package manager with its name, a count chip, its command and its
-  own "upgrade all"; its packages under a gutter rule, each a click or `↵` from
-  upgrading; a clean manager folds to one dim band; a long group caps at eight rows with
-  a "+N more" row that expands. "Upgrade everything" sits in the panel head (`Panel`
-  gains a `right` slot). The run block is one meter line (headline · progress · batch)
-  and the last output line. The hover card is the same bands, compact, with packages
-  listed under each. The first cut of the day borrowed the usage panel's segmented
-  control and tiles; Mitch found the managers blurred together, hence the asset.
-  Before this a click copied the source's command, which is why "nothing happened"
-  (JOURNAL 2026-10-31). `t` keeps the terminal hand-off for a sudo'ing cask, now per
-  package too.
-- **Why a queue.** Package-at-a-time only works if clicking a second package while the
-  first runs does something sensible; refusing it (the 2026-09-10 shape) made the panel
-  feel broken. One child at a time keeps brew's own locks out of the picture.
-- **Alternatives.** Running jobs in parallel (rejected: brew serialises on its own lock,
-  and interleaved tails are unreadable). Multi-select before starting (rejected for now:
-  a queue of clicks is the same thing with no mode). A pty for sudo (unchanged: `t`).
-
-### 2026-11-01 · The memory receipt: one measurement definition for the 120 MB budget
-
-- **Problem.** Every release re-argued what "idle memory < 120 MB" meant. Receipts
-  v0.2–v0.6 were main-process RSS (90–118 MB); `scripts/mem.sh` (2026-09-16) sums the app
-  and its helpers (157 MB); v0.7.0 reported 169 MB on the author's daily config; v0.8.0's
-  table read 114 MB on a light config while its prose gave 158 MB for the like-for-like.
-  STATUS carried the September number for six weeks. Four metrics, one table cell, and a
-  budget that was "undecided" in STATUS while AGENTS, the PRD and the release template all
-  said 120.
-- **Decision (the receipt).** The number compared with 120 MB is **the receipt**:
-  `scripts/mem.sh --receipt` on a release build, panel hidden, **bar on, agents monitor
-  off, no plugin services, Desktop rung off, one display**, a minute after launch; three
-  readings 10 s apart, the median; the app process plus any helper that is always on under
-  that config (none today). The notes name the Mac. `--receipt` prints a warning and calls
-  the reading a daily footprint when helpers are running or `agents.monitor` is on, so the
-  number produced is the number claimed.
-- **Decision (the footprint).** Release notes carry a second, unbudgeted line: the
-  **daily footprint**, the author's real config (agents monitor, plugin services, the
-  Desktop rung) with the uptime stated. Trend only; it is what the product costs a heavy
-  user, and it is allowed to be 500 MB with borders in it without failing a release.
-- **Decision (definition of done).** The before/after rule narrows to changes that add
-  something resident (a process, window, watcher or cache): they record the receipt in the
-  plan file. Everything else is covered by the release receipt.
-- **Why the app alone.** The budget is for what we control: the app's own resident set
-  under the install defaults. Plugin services are opt-in Bun processes whose cost belongs
-  to the plugin; borders is a third-party binary behind a rung that is off by default.
-  Budgeting the daily config at a higher ceiling was considered and rejected: it would
-  move with the author's plugin list, not with the app.
-- **What is open.** Growth with uptime (120 MB after a restart, 240 MB after 25 h,
-  `plans/done/2026-10-19-defaults-flip.md`) is the real memory task; ROADMAP carries it
-  with a trigger. The receipt baseline for v0.8.0 under this definition is taken at the
-  next release build on the primary Mac; the daily footprint on 2026-11-01 was 131 MB for
-  the app process and 501 MB with borders (268 MB), three Bun services and the BLE helper.
-
-### 2026-11-01 · One default bar layout: TypeScript's, mirrored in Rust and pinned by tests
-
-- **Decision.** `DEFAULT_BAR_LAYOUT` (`apps/desktop/src/lib/config.ts`: left workspaces,
-  agents, frontApp; center clock; right wifi, awake, usage, battery) is the default
-  arrangement. `BarConfig::default()` in `config.rs` writes the same lists into a fresh
-  `config.json`; a Rust test and a Vitest case pin the two equal, each naming the other.
-- **Why.** The Rust default had stayed at `wifi, battery` since v0.4 while the TS default
-  grew awake and usage. A fresh install wrote the short list, the renderer appended the
-  missing modules at the end of the zone, and the bar came up `wifi, battery, awake,
-usage` — an order no file in the repo says. Product opinion is the TS layer's (AGENTS
-  "Rust owns the OS, TypeScript owns the experience"); Rust mirrors it the way IPC types
-  are mirrored, pair kept adjacent by name and test.
-- **Effect.** Only fresh installs change; an existing `config.json` carries its own
-  layout. The legacy-migration sentinel (`layout == BarConfig::default().layout`) now
-  compares against the full list, which is what an untouched file deserialises to.

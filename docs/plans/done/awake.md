@@ -230,14 +230,14 @@ disablesleep`), rule installed by `scuttlarr sudoers on` (DECISIONS 2026-10-01).
 
 ### Slice E — lid closed on battery (deferred, own milestone)
 
-- [ ] **Measure first**: `sudo pmset -b disablesleep 1`, lid closed on battery, confirm the
-      machine survives. If it doesn't hold on current macOS, drop the slice entirely.
-- [ ] Helper bundled in the .app, registered via `SMAppService` on first toggle only.
-- [ ] **Watchdog is mandatory**: heartbeat from launcharr; helper reverts `disablesleep` on
-      silence, crash, or quit. `disablesleep` is persistent global state — a crash while set
-      leaves a Mac that never sleeps again.
-- [ ] Invariant 1 carve-out written into `docs/DECISIONS.md` before any code, same shape as
-      the invariant 2 amendment for usage limits: opt-in, off by default, user-initiated.
+- ~~**Measure first**: `sudo pmset -b disablesleep 1`, lid closed on battery, confirm the~~
+  machine survives. If it doesn't hold on current macOS, drop the slice entirely.
+- ~~Helper bundled in the .app, registered via `SMAppService` on first toggle only.~~
+- ~~**Watchdog is mandatory**: heartbeat from launcharr; helper reverts `disablesleep` on~~
+  silence, crash, or quit. `disablesleep` is persistent global state — a crash while set
+  leaves a Mac that never sleeps again.
+- ~~Invariant 1 carve-out written into `docs/DECISIONS.md` before any code, same shape as~~
+  the invariant 2 amendment for usage limits: opt-in, off by default, user-initiated.
 
 ## Acceptance criteria
 
@@ -301,3 +301,7 @@ superseded by slice F's `sleep_override.rs` (`sudo -n pmset -a disablesleep` via
 "lid-on-battery row explains itself" criterion goes with it. Carried to STATUS as
 hands-checks: tray Quit stays quit, a hold survives `fdesetup authrestart`, and an
 agents hold releasing within a minute of the last agent going idle.
+
+## Closed (2026-11-01, docs sweep)
+
+Slice E (a privileged helper) was never built: DECISIONS 2026-10-01 took the sudoers route instead (`scuttlarr sudoers on`), so its checklist is struck. The two slice-F hands-checks and the acceptance items moved to ROADMAP "Hands-checks owed".

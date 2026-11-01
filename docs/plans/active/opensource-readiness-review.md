@@ -1,74 +1,78 @@
 ---
 title: Open-source release readiness review
-status: active
+status: planned # ROADMAP "Open-source readiness review"; trigger: before the first public announcement
 created: 2026-08-17
-updated: 2026-10-19 (not started; launcharr-era scope still valid)
+updated: 2026-11-01 (rewritten for the current scope; not started)
 links:
   - ../../STANDARDS.md
   - ../../RELEASING.md
-  - ../../STATUS.md
+  - ../../ROADMAP.md
 ---
 
 # Open-source release readiness review
 
 ## Goal
 
-Audit the complete launcharr repository for security defects, poor engineering practices,
-standards drift, and release-readiness gaps, then leave a prioritized, evidence-backed
-document that can drive the hardening work before the next feature phase and public release.
+Audit the repository for security defects, poor engineering practice, standards drift and
+release-readiness gaps, and leave a prioritised, evidence-backed report that drives the
+hardening work before the first public announcement. The repo has been public since v0.2.0;
+this is about being _announced_, not visible.
 
 ## Context
 
-launcharr spans a privileged macOS boundary (Rust/Tauri), a React interface, a shared pure
-TypeScript engine, a static Next.js site, and local/GitHub release automation. The review
-therefore covers source, configuration, capabilities, dependencies, tests, documentation,
-generated artifacts, and the release supply chain rather than treating `pnpm verify` as the
-whole assurance case.
-
-The active `awake` feature remains separate. This review records findings against the tree as
-found and does not silently fold unrelated product fixes into that work.
+scuttlarr spans a privileged macOS boundary (Rust/Tauri: AppKit, process launch, the
+filesystem, a sudoers rule, self-update that swaps the bundle), a React interface, a shared
+pure TypeScript engine, a Bun runtime for user plugins and widgets (code the user installs
+and we run), the Theme rung (writes into editor and shell configs), the Machine rung (zsh,
+macOS defaults, a root-owned file), a static Next.js site, and local + GitHub release
+automation with a shared Homebrew tap. The review covers source, configuration,
+capabilities, dependencies, tests, documentation, generated artefacts and the release
+supply chain — `pnpm verify` is not the assurance case. The 2026-10-19 code-health pass
+(`done/2026-10-19-cleanup-bugs-and-guardrails.md`) covered engineering practice but not
+security, dependencies or secrets.
 
 ## Approach
 
-Inventory every shipped/runtime surface, inspect high-risk boundaries first, then review each
-module systematically. Combine manual review with the repository gate, dependency audits,
-secret scanning, Rust advisory checks where available, and targeted static searches. Record
-only reproducible findings, each with severity, evidence, impact, and a concrete remediation.
+Inventory every shipped and runtime surface, inspect high-risk boundaries first
+(self-update verification, the sudoers rule, plugin/widget execution and their Keychain
+access, the Claude hook, everything written outside `~/.config/scuttlarr`), then review
+each module systematically. Combine manual review with the gate, `cargo audit`, `pnpm
+audit`, secret scanning and targeted static searches. Record only reproducible findings,
+each with severity, evidence, impact and a concrete remediation.
 
 ## Steps
 
-- [ ] Map shipped artifacts, trust boundaries, permissions, IPC, persistence, and network use.
-- [ ] Review Rust/Tauri code, native FFI, subprocesses, filesystem handling, SQLite, and config.
-- [ ] Review desktop React, shared core/TUI, Next.js site, scripts, hooks, and release workflows.
-- [ ] Run verification, dependency, secret, and repository hygiene checks; assess test gaps.
-- [ ] Write the prioritized review report and update the project cursor.
+- [ ] Map shipped artefacts, trust boundaries, permissions, IPC, persistence and network use
+      (AGENTS invariants 1–3, 11, 12 as the checklist).
+- [ ] Rust/Tauri: native FFI, subprocesses, filesystem handling, SQLite, config, `selfupdate.rs`,
+      `sleep_override.rs`, `widget_secrets.rs`, `plugins.rs`/`runtime.rs` (what user code can
+      reach), `hooks.rs`.
+- [ ] TypeScript: the desktop UI, the kit, the plugin loader (blob-URL modules, shared
+      globals), the site, the reference widgets and bundled scripts.
+- [ ] `packages/setup`: every write outside the overlay, the sudoers rule, `remove`.
+- [ ] Release supply chain: `release.sh`, the workflow, the tap, notarization, `SHA256SUMS`.
+- [ ] Verification, dependency, secret and repository-hygiene checks; test gaps.
+- [ ] The report: open-source blockers, pre-announcement work, accepted residual risk.
+      STATUS points at it; this plan closes.
 
 ## Acceptance criteria
 
-- [ ] Every first-party source/config/workflow file is included in the review inventory.
-- [ ] Findings have severity, evidence, impact, and remediation; uncertainty is explicit.
-- [ ] `pnpm verify`, dependency audit, and secret scanning results are recorded.
-- [ ] The report separates open-source blockers, pre-next-phase work, and accepted residual risk.
-- [ ] `docs/STATUS.md` points to the report and this plan is closed.
+- [ ] Every first-party source, config and workflow file is in the review inventory.
+- [ ] Findings carry severity, evidence, impact and remediation; uncertainty is explicit.
+- [ ] `pnpm verify`, `cargo audit`, `pnpm audit` and secret-scanning results are recorded.
+- [ ] The report separates blockers, pre-announcement work and accepted residual risk.
+- [ ] `docs/STATUS.md` points to the report and this plan is in `done/`.
 
 ## Out of scope
 
 - Implementing the remediation backlog beyond trivial documentation corrections.
 - Dynamic penetration testing of third-party services or macOS internals.
-- Signing, notarization, and hands-on focus/lid checks that require Mitch's credentials or
-  physical interaction.
+- Signing, notarization and hands-on checks that need Mitch's credentials or a physical Mac.
 
 ## Risks / open questions
 
-- Generated build output may differ from source; only tracked/released artifacts are security
-  relevant, but stale local output can still reveal release hygiene problems.
-- Tool availability and advisory database access may constrain automated checks; any such gap
-  will be recorded rather than treated as a pass.
-
-## Status (2026-10-19)
-
-Not started — no report was written. Read the launcharr name as scuttlarr; the scope
-now also covers `packages/theme`, `packages/setup`, the plugin runtime and the
-self-updater. The 2026-10-19 code-health review (`done/2026-10-19-cleanup-bugs-and-guardrails.md`)
-covers part of the engineering-practice ground but not security, dependencies or
-secrets. Open: whether this runs before the next feature phase (Mitch).
+- Generated build output (`dist/`, `target/`) may differ from source; only tracked and
+  released artefacts are security-relevant, but stale local output can still reveal release
+  hygiene problems.
+- Tool availability may constrain automated checks; a gap is recorded, never treated as a
+  pass.

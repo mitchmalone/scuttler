@@ -48,10 +48,10 @@ content is one constants file (`src/lib/site.ts`) — a clean seam for generated
 
 ## Acceptance criteria
 
-- [ ] `bash scripts/release.sh --dry-run 0.3.0` walks every step and fails fast on the
-      missing notes file / cert with clear messages
-- [ ] Web repo builds green with generated release.json
-- [ ] All existing gates still green in the app repo
+- ~~`bash scripts/release.sh --dry-run 0.3.0` walks every step and fails fast on the~~
+  missing notes file / cert with clear messages
+- ~~Web repo builds green with generated release.json~~
+- ~~All existing gates still green in the app repo~~
 
 ## Out of scope
 
@@ -64,3 +64,7 @@ content is one constants file (`src/lib/site.ts`) — a clean seam for generated
 - Moving the app repo while the Claude session sits inside it — use absolute paths.
 - DMG bundling needs no signing to produce, but an unsigned dmg download will quarantine;
   advertised path stays brew until signing lands.
+
+## Closed (2026-11-01, docs sweep)
+
+launcharr-web merged into this repo as `apps/www` (2026-08-11) and the release pipeline has shipped seven releases since; the acceptance items were overtaken rather than ticked.
