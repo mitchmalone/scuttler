@@ -3,7 +3,7 @@
 > The cursor: where we are, what needs hands, what's next. A snapshot, not a history —
 > history lives in git, `plans/done/`, `releases/` and `JOURNAL.md`.
 >
-> Last updated: 2026-11-01 (v0.8.0 released; release smoke tests scripted, a release is one command; updates: dismiss a package for a day, keyed to its version, bulk upgrades skip it; 2026-10-31: updates upgrade in the app: per package, per source, everything, through a queue; card and panel on the usage design; 2026-10-28: agent dots: states by shape, liveness fix, card redesign; v0.8.0 notes written, perf measured, ready to release; setup survives a launch toast; site copy matches the v0.8.0 defaults and first-launch setup; setup follows the theme; dmg step cause found; site theme picker; site pixel hero; defaults flip: bar on, tiling off; invariant 3 reworded)
+> Last updated: 2026-11-01 (docs sweep + rename planned; v0.8.0 released; release smoke tests scripted, a release is one command; updates: dismiss a package for a day, keyed to its version, bulk upgrades skip it; 2026-10-31: updates upgrade in the app: per package, per source, everything, through a queue; card and panel on the usage design; 2026-10-28: agent dots: states by shape, liveness fix, card redesign; v0.8.0 notes written, perf measured, ready to release; setup survives a launch toast; site copy matches the v0.8.0 defaults and first-launch setup; setup follows the theme; dmg step cause found; site theme picker; site pixel hero; defaults flip: bar on, tiling off; invariant 3 reworded)
 
 ## Where we are
 
@@ -54,8 +54,11 @@
   pending).
 - **Workbench story titles are stable** (an external screenshot script keys on them):
   rename a story only with Mitch.
-- **Active plans:** `lights-plugin.md` (waiting on Mitch's Home.app shortcuts),
-  `opensource-readiness-review.md` (not started).
+- **Active plans:** `2026-11-01-docs-sweep.md` (every doc true against v0.8.0; the
+  memory receipt defined; six commits) then `2026-11-01-rename-to-scuttler.md` (planned:
+  scuttlarr → scuttler at www.scuttler.app as v0.9.0; old domains already redirect there).
+  Also `lights-plugin.md` (waiting on Mitch's Home.app shortcuts) and
+  `opensource-readiness-review.md` (not started) — both re-planned by the sweep.
 - **Daily use on the primary Mac:** bar, launcher, panels, agents, usage, updates, awake,
   desktop layer and the theme rung (`appearance.everywhere`, `editors`, `ghostty` on).
 - **Memory is over budget:** first `scripts/mem.sh` reading 157–177 MB app idle against
