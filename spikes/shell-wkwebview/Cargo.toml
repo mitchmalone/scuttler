@@ -1,0 +1,21 @@
+# The lighter-shell spike, arm (a): the launcher panel on a bare WKWebView in an
+# NSPanel, driven from Rust through objc2 — no Tauri, no wry, no tao. Measured
+# against the Tauri app with `scripts/mem.sh --webkit`. Not a product; see
+# docs/plans/active/2026-11-04-v0.8.5-fast-bar-and-shell-spike.md.
+[package]
+name = "shell-wkwebview"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", features = ["NSString", "NSURL", "NSURLRequest", "NSGeometry", "NSObjCRuntime", "NSThread"] }
+objc2-app-kit = { version = "0.3", features = ["NSApplication", "NSResponder", "NSWindow", "NSPanel", "NSView", "NSScreen", "NSRunningApplication", "NSGraphics", "NSColor"] }
+objc2-web-kit = { version = "0.3", features = ["WKWebView", "WKWebViewConfiguration", "WKPreferences", "WKUserContentController", "WKNavigation"] }
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
