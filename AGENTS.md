@@ -13,7 +13,7 @@ the weight budget conflict, the feature loses.
 
 History: launcharr (the launcher) and scuttlarr (the distro) were two repos until
 2026-09-11 (DECISIONS); this repo is the fold, renamed twice — scuttlarr (2026-09-11),
-then scuttler (2026-11-01, v0.8.1). Names and paths are scuttler's; the bundle id stays
+then scuttler (2026-11-01, shipped as v0.8.5). Names and paths are scuttler's; the bundle id stays
 `com.mitchmalone.scuttlarr` on purpose (DECISIONS 2026-11-01); `rename.rs` migrates old
 homes across both hops.
 

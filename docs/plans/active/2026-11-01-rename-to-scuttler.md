@@ -183,9 +183,10 @@ Phase 2 — migration and shims (TDD in `rename.rs`, `hooks.rs`, `widget_secrets
       symlink going after the setup migration, were not exercised live (covered by
       `test/rename.test.zsh`).
 
-Phase 3 — release v0.8.1
+Phase 3 — release (as **v0.8.5**: v0.8.1 was never cut, folded 2026-11-04 with the
+bar's workspace fix, DECISIONS 2026-11-04; `releases/v0.8.1.md` became `v0.8.5.md`)
 
-- [x] `releases/v0.8.1.md`: breaking change is the name; what migrates by itself, what
+- [x] `releases/v0.8.5.md` (drafted as v0.8.1): breaking change is the name; what migrates by itself, what
       is a one-time pick again (`custom:scuttler`, `scuttler sudoers on`), what is left
       behind on purpose. Perf receipts per the memory-receipt definition (docs sweep
       finding 1, decided before this release).

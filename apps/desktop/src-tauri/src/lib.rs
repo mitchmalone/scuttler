@@ -208,6 +208,7 @@ pub fn run() {
 
             // launcharr → scuttler paths, once, before anything reads them (rename.rs).
             rename::boot();
+            desktop::boot();
             let (cfg, first_run) = config::load_or_create()?;
 
             let data_dir = app.path().app_data_dir()?;

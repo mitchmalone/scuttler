@@ -353,6 +353,10 @@ fn push_loop(app: AppHandle) {
     });
 }
 
+/// The last snapshot pushed, so a workspace trigger can be answered from memory
+/// (`push_focus`) before the next full snapshot spawns anything.
+static LAST: std::sync::Mutex<Option<BarSnapshot>> = std::sync::Mutex::new(None);
+
 /// Also poked by agents.rs so state flips beat the 1 Hz tick.
 pub(crate) fn push(app: &AppHandle) {
     // Off means off: the snapshot spawns aerospace and reads the battery.
@@ -363,7 +367,40 @@ pub(crate) fn push(app: &AppHandle) {
     if snap.focused.is_none() && !snap.workspaces.is_empty() {
         eprintln!("[scuttler bar] push without focus: {snap:?}");
     }
-    let Ok(json) = serde_json::to_string(&snap) else {
+    if let Ok(mut last) = LAST.lock() {
+        *last = Some(snap.clone());
+    }
+    eval_snapshot(app, &snap);
+}
+
+/// The instant path for a workspace switch: AeroSpace's hook writes the new
+/// name into `triggers/workspace`, and the bar shows it from the last snapshot
+/// in memory — no process spawned, nothing asked. The full snapshot that
+/// follows corrects anything else (front app, a workspace that appeared).
+/// An unknown name (a workspace the list has not seen) still shows: the cells
+/// catch up on the full push.
+pub(crate) fn push_focus(app: &AppHandle, name: &str) {
+    if !enabled() || name.is_empty() {
+        return;
+    }
+    let snap = {
+        let Ok(mut last) = LAST.lock() else {
+            return;
+        };
+        let Some(last) = last.as_mut() else {
+            return;
+        };
+        last.focused = Some(name.to_owned());
+        if !last.workspaces.iter().any(|w| w == name) {
+            last.workspaces.push(name.to_owned());
+        }
+        last.clone()
+    };
+    eval_snapshot(app, &snap);
+}
+
+fn eval_snapshot(app: &AppHandle, snap: &BarSnapshot) {
+    let Ok(json) = serde_json::to_string(snap) else {
         return;
     };
     let script = format!("window.__barPush && window.__barPush({json})");
@@ -384,8 +421,11 @@ pub(crate) fn push(app: &AppHandle) {
 /// Event-driven refresh: anything touching a file in
 /// `~/.config/scuttler/triggers/` makes the bar re-snapshot immediately.
 /// Aerospace's `exec-on-workspace-change` points here — polling is only the
-/// fallback, so workspace switches show up in tens of ms, not up to a second.
-/// It's also a hackable surface: any script can poke the bar.
+/// fallback. The generated hook writes the focused workspace's name into
+/// `triggers/workspace`, and that name goes to the bar before anything else
+/// happens (`push_focus`); a bare `touch` (an older hook, a user's own) still
+/// works, it just waits for the snapshot. It's also a hackable surface: any
+/// script can poke the bar.
 fn watch_triggers(app: AppHandle) {
     let dir = crate::config::config_dir().join("triggers");
     if let Err(e) = std::fs::create_dir_all(&dir) {
@@ -406,7 +446,15 @@ fn watch_triggers(app: AppHandle) {
             eprintln!("[scuttler bar] trigger watch failed: {e}");
             return;
         }
+        let workspace_file = dir.join("workspace");
         while let Ok(first) = rx.recv() {
+            // The workspace name first, before any coalescing or spawning: this
+            // is the one event a human is watching for.
+            if event_names(&first).any(|n| n == "workspace") {
+                if let Some(name) = read_trigger_name(&workspace_file) {
+                    push_focus(&app, &name);
+                }
+            }
             let mut events = vec![first];
             // Coalesce bursts, then push a fresh snapshot immediately.
             while let Ok(ev) = rx.recv_timeout(std::time::Duration::from_millis(30)) {
@@ -430,6 +478,29 @@ fn watch_triggers(app: AppHandle) {
             push(&app);
         }
     });
+}
+
+/// File names an event touched.
+fn event_names(ev: &Result<notify::Event, notify::Error>) -> impl Iterator<Item = &str> {
+    ev.as_ref()
+        .ok()
+        .into_iter()
+        .flat_map(|ev| ev.paths.iter())
+        .filter_map(|p| p.file_name().and_then(|n| n.to_str()))
+}
+
+/// The workspace name the hook wrote, `None` for a bare touch or junk. A name
+/// is one short line of what AeroSpace accepts in `aerospace workspace`.
+fn read_trigger_name(path: &std::path::Path) -> Option<String> {
+    let raw = std::fs::read_to_string(path).ok()?;
+    let name = raw.trim();
+    (!name.is_empty() && name.len() <= 64 && name.chars().all(valid_workspace_char))
+        .then(|| name.to_owned())
+}
+
+/// What a workspace name may contain before it goes near a command line.
+fn valid_workspace_char(c: char) -> bool {
+    c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.')
 }
 
 /// `widget.<id>` → `<id>`; anything else is a plain bar poke.
@@ -533,11 +604,7 @@ fn parse_workspace_table(out: &str) -> (Vec<String>, Option<String>) {
 /// Focus a workspace (bar click). The name comes from our own snapshot, but
 /// validate anyway — it ends up as a process argument.
 pub fn switch_workspace(ws: &str) -> CmdResult<()> {
-    if ws.is_empty()
-        || !ws
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
-    {
+    if ws.is_empty() || !ws.chars().all(valid_workspace_char) {
         return Err(CmdError::Internal(format!("bad workspace name: {ws:?}")));
     }
     aerospace(&["workspace", ws])
@@ -628,6 +695,22 @@ mod tests {
         );
         assert_eq!(parse_lsappinfo_name(""), None);
         assert_eq!(parse_lsappinfo_name("no quotes here"), None);
+    }
+
+    #[test]
+    fn trigger_name_is_one_clean_line_or_nothing() {
+        let dir = std::env::temp_dir().join(format!("scuttler-trigger-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let f = dir.join("workspace");
+        std::fs::write(&f, "").unwrap();
+        assert_eq!(read_trigger_name(&f), None, "a bare touch");
+        std::fs::write(&f, "3\n").unwrap();
+        assert_eq!(read_trigger_name(&f), Some("3".into()));
+        std::fs::write(&f, "dev.main").unwrap();
+        assert_eq!(read_trigger_name(&f), Some("dev.main".into()));
+        std::fs::write(&f, "1; rm -rf /").unwrap();
+        assert_eq!(read_trigger_name(&f), None);
+        assert_eq!(read_trigger_name(&dir.join("missing")), None);
     }
 
     #[test]

@@ -5,6 +5,28 @@
 
 ---
 
+### 2026-11-04 · v0.8.1 folded into v0.8.5; a workspace switch reaches the bar without a spawn
+
+- **Decision.** The rename release (v0.8.1, drafted, never cut: the notary profile was
+  not on this Mac) ships inside v0.8.5 with the bar work. `releases/v0.8.1.md` became
+  `v0.8.5.md`. And the bar's workspace path is instant by contract: AeroSpace's
+  generated `exec-on-workspace-change` hook writes `$AEROSPACE_FOCUSED_WORKSPACE` into
+  `triggers/workspace`; the trigger watcher pushes that name from the last snapshot in
+  memory (`bar::push_focus`) before any coalescing or spawning; the full snapshot
+  follows. The 1 Hz poll is the fallback for a hook that is missing or a bare `touch`
+  (a user's own `aerospace.toml`), never the path. A managed file written by an older
+  build is repointed (`rename::migrate`) and its hook upgraded (`desktop::boot`) at
+  launch — ours by its header, invariant 11.
+- **Why.** Mitch, 2026-11-04: a one-second gap "is a noticeable gap. It needs to be as
+  short as possible, and ideally should feel instant." The rename had killed the hook
+  (JOURNAL 2026-11-04) and the poll became the path. Reading the name from the file
+  removes the `aerospace` spawn (10–60 ms) and the 30 ms coalesce window from the one
+  event a human is watching for. Folding the releases: two releases a few days apart,
+  the first with a known regression in its own migration, is worse than one.
+- **Alternatives.** AeroSpace's Unix socket (off-limits, DECISIONS 2026-08-15). A
+  faster poll (wasteful, still a gap). Keeping `touch` and spawning `aerospace` on the
+  event (what we had, ~60–100 ms; the name is free in the hook's environment).
+
 ### 2026-11-01 · The last rename: scuttlarr → scuttler at www.scuttler.app, as v0.8.1, bundle id kept
 
 - **Decision.** The product, repo, package scopes (`@scuttler/*`), crate, CLI
