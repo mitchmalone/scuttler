@@ -41,8 +41,10 @@ const EMPTY_THEMES = { themes: {} }
 
 declare global {
   interface Window {
-    /** Rust pushes snapshots here via webview eval (see bar.rs push()). */
+    /** Rust pushes snapshots here via webview eval (see bar.rs run_push()). */
     __barPush?: (snap: BarSnapshot) => void
+    /** Rust's tick when the snapshot did not change: only the clock moves. */
+    __barTick?: () => void
     /** Injected by bar.rs before page scripts: does this display carry a notch? */
     __notched?: boolean
     /** Rust re-announces the notch when this window is re-framed onto another display. */
@@ -115,9 +117,13 @@ function useSnapshot(): [
     // One pull for first paint; everything after arrives by Rust eval-push.
     invoke<BarSnapshot>('bar_snapshot').then(absorb).catch(console.error)
     window.__barPush = absorb
+    window.__barTick = () => {
+      if (live) setNow(new Date())
+    }
     return () => {
       live = false
       delete window.__barPush
+      delete window.__barTick
     }
   }, [])
   const patch = (update: (prev: BarSnapshot) => BarSnapshot) =>

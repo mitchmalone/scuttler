@@ -13,7 +13,6 @@ use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
-use tauri::AppHandle;
 
 use crate::config::Terminal;
 use crate::error::{CmdError, CmdResult};
@@ -402,7 +401,7 @@ fn strip_status_suffix(name: &str) -> &str {
 
 /// Start the listener. Called once at setup regardless of `bar.enabled` — the
 /// `agents` panel wants the data even on a bar-less install.
-pub fn start(app: AppHandle) {
+pub fn start() {
     std::thread::spawn(move || {
         if let Ok(saved) = load(&state_file()) {
             *SESSIONS.lock().unwrap() = saved;
@@ -428,13 +427,12 @@ pub fn start(app: AppHandle) {
         }
         for stream in listener.incoming() {
             let Ok(stream) = stream else { continue };
-            let app = app.clone();
-            std::thread::spawn(move || handle(stream, &app));
+            std::thread::spawn(move || handle(stream));
         }
     });
 }
 
-fn handle(stream: UnixStream, app: &AppHandle) {
+fn handle(stream: UnixStream) {
     let reader = std::io::BufReader::new(stream);
     for line in reader.lines() {
         let Ok(line) = line else { break };
@@ -453,7 +451,7 @@ fn handle(stream: UnixStream, app: &AppHandle) {
                 eprintln!("[scuttler agents] state save failed: {e}");
             }
             // The bar re-snapshots immediately — state flips beat the 1 Hz tick.
-            crate::bar::push(app);
+            crate::bar::push();
         }
     }
 }
@@ -542,7 +540,7 @@ fn apply(sessions: &mut Vec<AgentSession>, event: AgentEvent, now: u64) -> bool 
 ///
 /// herdr sessions aren't in our store at all: herdr owns their state, so the
 /// jump is dispatched straight from the session key it minted.
-pub fn jump_session(app: &AppHandle, session_id: &str, terminal: Terminal) -> CmdResult<()> {
+pub fn jump_session(session_id: &str, terminal: Terminal) -> CmdResult<()> {
     if let Some((herdr_session, pane)) = parse_herdr_key(session_id) {
         if !crate::herdr::focus(herdr_session, pane) {
             return Err(CmdError::Internal("herdr would not focus that pane".into()));
@@ -568,7 +566,7 @@ pub fn jump_session(app: &AppHandle, session_id: &str, terminal: Terminal) -> Cm
     if let Err(e) = save(&state_file(), &own_list()) {
         eprintln!("[scuttler agents] state save failed: {e}");
     }
-    crate::bar::push(app);
+    crate::bar::push();
     Ok(())
 }
 
@@ -584,7 +582,7 @@ fn parse_herdr_key(session_id: &str) -> Option<(&str, &str)> {
 /// Drop a session by hand. Every liveness heuristic has a blind spot — an
 /// adapter that never reports a pid, an agent that died with tmux unreachable —
 /// and the answer to a stuck cell must not be "edit agents.json".
-pub fn forget_session(app: &AppHandle, session_id: &str) -> CmdResult<()> {
+pub fn forget_session(session_id: &str) -> CmdResult<()> {
     {
         let mut sessions = SESSIONS.lock().unwrap();
         let before = sessions.len();
@@ -596,7 +594,7 @@ pub fn forget_session(app: &AppHandle, session_id: &str) -> CmdResult<()> {
     if let Err(e) = save(&state_file(), &own_list()) {
         eprintln!("[scuttler agents] state save failed: {e}");
     }
-    crate::bar::push(app);
+    crate::bar::push();
     Ok(())
 }
 

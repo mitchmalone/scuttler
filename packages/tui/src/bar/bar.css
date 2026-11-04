@@ -136,12 +136,18 @@
   color: var(--dim, #7f86a5);
 }
 
+/* Each animated glyph gets its own compositing layer (`will-change`), so the
+ * spin and the breathe run in the compositor instead of repainting the strip
+ * sixty times a second. Measured 2026-11-05 (JOURNAL): without it the bar's
+ * WebContent painted every frame for every working agent all day. */
 .bar-agent-icon-working {
   animation: bar-agent-spin 1.1s linear infinite;
+  will-change: transform;
 }
 
 .bar-agent-breathe {
   animation: bar-agent-breathe 1.6s ease-in-out infinite;
+  will-change: opacity;
 }
 
 @keyframes bar-agent-spin {

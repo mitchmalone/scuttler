@@ -33,6 +33,7 @@ mod desktop;
 mod error;
 mod favicon;
 mod frecency;
+mod front_app;
 mod herdr;
 mod hooks;
 mod icons;
@@ -247,7 +248,7 @@ pub fn run() {
             selfupdate::configure(&cfg.updates);
             // We are running: whatever the last self-update staged can go.
             selfupdate::cleanup();
-            agents::start(app.handle().clone());
+            agents::start();
             if cfg.agents.monitor {
                 // Keep the Claude hook adapter installed at its stable path and
                 // mend our own stale registrations (hooks.rs); adds nothing.

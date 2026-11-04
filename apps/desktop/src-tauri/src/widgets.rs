@@ -603,7 +603,7 @@ fn tick(
             e.next_due = Instant::now() + Duration::from_secs(e.manifest.interval);
         }
     }
-    crate::bar::push(&app);
+    crate::bar::push();
 }
 
 // ---- auth (the widget's own OAuth flow) ----------------------------------
@@ -940,10 +940,9 @@ pub fn start(app: AppHandle) {
 
     // Watcher: any change in the dir re-discovers (coalesced) — drop a widget
     // in, it's live; edit it, it re-ticks.
-    let watch_app = app.clone();
     std::thread::spawn(move || {
         refresh();
-        crate::bar::push(&watch_app);
+        crate::bar::push();
         use notify::{RecursiveMode, Watcher};
         let (tx, rx) = mpsc::channel();
         let mut watcher = match notify::recommended_watcher(tx) {
@@ -962,7 +961,7 @@ pub fn start(app: AppHandle) {
             }
             while rx.recv_timeout(Duration::from_millis(400)).is_ok() {}
             refresh();
-            crate::bar::push(&watch_app);
+            crate::bar::push();
         }
     });
 

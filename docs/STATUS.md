@@ -4,9 +4,9 @@
 > history lives in git, `plans/done/`, `releases/` and `JOURNAL.md`; the backlog with its
 > triggers lives in `ROADMAP.md`.
 >
-> Last updated: 2026-11-04 (v0.8.1 folded into v0.8.5, DECISIONS 2026-11-04; the
-> rename's one regression fixed and the bar's workspace path made instant — the hook
-> carries the name; next: one push stream, cheaper snapshots, the shell spike)
+> Last updated: 2026-11-05 (the bar is one push stream with cheaper snapshots and no
+> per-frame paint, DECISIONS 2026-11-05; the 20-hour instance was found at 4 GB and is
+> now watched with `mem.sh --webkit`, JOURNAL 2026-11-05; next: the shell spike)
 
 ## Where we are
 
@@ -26,19 +26,23 @@
   `pnpm verify` green. **Not yet done:** the release itself (phase 3) and the brand
   assets (phase 4) — see Needs Mitch.
 - **v0.8.5 in flight** (`plans/active/2026-11-04-v0.8.5-fast-bar-and-shell-spike.md`):
-  the rename had left the generated `aerospace.toml` touching the old trigger path, so
-  workspace switches waited for the 1 Hz poll (JOURNAL 2026-11-04); fixed in
-  `rename.rs` + both header detectors, dev-installed. Next: one serialised push
-  stream, fewer spawns per snapshot, the WebKit helpers made visible beside the
-  receipt, then the lighter-shell spike (bare WKWebView vs zero-native vs Tauri) and a
-  DECISIONS gate before any migration.
+  the rename's dead hook fixed and the workspace path made instant (2026-11-04); then
+  one push stream, unchanged snapshots not re-sent, no `lsappinfo`, the workspace list
+  cached behind a live hook, the agent spinners composited instead of painted
+  (2026-11-05, dev-installed under launchd). The day-old instance it replaced was at
+  4 GB (JOURNAL 2026-11-05): a shared-buffer leak between the app and the bar's
+  WebContent that a fresh process does not show; watched, not closed. Next: the
+  lighter-shell spike (bare WKWebView vs zero-native vs Tauri, helpers included) and
+  a DECISIONS gate before any migration; then the release.
 - **Parked:** `plans/done/lights-plugin.md` (built, in daily use; Nanoleaf waits on
   Mitch's Home.app shortcuts, outside the repo); `plans/active/opensource-readiness-review.md`
   (`planned`, rewritten for the current scope; ROADMAP carries its trigger).
 - **Daily use on the primary Mac:** bar, launcher, panels, agents, usage, updates, awake,
   the Desktop and Theme rungs (`appearance.everywhere`, `editors`, `ghostty` on).
 - **Memory:** one measurement, the receipt (DECISIONS 2026-11-01, `scripts/mem.sh
---receipt`). The open task, growth with uptime, is ROADMAP "Memory".
+--receipt`), and the floor beside it (`--webkit`: WebKit's helpers by responsible pid,
+  and the app's owned-but-unmapped share, which is the leak's gauge). Growth with
+  uptime is ROADMAP "Memory", now with a number.
 - **Workbench story titles are stable** (an external screenshot script keys on them):
   rename a story only with Mitch.
 
@@ -46,6 +50,13 @@
 
 - The spike's time box (plan says 2 days) and whether zero-native (Zig, own JS bridge)
   is even a candidate given "Rust owns the OS", or only the bare-WKWebView arm.
+- Whether the receipt should now count WebKit's helpers (`mem.sh --webkit` can see
+  them: ~140 MB of WebContent and GPU at idle on top of the 41 MB app). The budget
+  line in AGENTS says 120 MB for the app alone; a floor that honest would need a new
+  number.
+- A day after 2026-11-05's install, run `scripts/mem.sh --webkit` on the launchd
+  instance: if "owned but unmapped" is above single-digit MB the leak is still live and
+  the spike's bare-WKWebView arm should test for it first.
 
 - `opensource-readiness-review`: run before the first public announcement, or not.
 - Usage pace thresholds (±15/25 pts) and worst-across-accounts for the cell.

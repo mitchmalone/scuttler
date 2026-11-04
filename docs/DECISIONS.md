@@ -5,6 +5,36 @@
 
 ---
 
+### 2026-11-05 · The bar is fed by one push stream; what did not change is not re-sent; the WebKit floor is measured beside the receipt
+
+- **Decision.** `bar::push()` is a non-blocking poke on one channel. One thread waits
+  for a poke or the one-second tick, coalesces the burst behind it (a 30 ms deadline),
+  takes one snapshot and evals it; agents, plugins, widgets, the trigger watcher and
+  the enable toggle all speak to it the same way. A workspace focus reported by the
+  hook while a snapshot is in flight wins over what the snapshot saw. A snapshot
+  identical to the last one is not re-sent — the page gets a bare tick so its clock
+  moves — and a changed one crosses as a JSON string for `JSON.parse`. The front app
+  comes from `NSWorkspace` (a read and an activation observer; no `lsappinfo`), and the
+  workspace list is served from a 5 s cache once AeroSpace's hook has been seen
+  writing the trigger in this process, asked every tick until then. The idle-memory
+  receipt stays the app-only number (DECISIONS 2026-11-01); `scripts/mem.sh --webkit`
+  now prints the floor under it — every process macOS holds scuttler responsible for,
+  with footprints — so the lighter-shell spike compares like with like.
+- **Why.** Ten call sites on ten threads each took a snapshot and evaled it, so two
+  could land swapped and show an older focus for a tick. Every tick spawned three
+  processes (`aerospace`, `lsappinfo` twice) and made JavaScriptCore parse a 40 KB
+  literal whether or not anything had changed; the bar's WebContent spent 14 minutes
+  of CPU in a day (JOURNAL 2026-11-05). The cache is gated on the hook being alive so
+  a hand-written `aerospace.toml` without it still sees switches within a second.
+  Measuring the helpers found the 4 GB instance; a shell comparison that could not see
+  them would have been a comparison of nothing.
+- **Alternatives.** Keep direct pushes and add a lock (keeps the spawns, keeps the
+  parse). An NSWorkspace observer only, no per-push read (a missed notification
+  would stick). Make the receipt include the helpers now (a budget change is Mitch's
+  call; it is in STATUS as a question, the number is printed either way).
+
+---
+
 ### 2026-11-04 · v0.8.1 folded into v0.8.5; a workspace switch reaches the bar without a spawn
 
 - **Decision.** The rename release (v0.8.1, drafted, never cut: the notary profile was

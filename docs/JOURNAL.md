@@ -6,6 +6,49 @@
 
 ---
 
+### 2026-11-05 · The 20-hour instance was 4 GB, and the bar was painting sixty times a second
+
+Attributing WebKit's helpers to the app (they are launchd children, so `pgrep -P`
+never sees them) found the uptime leak ROADMAP "Memory" was waiting for, at a scale
+it had not imagined: `footprint <pid>` on the instance that had run since the day
+before read a physical footprint of **4036 MB**, 3660 MB of it "owned physical
+footprint (unmapped)" in 78 000 regions of ~48 KB — memory the kernel charges to the
+app that the app no longer maps. `ps` RSS said 486 MB and would never have told.
+The bar's WebContent was at 1.5 GB with 14 min of CPU; the GPU helper had 4 min.
+
+What the toggles said (config is hot-applied, so each test was a 25 s window): bar
+off → zero growth; bar on → ~1 region a second whatever cells were on (clock, usage,
+agents, widgets, all off: still 1/s); sixty trigger-driven pushes in two seconds →
+seven extra, not sixty. A fresh process shows the same regions coming and going
+(11–64 at any moment, never climbing), so they are in-flight shared buffers between
+the UI process and the bar's WebContent, released in a young view and no longer
+released in the old one. Not pinned further today: `lsmp`, `footprint --unmapped`
+and `launchctl procinfo` all want root, and the old instance is gone. Watch it:
+`scripts/mem.sh --webkit` prints the owned-but-unmapped number; on a day-old launchd
+instance it should still read single-digit MB.
+
+Two costs that fed the churn were real and are fixed. `sample <WebContent pid> 5`
+showed `WebCore::PaintInfo` / `RenderLayer::paint` in 53 of the samples: a
+`transform: rotate` keyframe on an element without its own compositing layer repaints
+the strip every frame, for every working agent, all day. `will-change: transform` (and
+`opacity` for the breathe) on the glyphs took that to 0. And `JSC::Parser` in 20
+samples: every 1 Hz push evaluated a 40 KB object literal. Now an unchanged snapshot
+sends a bare `__barTick()`, and a changed one goes over as a string for `JSON.parse`;
+the parser frames went to 1.
+
+How to see the helpers without root: the kernel's "responsible pid" (what Activity
+Monitor groups by) is `responsibility_get_pid_responsible_for_pid` in libquarantine,
+reachable from python's ctypes in three lines — that is what `mem.sh --webkit` does.
+Two WebContent processes exist at idle: the launcher's (~55 MB, almost no CPU) and
+the bar's (~68 MB); the bar's is the one that works.
+
+Measuring idle on this Mac while Claude Code sessions are running is not measuring
+idle: seven panes' hooks poke the bar on every tool call. The numbers above that are
+rates were taken as before/after on the same conditions where possible and marked
+otherwise.
+
+---
+
 ### 2026-11-04 · "Workspace switches take a long, long time": the rename killed the bar's fast path
 
 The bar learns of a workspace switch two ways: AeroSpace's `exec-on-workspace-change`

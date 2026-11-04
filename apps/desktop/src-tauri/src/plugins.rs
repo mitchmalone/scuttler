@@ -715,7 +715,7 @@ pub fn configure(app: &AppHandle, disabled: &[String]) {
     };
     if changed {
         refresh(app);
-        crate::bar::push(app);
+        crate::bar::push();
     }
 }
 
@@ -839,7 +839,7 @@ fn supervise(app: AppHandle, id: String, generation: u64) {
         }
         if !needs.is_empty() {
             set_needs(&id, needs);
-            crate::bar::push(&app);
+            crate::bar::push();
             if !sleep_unless_stale(&id, generation, Duration::from_secs(5)) {
                 return;
             }
@@ -874,7 +874,7 @@ fn supervise(app: AppHandle, id: String, generation: u64) {
             e.state.running = false;
             e.state.restarts = e.state.restarts.saturating_add(1);
         }
-        crate::bar::push(&app);
+        crate::bar::push();
         // A service that lived a while earned a fresh backoff. One the OS
         // killed (a signal, not an exit) is not going to do better in a
         // second: wait the full backoff — that is usually TCC or a crash.
@@ -983,7 +983,7 @@ fn run_stream(
             }
         }
     }
-    crate::bar::push(app);
+    crate::bar::push();
     // stderr on its own thread: the tail lands in the error when it exits,
     // and every line goes to our log so a plugin can be debugged from Console.
     let err_id = id.to_string();
@@ -1041,7 +1041,7 @@ fn run_stream(
                     e.state.updated_at = Some(now);
                 }
                 drop(reg);
-                crate::bar::push(app);
+                crate::bar::push();
                 // An open panel re-pulls on this instead of waiting for its
                 // 1 s poll — a toggle must answer at the speed of the light.
                 let _ = app.emit(STATE_EVENT, id);
@@ -1326,7 +1326,7 @@ fn tick(
                 Instant::now() + Duration::from_secs(e.manifest.interval.unwrap_or(MIN_INTERVAL));
         }
     }
-    crate::bar::push(&app);
+    crate::bar::push();
 }
 
 /// Restart a plugin: stream service killed (the supervisor respawns it), tick
@@ -1391,7 +1391,7 @@ pub fn restart(app: &AppHandle, id: &str) -> Result<(), String> {
         build_plugin(id);
     }
     let _ = app.emit("plugins-changed", ());
-    crate::bar::push(app);
+    crate::bar::push();
     Ok(())
 }
 
@@ -1484,7 +1484,7 @@ pub fn start(app: AppHandle, disabled: &[String]) {
     let watch_app = app.clone();
     std::thread::spawn(move || {
         refresh(&watch_app);
-        crate::bar::push(&watch_app);
+        crate::bar::push();
         use notify::{RecursiveMode, Watcher};
         let (tx, rx) = mpsc::channel();
         let mut watcher = match notify::recommended_watcher(tx) {
@@ -1504,7 +1504,7 @@ pub fn start(app: AppHandle, disabled: &[String]) {
             // Editor save bursts and `git clone` land as many events.
             while rx.recv_timeout(Duration::from_millis(500)).is_ok() {}
             refresh(&watch_app);
-            crate::bar::push(&watch_app);
+            crate::bar::push();
         }
     });
 

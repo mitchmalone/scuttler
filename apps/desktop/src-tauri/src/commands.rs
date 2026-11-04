@@ -161,14 +161,10 @@ pub struct AwakeReadings {
 /// Jump to an agent session's tmux pane and bring the terminal frontmost;
 /// visiting marks a `done` session read. async: spawns tmux and `open`.
 #[tauri::command]
-pub async fn agent_jump(
-    session: String,
-    app: AppHandle,
-    state: State<'_, AppState>,
-) -> CmdResult<()> {
+pub async fn agent_jump(session: String, state: State<'_, AppState>) -> CmdResult<()> {
     let terminal = state.config.read().unwrap().terminal;
     crate::logbook::breadcrumb("agents", &format!("jump {session} ({terminal:?})"));
-    let result = crate::agents::jump_session(&app, &session, terminal);
+    let result = crate::agents::jump_session(&session, terminal);
     if let Err(e) = &result {
         crate::logbook::breadcrumb("agents", &format!("jump {session} failed: {e}"));
     }
@@ -178,8 +174,8 @@ pub async fn agent_jump(
 /// Forget an agent session by hand — the escape hatch for a cell the liveness
 /// checks can't prove dead (DECISIONS 2026-08-18). async: `list()` may spawn.
 #[tauri::command]
-pub async fn agent_forget(session: String, app: AppHandle) -> CmdResult<()> {
-    crate::agents::forget_session(&app, &session)
+pub async fn agent_forget(session: String) -> CmdResult<()> {
+    crate::agents::forget_session(&session)
 }
 
 /// Wifi panel (P0). All async — they spawn subprocesses.

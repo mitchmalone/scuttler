@@ -7,6 +7,12 @@
 #   scripts/mem.sh --receipt  the budget number: three readings 10 s apart, the median
 #                             total, and a warning when the running config is not the
 #                             reference one (agents monitor on, plugin services up)
+#   scripts/mem.sh --webkit   the floor the receipt does not count: every process macOS
+#                             holds scuttler responsible for (WebKit's WebContent, GPU and
+#                             Networking helpers, borders, plugin services) with each one's
+#                             physical footprint, plus the app's own footprint and how much
+#                             of it is memory the app owns but no longer maps — the number
+#                             that grew to 3.6 GB in 20 h on 2026-11-05 (JOURNAL)
 #
 # The budget is idle resident < 120 MB, panel hidden, under the reference config: a
 # release build, bar on, agents monitor off, no plugin services, one display, read a
@@ -96,6 +102,59 @@ receipt() {
   fi
 }
 
+# Everything macOS attributes to the app, launchd children included. WebKit's
+# helpers are XPC services whose parent is launchd, so `pgrep -P` never sees
+# them; the kernel's "responsible pid" (what Activity Monitor groups by) does.
+# That call lives in libquarantine and has no CLI, hence python's ctypes.
+webkit() {
+  local root
+  root=$(root_pid)
+  if [[ -z "$root" ]]; then
+    echo "scuttler is not running"
+    return 1
+  fi
+  echo "responsible for (physical footprint, MB):"
+  python3 -I - "$root" <<'PY'
+import ctypes, subprocess, sys
+root = int(sys.argv[1])
+lib = ctypes.CDLL('/usr/lib/system/libquarantine.dylib')
+f = lib.responsibility_get_pid_responsible_for_pid
+f.restype, f.argtypes = ctypes.c_int, [ctypes.c_int]
+def footprint(pid):
+    try:
+        out = subprocess.run(['footprint', str(pid)], capture_output=True, text=True, timeout=20).stdout
+    except Exception:
+        return None, None
+    phys = unmapped = None
+    for line in out.splitlines():
+        if 'phys_footprint:' in line:
+            phys = to_mb(line.split()[1], line.split()[2])
+        if line.rstrip().endswith('Owned physical footprint (unmapped)'):
+            unmapped = to_mb(line.split()[0], line.split()[1])
+    return phys, unmapped
+def to_mb(value, unit):
+    scale = {'B': 1 / 1048576, 'KB': 1 / 1024, 'MB': 1, 'GB': 1024}.get(unit, 1)
+    try:
+        return float(value) * scale
+    except ValueError:
+        return None
+rows = []
+for line in subprocess.check_output(['ps', '-axo', 'pid=,comm=']).decode().splitlines():
+    pid, comm = line.split(None, 1)
+    pid = int(pid)
+    if pid != root and f(pid) == root:
+        rows.append((pid, comm.rsplit('/', 1)[-1]))
+total = 0
+for pid, comm in rows:
+    phys, _ = footprint(pid)
+    total += phys or 0
+    print(f'  {pid:<8}{(phys or 0):>8.1f}  {comm}')
+phys, unmapped = footprint(root)
+print(f'  helpers {total:>8.1f}  total')
+print(f'app      {(phys or 0):>8.1f}  physical footprint, of which owned but unmapped: {(unmapped or 0):.1f} MB')
+PY
+}
+
 case "${1:-}" in
   --watch)
     while true; do
@@ -106,6 +165,7 @@ case "${1:-}" in
     done
     ;;
   --receipt) receipt ;;
+  --webkit) webkit ;;
   "") reading ;;
-  *) echo "usage: scripts/mem.sh [--watch | --receipt]" >&2; exit 2 ;;
+  *) echo "usage: scripts/mem.sh [--watch | --receipt | --webkit]" >&2; exit 2 ;;
 esac
