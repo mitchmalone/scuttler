@@ -357,7 +357,7 @@ const ROADMAP = [
   [
     'done',
     'The rename',
-    'scuttlarr became scuttler, at www.scuttler.app, in v0.8.1',
+    'scuttlarr became scuttler, at www.scuttler.app, in v0.8.5',
   ],
   [
     'todo',

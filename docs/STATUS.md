@@ -4,7 +4,7 @@
 > history lives in git, `plans/done/`, `releases/` and `JOURNAL.md`; the backlog with its
 > triggers lives in `ROADMAP.md`.
 >
-> Last updated: 2026-11-06 (v0.8.5 releasing; the shell stays Tauri, DECISIONS 2026-11-06;
+> Last updated: 2026-11-06 (v0.8.5 released, fan-out green; the shell stays Tauri, DECISIONS 2026-11-06;
 > agent state will come from the screen, planned; cells no longer stick on "working" after Claude's away recap,
 > JOURNAL 2026-11-06; the bar is one push stream with cheaper snapshots and
 > no per-frame paint, DECISIONS 2026-11-05; the 20-hour instance was found at 4 GB and
@@ -12,8 +12,10 @@
 
 ## Where we are
 
-- **Releasing: v0.8.5** (2026-11-06, `releases/v0.8.5.md`): the rename, the fast bar,
-  the agents fix; receipt 113.5 MB, cold start 179 ms. Both plans closed
+- **Released: v0.8.5** (2026-11-06, `releases/v0.8.5.md`): the rename, the fast bar,
+  the agents fix; receipt 113.5 MB, cold start 179 ms. Fan-out green (check, homebrew,
+  notion, deploy-mmcom); the tap holds `scuttler.rb` 0.8.5 with `auto_updates` and
+  `scuttlarr.rb` deprecated to it; `www.scuttler.app` and `/install` serve 0.8.5. Both plans closed
   (`plans/done/2026-11-01-rename-to-scuttler.md`,
   `plans/done/2026-11-04-v0.8.5-fast-bar-and-shell-spike.md`); the shell stays Tauri
   (DECISIONS 2026-11-06). Previous: v0.8.0 (2026-11-01).
@@ -80,8 +82,8 @@ Settings); `setup ⏎` starts from the current config; the hotkey try; Esc on th
 screen restores the old theme; the field stops while hidden (idle CPU); with an awake
 hold armed, five fresh-config launches each open setup on first summon.
 
-Release path: v0.8.5 released 2026-11-06 from this Mac (notary profile stored). Check
-after the fan-out: tap holds `scuttler.rb` plus a deprecated `scuttlarr.rb`; the live
+Release path: v0.8.5 released 2026-11-06 from this Mac (notary profile stored); fan-out,
+tap and site checked by the agent. Still yours: the live
 proof of the one cross-rename upgrade (a 0.8.0 install runs `updates ⏎` → `↵`, lands as
 `scuttler.app`; `brew upgrade` on a scuttlarr install reports the deprecation);
 `www.scuttler.app/install` and the old domain's redirect; `git grep -i scuttlarr`
