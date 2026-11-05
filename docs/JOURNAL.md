@@ -6,6 +6,22 @@
 
 ---
 
+### 2026-11-06 · A debug AeroSpace build empties the bar's workspace cells
+
+Mitch quit the Homebrew AeroSpace and ran his fork's debug build, which serves on
+`/tmp/bobko.aerospace.debug-mitch.sock`; the bar went blank where the workspaces are.
+Why: `deps::locate` finds `aerospace` on PATH, then under Homebrew, and the launchd
+PATH is `/usr/bin:/bin:/usr/sbin:/sbin`, so the bar always runs
+`/opt/homebrew/bin/aerospace`, whose socket path is compiled in
+(`/tmp/<app-id>-<user>.sock`, no env override). With no server there, `aerospace()`
+returns `None` and the snapshot has no workspaces; the hook still wrote the trigger, so
+the focused name flashed in and the next snapshot emptied it. The CLI's client/server
+version check is only a warning on a failed exit, so the fix needs no code:
+`ln -sf /tmp/bobko.aerospace.debug-mitch.sock /tmp/bobko.aerospace-mitch.sock` and the
+Homebrew CLI talks to the debug server; the release app replaces the link when it next
+starts. A `desktop.aerospace` path key in config would be the scuttler-side answer if
+this becomes routine; not added for one dev session.
+
 ### 2026-11-05 · The 20-hour instance was 4 GB, and the bar was painting sixty times a second
 
 Attributing WebKit's helpers to the app (they are launchd children, so `pgrep -P`
