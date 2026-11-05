@@ -5,6 +5,24 @@
 
 ---
 
+### 2026-11-06 · The shell stays Tauri; the spike closes on arm (a)
+
+- **Decision.** scuttler keeps Tauri 2 as its shell. The lighter-shell spike (plan
+  2026-11-04) closes with its one measured arm: the launcher alone on a bare `objc2`
+  WKWebView NSPanel is a 21 MB app process beside Tauri's ~20 MB, and the WebKit
+  helpers are the same ~80 MB either way. The zero-native arm and the minimal-Tauri
+  control were not built; the Notion item "Try a lighter app shell" is answered by the
+  numbers in the plan, and a migration plan does not exist.
+- **Why.** The shell is not where the weight is. The receipt is 113.5 MB of which the
+  app process is ~40 MB; the rest is WebKit, which no shell removes while the UI is a
+  web view. A rewrite would spend the IPC surface, the panel plugin, the global shortcut,
+  signing and updater paths to save single-digit MB. The real memory problem is the
+  uptime leak (JOURNAL 2026-11-05), which is watched by `mem.sh --webkit` and is a
+  WebKit-buffer question, not a shell one.
+- **Alternatives.** Build the remaining arms first (two more days for a comparison the
+  first arm already bounds); thin Tauri to wry/objc2 (same WebKit, same floor, less
+  tooling); revisit if the leak proves to be the shell's (the gauge is in place).
+
 ### 2026-11-06 · Agent state comes from the screen; hooks identify and label
 
 - **Decision.** A tmux agent's state (`working`, `attention`, idle) is classified from

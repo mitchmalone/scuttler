@@ -1,8 +1,8 @@
 ---
 title: Rename scuttlarr to scuttler, everywhere, at www.scuttler.app
-status: active # phases 0–2 and 4 done 2026-11-01; phase 3 (the release) is Mitch's hands
+status: done # phases 0–2 done 2026-11-01; phase 3 released 2026-11-06 as v0.8.5; what still needs hands is in STATUS
 created: 2026-11-01
-updated: 2026-11-01
+updated: 2026-11-06
 links:
   - 2026-11-01-docs-sweep.md # runs first; this plan's sed then renames true text
   - ../done/2026-09-11-unify-into-scuttlarr.md
@@ -142,7 +142,7 @@ External moves, in this order, inside `release.sh 0.9.0`'s window:
 Phase 0 — gate
 
 - [x] v0.8.0 released and STATUS says so. Nothing below starts before.
-- [x] This file moves to `docs/plans/active/2026-11-01-rename-to-scuttler.md`; DECISIONS
+- [x] This file moves to `docs/plans/done/2026-11-01-rename-to-scuttler.md`; DECISIONS
       entry (name, domain, version, bundle id kept, symlink-for-state-only, alias policy,
       what is left behind).
 
@@ -266,3 +266,10 @@ Close
 - **Search and the name.** "scuttler" collides with common English in a way "scuttlarr"
   did not; the site's metadata and the GitHub description carry "scuttler.app" and the
   tagline so a search lands.
+
+## Closed 2026-11-06
+
+Released as v0.8.5 (`releases/v0.8.5.md`). Unticked boxes above are hands-checks and
+pixels, carried to `STATUS.md` "Needs Mitch": the fan-out and tap check, the site and
+install-script checks, the cross-rename upgrade proof, the brand assets, dotfiles, and
+the `git grep scuttlarr` sweep.
