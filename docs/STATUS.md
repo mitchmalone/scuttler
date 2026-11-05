@@ -4,8 +4,9 @@
 > history lives in git, `plans/done/`, `releases/` and `JOURNAL.md`; the backlog with its
 > triggers lives in `ROADMAP.md`.
 >
-> Last updated: 2026-11-06 (agent cells no longer stick on "working" after Claude's
-> away recap, JOURNAL 2026-11-06; the bar is one push stream with cheaper snapshots and
+> Last updated: 2026-11-06 (agent state will come from the screen, DECISIONS
+> 2026-11-06, planned; cells no longer stick on "working" after Claude's away recap,
+> JOURNAL 2026-11-06; the bar is one push stream with cheaper snapshots and
 > no per-frame paint, DECISIONS 2026-11-05; the 20-hour instance was found at 4 GB and
 > is now watched with `mem.sh --webkit`, JOURNAL 2026-11-05; next: the shell spike)
 
@@ -34,7 +35,10 @@
   4 GB (JOURNAL 2026-11-05): a shared-buffer leak between the app and the bar's
   WebContent that a fresh process does not show; watched, not closed. 2026-11-06: a
   subagent event no longer changes a known session's state, so Claude's away recap
-  cannot leave a cell on "working" for a day (JOURNAL 2026-11-06). Next: the
+  cannot leave a cell on "working" for a day (JOURNAL 2026-11-06); the lasting fix is
+  planned: state from the pane's screen, hooks for identity, herdr's model (DECISIONS
+  2026-11-06, `plans/active/2026-11-06-agent-state-from-the-screen.md`, after this
+  release). Next: the
   lighter-shell spike (bare WKWebView vs zero-native vs Tauri, helpers included) and
   a DECISIONS gate before any migration; then the release.
 - **Parked:** `plans/done/lights-plugin.md` (built, in daily use; Nanoleaf waits on

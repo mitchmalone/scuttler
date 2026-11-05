@@ -5,6 +5,27 @@
 
 ---
 
+### 2026-11-06 · Agent state comes from the screen; hooks identify and label
+
+- **Decision.** A tmux agent's state (`working`, `attention`, idle) is classified from
+  the live bottom of its pane by a rule engine over bundled per-agent TOML rules in
+  herdr's manifest shape (regions, matchers, priorities, skip-on-overlay). The Claude
+  hook, and any other agent's hook, supplies identity, pid, title and detail, and is a
+  reason to look; its state is only a hint for sessions with no pane. `done` / `read`
+  stay scuttler's rollup over the screen's idle. Plan:
+  `plans/active/2026-11-06-agent-state-from-the-screen.md`.
+- **Why.** Two days of hook-order bugs (JOURNAL 2026-11-06): the away recap's
+  SubagentStop revived done cells, the idle notification promoted every finished cell to
+  "needs you", AskUserQuestion read as working. Hook sequences are not a state machine
+  the agent promises; the screen is what the user would look at to decide. herdr
+  reached the same conclusion for the same agent (its Claude hook reports identity only
+  and ignores SubagentStop) and runs 22 agents on one engine with rules as data,
+  patched remotely without a binary update.
+- **Alternatives.** Keep mapping hook events (each fix found the next); poll every pane
+  every tick (cost scales with panes, not activity; we capture only working/attention
+  panes); consume herdr's served catalogue directly (no licence on the files; ask
+  first, stay format-compatible so a yes is cheap).
+
 ### 2026-11-05 · The bar is fed by one push stream; what did not change is not re-sent; the WebKit floor is measured beside the receipt
 
 - **Decision.** `bar::push()` is a non-blocking poke on one channel. One thread waits
