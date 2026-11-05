@@ -1,6 +1,6 @@
 [package]
 name = "scuttler"
-version = "0.8.0"
+version = "0.8.5"
 description = "Scuttle the ship. Sail the wreck. An opinionated macOS desktop for terminal developers"
 authors = ["Mitch Malone"]
 edition = "2021"
