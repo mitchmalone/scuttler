@@ -134,6 +134,15 @@ struct AgentEvent {
     /// actually driving that session (diagnosis 2026-08-19).
     #[serde(default)]
     background: bool,
+    /// Present when the event is about a subagent of this session (the Claude
+    /// hook's SubagentStart/SubagentStop), not the session itself. Such an
+    /// event never changes a known session's state: the parent's own
+    /// lifecycle says whether it is working, and a subagent can finish after
+    /// the parent's turn ended (Claude's away recap runs one three minutes
+    /// after every Stop, which left four cells spinning for a day,
+    /// 2026-11-06). The payload is not read; only its presence matters.
+    #[serde(default)]
+    subagent: Option<serde_json::Value>,
 }
 
 static SESSIONS: Mutex<Vec<AgentSession>> = Mutex::new(Vec::new());
@@ -497,6 +506,9 @@ fn apply(sessions: &mut Vec<AgentSession>, event: AgentEvent, now: u64) -> bool 
     };
     if let Some(i) = previous {
         let old = &sessions[i];
+        if event.subagent.is_some() {
+            next.state = old.state.clone();
+        }
         if next.title.is_empty() {
             next.title = old.title.clone();
         }
@@ -950,6 +962,35 @@ mod tests {
         assert!(apply(&mut s, event("a", "ended"), 200));
         assert_eq!(s.len(), 1);
         assert_eq!(s[0].session, "b");
+    }
+
+    #[test]
+    fn a_subagent_event_never_changes_a_known_sessions_state() {
+        // The away recap: Stop, the idle notification, then a subagent that
+        // ran after the turn ended. The cell must still read as it did.
+        let mut sessions = Vec::new();
+        apply(&mut sessions, event("s", "done"), 100);
+        let mut note = event("s", "attention");
+        note.detail = "Claude is waiting for your input".into();
+        apply(&mut sessions, note, 160);
+        let mut recap = event("s", "working");
+        recap.subagent = Some(serde_json::json!({"op": "stop"}));
+        assert!(apply(&mut sessions, recap, 340));
+        assert_eq!(sessions[0].state, "attention");
+        assert_eq!(sessions[0].detail, "Claude is waiting for your input");
+        assert_eq!(sessions[0].state_since, 160, "the stamp survives");
+        assert_eq!(
+            sessions[0].updated_at, 340,
+            "but it is still a sign of life"
+        );
+        // A subagent in a session we have never seen is still a session.
+        let mut fresh = event("t", "working");
+        fresh.subagent = Some(serde_json::json!({"op": "start"}));
+        apply(&mut sessions, fresh, 400);
+        assert_eq!(
+            sessions.iter().find(|s| s.session == "t").unwrap().state,
+            "working"
+        );
     }
 
     #[test]

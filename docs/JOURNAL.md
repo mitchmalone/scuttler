@@ -6,6 +6,22 @@
 
 ---
 
+### 2026-11-06 · Four agent cells spun for a day: Claude's away recap is a subagent
+
+PR608 read "working" with the detail "Claude is waiting for your input", 25 hours after
+its last turn, and three sibling cells wore the same contradiction. The detail only comes
+from a Notification (`attention`), so something later set `working` with no detail of its
+own; the only such events are SubagentStart/SubagentStop. Each record's last touch was
+the exact second of a `system/away_summary` line in its transcript, three minutes after
+the final Stop: Claude Code's "recap while you were away" runs as a subagent and fires
+the subagent hooks, after the turn's Stop had already landed, so nothing ever cleared
+it. The pids were alive, so the reaper rightly kept them; `working` has no timeout
+because a long tool call is silent too. Fix in the store: an event carrying `subagent`
+never changes a known session's state (it still counts as a sign of life and still
+creates an unknown session). The hook keeps mapping them to `working` as the seed.
+Transcripts for the `.claude-psyke` sessions live under `~/.claude-psyke/projects/`,
+timestamps in UTC.
+
 ### 2026-11-06 · A debug AeroSpace build empties the bar's workspace cells
 
 Mitch quit the Homebrew AeroSpace and ran his fork's debug build, which serves on

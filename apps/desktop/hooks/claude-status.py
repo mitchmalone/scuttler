@@ -36,8 +36,11 @@ STATES = {
     # done, not idle: a finished turn stays "unread" (blue) until visited.
     "Stop": "done",
     "SessionEnd": "ended",
-    # Subagents run inside the parent, which is still working; the event
-    # itself rides in the `subagent` field.
+    # Subagents ride in the `subagent` field, and the store never lets one
+    # change a known session's state (agents.rs): Claude's away recap runs a
+    # subagent minutes after a turn ended, which used to re-mark a done cell
+    # "working" for good (2026-11-06). The state here only seeds an unknown
+    # session.
     "SubagentStart": "working",
     "SubagentStop": "working",
 }
