@@ -1,6 +1,6 @@
 ---
-title: Agent state from the screen — the herdr model, for every agent
-status: planned
+title: Make agent statuses correct
+status: active
 created: 2026-11-06
 updated: 2026-11-06
 links:
@@ -11,14 +11,15 @@ links:
   - herdr catalogue: https://herdr.dev/agent-detection/index.toml (public, unlicensed)
 ---
 
-# Agent state from the screen — the herdr model, for every agent
+# Make agent statuses correct
 
 ## Goal
 
-A cell reads `working`, `needs you` or `done` because that is what the agent's pane
-shows, not because of the order its hooks happened to fire. One rule engine and one
-rule file per agent, so a wrong cell is fixed by adding a screen shape to a text file,
-and a new agent (Codex, Copilot, Cursor, Gemini, …) is a new file, not new Rust.
+An agent cell on the bar says what you would see if you switched to that pane and
+looked: working, needs you, done. Not just for the shapes we have met, but forever:
+the shapes live in one rule file per agent, a wrong cell is a screen capture and a new
+line in that file, and every agent herdr supports from the screen (22 in its public
+catalogue, 2026-11-06) is a file here too.
 
 ## Context
 
@@ -82,36 +83,47 @@ not activity); read herdr's catalogue live (licence unclear, network on a core p
 
 ## Steps
 
-- [ ] `agents/rules/<id>.toml` bundled (`include_str!`), starting with `claude` and
-      `codex`; a `rules.rs` evaluator (regions, matchers, priority, skip) with tests
-      that replay captured screens: Claude working (activity line), idle (bare prompt
-      box), AskUserQuestion form, Bash permission prompt, transcript viewer overlay,
-      model picker; Codex "Action Required" title, "allow command?", `[y/n]`.
-- [ ] Screen capture in `agents.rs`: `capture-pane` for the pane of each `working` /
-      `attention` session on the layout tick and on each hook event; agent id from
-      `pane_current_command` (`claude`, `codex`, `copilot`, …); unknown command → hook
-      state as today.
-- [ ] The rollup: screen `idle` after `working` → `done`; `blocked` → `attention`;
-      `skip_state_update` → no change; `read` only via a jump, as now.
-- [ ] The hook shrinks: identity, title, detail, pid; SubagentStart/Stop send no state;
-      Notification sends no state (the detail still lands on the card).
-- [ ] "explain" on the agent card: the rule id that set the state and when.
-- [ ] Codex hook installer (`~/.codex/hooks.json` + `[features] hooks = true`), under
-      invariant 11 like the Claude one; Copilot's one SessionStart entry if Mitch uses it.
-- [ ] Docs: PLUGINS/agents section on how a rule file is added; DECISIONS 2026-11-06
-      already records the model; JOURNAL for any Claude Code UI shape that surprised us.
+- [x] `agents/<id>.toml` bundled for all 22 agents in herdr's catalogue (claude, codex,
+      copilot, cursor, gemini, cline, agy, kiro, maki, opencode, pi, qodercli, letta,
+      muse, qwen, amp, devin, droid, grok, hermes, kilo, kimi), each with a provenance
+      header; `rules.rs` evaluates regions (`osc_title`, `bottom_non_empty_lines(N)`,
+      `top_non_empty_lines(N)`, `whole_recent`, `after_last_horizontal_rule`,
+      `prompt_box_body`, `last_non_empty_above_prompt_box`, the Codex prompt-marker
+      regions), matchers (`contains` case-folded, `regex`, `line_regex`, `any`, `all`,
+      `not`), priority, `skip_state_update`; tests replay Claude working, idle, question
+      form, Bash permission, transcript overlay, and Codex title, approval, spinner.
+      `toml` and `regex` were already in the tree through tauri: no new weight.
+- [x] Screen capture in `agents.rs`: the layout read carries `pane_current_command`,
+      `pane_tty` and `pane_title`; `look()` runs `capture-pane -S -40` for every
+      `working` / `attention` session on the 2 s layout cadence and for any session a
+      hook just spoke for; the verdict settles through `settle()`.
+- [x] Discovery: a pane whose foreground command is a known agent (or an interpreter
+      whose command line names one, `ps -t`, cached 30 s) becomes a `pane:%N` session
+      with no hook at all; a hook for that pane takes the cell over, keeping its age.
+- [x] The rollup: screen `idle` after `working`/`attention` → `done`; `blocked` →
+      `attention`; an overlay → no change; `read` only via a jump, as before.
+- [x] The hook shrinks: Notification carries state only for `permission_prompt` and
+      `elicitation_dialog`; SubagentStart/Stop carry none; PreToolUse of
+      AskUserQuestion is `attention`; a blank state inherits in the store.
+- [x] "seen: <rule>" on the agents panel row (`AgentSession.rule`, mirrored in the kit).
+- [ ] Codex hook installer (`~/.codex/hooks.json` + `[features] hooks = true`): not
+      needed for state (Codex panes are discovered and read); only for a title. Later.
+- [x] Docs: README names where the rules live; DECISIONS 2026-11-06; this plan.
 
 ## Acceptance criteria
 
-- [ ] PR608's shape (bare prompt box, 25 h silent) reads `done · unread`, never
-      `needs you`; a pane showing a question form or a permission prompt reads
-      `needs you` within one tick; a pane with the activity line reads `working`.
-- [ ] The away recap, the idle notification and an Esc-interrupted turn change nothing
-      the screen does not show.
-- [ ] A transcript viewer or model picker left open does not change the cell.
-- [ ] `pnpm verify` green; every rule file has a replayed-screen test per rule.
-- [ ] Memory: `scripts/mem.sh --receipt` before → after (no new process; a few KB of
-      rule tables).
+- [x] PR608's shape (bare prompt box, 25 h silent) reads idle/`done`, never `needs
+you` (test `claude_bare_prompt_box_is_idle_whatever_the_title_says`); a question
+      form or a permission prompt reads `needs you` (tests); the activity line reads
+      `working` (test).
+- [x] The away recap, the idle notification and an Esc-interrupted turn change nothing
+      the screen does not show: the hook sends no state for the first two, and the
+      screen look settles the third on its next 2 s tick.
+- [x] A transcript viewer or model picker left open does not change the cell (test).
+- [ ] `pnpm verify` green on the final commit; every rule file parses and every
+      pattern compiles (test); live check on Mitch's panes after dev-install.
+- [ ] Memory: `scripts/mem.sh --receipt` unchanged in kind (no new process; rule tables
+      are a few KB of text); recorded at the next release.
 - [ ] Idle CPU with eight idle agents unchanged (no capture for idle sessions).
 
 ## Out of scope

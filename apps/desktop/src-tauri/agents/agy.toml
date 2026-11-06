@@ -1,0 +1,59 @@
+# scuttler agent screen rules (rules.rs). Format and shapes recorded from herdr's public
+# catalogue, herdr.dev/agent-detection, 2026-11-06 (its binary is Apache-2.0; the
+# catalogue files carry no licence text: STATUS, Needs Mitch). Strings are the agent's
+# own UI text. A wrong cell is a captured screen and a new rule here, with a test.
+
+id = "agy"
+version = "2026.11.06.1"
+aliases = ["antigravity", "antigravity-cli"]
+
+# Dialogs replace the prompt box and end with a key-hint row directly above the
+# "esc to cancel" footer; some captures hold only the two footer rows, so the
+# dialog rules do not require the question text. Background tasks and
+# subagents after the agent is back at its prompt do not count as working.
+
+[[rules]]
+id = "permission_prompt"
+state = "blocked"
+priority = 300
+region = "bottom_non_empty_lines(2)"
+contains = ["navigate", "tab amend"]
+
+[[rules]]
+id = "question_prompt"
+state = "blocked"
+priority = 290
+region = "bottom_non_empty_lines(2)"
+contains = ["navigate", "esc skip"]
+
+[[rules]]
+id = "trust_prompt"
+state = "blocked"
+priority = 280
+region = "bottom_non_empty_lines(8)"
+contains = ["do you trust the contents of this project?", "yes, i trust this folder", "enter confirm"]
+
+[[rules]]
+id = "legacy_permission_prompt"
+state = "blocked"
+priority = 270
+region = "whole_recent"
+contains = ["requesting permission for:"]
+any = [
+  { contains = ["do you want to proceed?"] },
+  { contains = ["tab amend", "edit command"] },
+]
+
+[[rules]]
+id = "esc_cancel_footer_working"
+state = "working"
+priority = 110
+region = "bottom_non_empty_lines(2)"
+regex = ['(?m)^\s*─{3,}\s*esc to cancel\b']
+
+[[rules]]
+id = "spinner_working"
+state = "working"
+priority = 100
+region = "bottom_non_empty_lines(12)"
+line_regex = ['^\s*[⠁-⣿]+\s+\S']

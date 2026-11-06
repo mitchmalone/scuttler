@@ -1,0 +1,82 @@
+# scuttler agent screen rules (rules.rs). Format and shapes recorded from herdr's public
+# catalogue, herdr.dev/agent-detection, 2026-11-06 (its binary is Apache-2.0; the
+# catalogue files carry no licence text: STATUS, Needs Mitch). Strings are the agent's
+# own UI text. A wrong cell is a captured screen and a new rule here, with a test.
+
+id = "devin"
+version = "2026.11.06.1"
+aliases = ["devin-cli", "devin cli"]
+
+[[rules]]
+id = "workspace_trust_prompt"
+state = "blocked"
+priority = 300
+region = "bottom_non_empty_lines(8)"
+contains = [
+  "do you trust the authors of this directory?",
+  "with untrusted content.",
+  "yes, trust ",
+]
+
+[[rules]]
+id = "permission_prompt"
+state = "blocked"
+priority = 290
+region = "bottom_non_empty_lines(8)"
+contains = ["approve once", "select", "confirm", "esc cancel"]
+
+[[rules]]
+id = "running_tools_footer"
+state = "working"
+priority = 200
+region = "bottom_non_empty_lines(8)"
+contains = ["running tools", "esc to interrupt"]
+not = [
+  { contains = ["approve once", "esc cancel"] },
+]
+
+[[rules]]
+id = "guide_while_working"
+state = "working"
+priority = 190
+region = "bottom_non_empty_lines(6)"
+contains = ["guide devin while it works"]
+not = [
+  { contains = ["approve once", "esc cancel"] },
+]
+
+[[rules]]
+id = "tool_reading_timeout"
+state = "working"
+priority = 180
+region = "bottom_non_empty_lines(8)"
+contains = ["reading shell ", "timeout:"]
+not = [
+  { contains = ["approve once", "esc cancel"] },
+]
+
+[[rules]]
+id = "welcome_prompt_footer"
+state = "idle"
+priority = 120
+region = "bottom_non_empty_lines(8)"
+contains = ["ask devin to build", "features, fix bugs", "your code"]
+line_regex = ['^\s*> Ask Devin to build']
+not = [
+  { contains = ["approve once", "esc cancel"] },
+  { contains = ["running tools", "esc to interrupt"] },
+  { contains = ["guide devin while it works"] },
+]
+
+[[rules]]
+id = "live_prompt_footer"
+state = "idle"
+priority = 100
+region = "bottom_non_empty_lines(6)"
+contains = ["context:"]
+line_regex = ['^\s*>']
+not = [
+  { contains = ["approve once", "esc cancel"] },
+  { contains = ["running tools", "esc to interrupt"] },
+  { contains = ["guide devin while it works"] },
+]

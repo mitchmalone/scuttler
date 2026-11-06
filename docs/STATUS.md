@@ -23,8 +23,12 @@
   receipt, STATUS/ROADMAP/PRD as cursors, SETUP.md true, STANDARDS re-vendored, the
   extension docs split, the logs re-sorted and marked, the site on the kit's own panel
   registry, bar layout and launcher.
-- **Next up:** agent state from the screen
-  (`plans/active/2026-11-06-agent-state-from-the-screen.md`, DECISIONS 2026-11-06).
+- **In flight: make agent statuses correct**
+  (`plans/active/2026-11-06-make-agent-statuses-correct.md`, DECISIONS 2026-11-06):
+  built 2026-11-06 — a rule engine over 22 bundled per-agent rule files (herdr's
+  catalogue shapes), screens read from tmux for working/attention panes and on every
+  hook event, agent panes discovered without a hook, the Claude hook reduced to a
+  hint; dev-installed, watching it on Mitch's panes before the next release.
 - **Parked:** `plans/done/lights-plugin.md` (built, in daily use; Nanoleaf waits on
   Mitch's Home.app shortcuts, outside the repo); `plans/active/opensource-readiness-review.md`
   (`planned`, rewritten for the current scope; ROADMAP carries its trigger).
@@ -39,6 +43,10 @@
 
 ## Needs Mitch (decisions)
 
+- The 22 rule files under `apps/desktop/src-tauri/agents/` carry herdr's catalogue
+  shapes (herdr.dev/agent-detection, no licence text on those files; the binary is
+  Apache-2.0). Ask herdr, credit them in the README, or rewrite the files from our own
+  captures over time: your call before the next release ships them.
 - Whether the receipt should now count WebKit's helpers (`mem.sh --webkit` can see
   them: ~140 MB of WebContent and GPU at idle on top of the 41 MB app). The budget
   line in AGENTS says 120 MB for the app alone; a floor that honest would need a new

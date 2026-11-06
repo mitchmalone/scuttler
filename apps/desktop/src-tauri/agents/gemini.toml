@@ -1,0 +1,26 @@
+# scuttler agent screen rules (rules.rs). Format and shapes recorded from herdr's public
+# catalogue, herdr.dev/agent-detection, 2026-11-06 (its binary is Apache-2.0; the
+# catalogue files carry no licence text: STATUS, Needs Mitch). Strings are the agent's
+# own UI text. A wrong cell is a captured screen and a new rule here, with a test.
+
+id = "gemini"
+version = "2026.11.06.1"
+
+[[rules]]
+id = "apply_or_allow_change"
+state = "blocked"
+priority = 300
+region = "whole_recent"
+any = [
+  { contains = ["│ Apply this change"] },
+  { contains = ["│ Allow execution"] },
+  { all = [{ contains = ["yes"] }, { any = [{ contains = ["waiting for user confirmation"] }, { contains = ["│ Do you want to proceed"] }, { contains = ["do you want to proceed?"] }] }] },
+  { line_regex = ['(?i)^\s*>.*(yes|allow)'] },
+]
+
+[[rules]]
+id = "esc_cancel_working"
+state = "working"
+priority = 100
+region = "whole_recent"
+contains = ["esc to cancel"]

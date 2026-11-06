@@ -31,6 +31,9 @@ export interface AgentSession {
   startedAt: number
   /** Unix seconds the current state was entered — the turn's clock. */
   stateSince: number
+  /** The screen rule that last set the state (rules.rs), so a card can say
+   * why; absent until the pane has been looked at. */
+  rule?: string | null
 }
 
 /** What the wifi hover card shows — mirrors WifiStatus in wifi.rs (the same

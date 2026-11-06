@@ -1,0 +1,47 @@
+# scuttler agent screen rules (rules.rs). Format and shapes recorded from herdr's public
+# catalogue, herdr.dev/agent-detection, 2026-11-06 (its binary is Apache-2.0; the
+# catalogue files carry no licence text: STATUS, Needs Mitch). Strings are the agent's
+# own UI text. A wrong cell is a captured screen and a new rule here, with a test.
+
+id = "droid"
+version = "2026.11.06.1"
+
+[[rules]]
+id = "execute_selection_blocker"
+state = "blocked"
+priority = 300
+region = "whole_recent"
+contains = ["enter to select", "esc to cancel"]
+any = [
+  { contains = ["↑↓ to navigate"] },
+  { contains = ["use ↑↓ to navigate"] },
+]
+all = [
+  { any = [{ contains = ["> yes, allow"] }, { contains = ["> no, cancel"] }] },
+]
+
+[[rules]]
+id = "selection_menu_blocker"
+state = "blocked"
+priority = 290
+region = "bottom_non_empty_lines(8)"
+contains = ["enter select", "esc cancel"]
+any = [
+  { contains = ["↑/↓ navigate"] },
+  { contains = ["↑↓ navigate"] },
+]
+
+[[rules]]
+id = "spinner_stop_working"
+state = "working"
+priority = 110
+region = "whole_recent"
+contains = ["esc to stop"]
+line_regex = ['^\s*[⠀-⣿]']
+
+[[rules]]
+id = "stop_hint_working"
+state = "working"
+priority = 100
+region = "whole_recent"
+contains = ["esc to stop"]

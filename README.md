@@ -186,7 +186,10 @@ rm -rf ~/.config/scuttler \
 
 If you enabled agent monitoring, the hook entries in `~/.claude*/settings.json` still
 point at `~/.config/scuttler/hooks/claude-status.py`; they're inert once it's gone —
-delete them if you want a clean file.
+delete them if you want a clean file. (The hook only names and titles a session; what a
+cell says comes from the pane's own screen, read against the rule file for that agent
+in `apps/desktop/src-tauri/agents/` — 22 agents, Claude Code and Codex among them, any
+of them in a tmux pane with or without a hook.)
 
 ## Credit
 

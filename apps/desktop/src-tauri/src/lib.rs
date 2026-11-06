@@ -46,6 +46,7 @@ mod permissions;
 mod plugins;
 mod power;
 mod rename;
+mod rules;
 mod runtime;
 mod screens;
 mod screenshots;

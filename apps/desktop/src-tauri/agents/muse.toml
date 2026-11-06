@@ -1,0 +1,94 @@
+# scuttler agent screen rules (rules.rs). Format and shapes recorded from herdr's public
+# catalogue, herdr.dev/agent-detection, 2026-11-06 (its binary is Apache-2.0; the
+# catalogue files carry no licence text: STATUS, Needs Mitch). Strings are the agent's
+# own UI text. A wrong cell is a captured screen and a new rule here, with a test.
+
+id = "muse"
+version = "2026.11.06.1"
+aliases = ["muse-code", "muse-cli"]
+
+# Idle has a ">" prompt and a "model · effort · cwd" footer; active turns show an
+# activity label with the interrupt hint. Structured questions show two
+# co-occurring footer controls; approvals need a pair of phrases because Muse can
+# emit any one of them as ordinary assistant text after a completed turn.
+
+[[rules]]
+id = "workspace_trust_blocked"
+state = "blocked"
+priority = 970
+region = "bottom_non_empty_lines(12)"
+contains = ["Do you trust this workspace?"]
+any = [
+  { contains = ["Trust and continue"] },
+  { contains = ["Use Up/Down"] },
+]
+
+[[rules]]
+id = "pick_request_blocked"
+state = "blocked"
+priority = 950
+region = "bottom_non_empty_lines(8)"
+any = [
+  { contains = ["Enter to select", "Tab for an optional note"] },
+  { contains = ["Enter to toggle", "Esc to interrupt"] },
+]
+
+[[rules]]
+id = "menu_overlay"
+state = "unknown"
+priority = 940
+region = "bottom_non_empty_lines(8)"
+skip_state_update = true
+any = [
+  { contains = ["enter confirm", "esc go back"] },
+  { contains = ["enter save", "esc go back"] },
+  { contains = ["space toggle", "esc close", "type filter"] },
+]
+
+[[rules]]
+id = "working_esc_interrupt"
+state = "working"
+priority = 900
+region = "bottom_non_empty_lines(8)"
+contains = ["esc to interrupt"]
+not = [
+  { contains = ["Enter to select", "Tab for an optional note"] },
+  { contains = ["Enter to toggle", "Esc to interrupt"] },
+]
+
+[[rules]]
+id = "blocked_approval"
+state = "blocked"
+priority = 850
+region = "bottom_non_empty_lines(8)"
+any = [
+  { contains = ["Allow this stage once", "Always allow in this workspace"] },
+  { contains = ["Allow once", "Allow for this session"] },
+  { contains = ["Yes, proceed", "Yes, don't ask again this session"] },
+]
+
+[[rules]]
+id = "idle_prompt"
+state = "idle"
+priority = 700
+region = "bottom_non_empty_lines(5)"
+any = [
+  { line_regex = ['^\s*>\s*$'] },
+  { line_regex = ['^\s*>\s+\S'] },
+]
+not = [
+  { contains = ["esc to interrupt"] },
+  { contains = ["Enter to select", "Tab for an optional note"] },
+  { contains = ["Enter to toggle", "Esc to interrupt"] },
+  { contains = ["enter confirm", "esc go back"] },
+  { contains = ["enter save", "esc go back"] },
+  { contains = ["space toggle", "esc close", "type filter"] },
+]
+
+[[rules]]
+id = "idle_status_fallback"
+state = "idle"
+priority = 500
+region = "bottom_non_empty_lines(3)"
+line_regex = ['^\s*\S+ · (none|minimal|low|medium|high|xhigh|ultra) · ']
+not = [{ contains = ["esc to interrupt"] }]

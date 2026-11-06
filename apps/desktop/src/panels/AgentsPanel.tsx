@@ -120,6 +120,7 @@ export function AgentsPanel({
                 s.agent,
                 s.state,
                 s.detail,
+                s.rule && `seen: ${s.rule.replace(/_/g, ' ')}`,
               ]
                 .filter(Boolean)
                 .join(' · ')}

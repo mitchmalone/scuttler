@@ -1,0 +1,78 @@
+# scuttler agent screen rules (rules.rs). Format and shapes recorded from herdr's public
+# catalogue, herdr.dev/agent-detection, 2026-11-06 (its binary is Apache-2.0; the
+# catalogue files carry no licence text: STATUS, Needs Mitch). Strings are the agent's
+# own UI text. A wrong cell is a captured screen and a new rule here, with a test.
+
+id = "letta"
+version = "2026.11.06.1"
+aliases = ["letta-code", "letta code"]
+
+# Letta keeps completed tool rows and spinners in the transcript, so a standalone
+# spinner is not working evidence; the title, the status chrome and running tool
+# rows are.
+
+[[rules]]
+id = "osc_title_blocked"
+state = "blocked"
+priority = 1300
+region = "osc_title"
+regex = ['^\[ [!.] \] Action Required(?: \| |$)']
+
+[[rules]]
+id = "command_approval"
+state = "blocked"
+priority = 1200
+region = "bottom_non_empty_lines(20)"
+contains = ["Run this command?", "Enter to select · Esc to cancel"]
+
+[[rules]]
+id = "osc_title_working"
+state = "working"
+priority = 900
+region = "osc_title"
+regex = ['(?:^| )[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏](?: |$)']
+
+[[rules]]
+id = "active_status"
+state = "working"
+priority = 850
+region = "bottom_non_empty_lines(8)"
+line_regex = ['^\s*(?:\S+\s+)+is(?: \S+)*… \((?:esc to interrupt(?: · .*)?|interrupting)\)\s*$']
+
+[[rules]]
+id = "running_tool"
+state = "working"
+priority = 800
+region = "bottom_non_empty_lines(8)"
+line_regex = ['^\s*(?:└\s*)?Running\.\.\.\s*(?:\(.*\))?$']
+
+[[rules]]
+id = "profile_selector"
+state = "unknown"
+priority = 700
+region = "bottom_non_empty_lines(12)"
+contains = ["Create a new agent (--new)", "Enter select · Esc exit"]
+
+[[rules]]
+id = "composer_input"
+state = "unknown"
+priority = 150
+region = "bottom_non_empty_lines(8)"
+line_regex = ['^\s*>\s+\S.*$']
+not = [
+  { line_regex = ['^\s*>\s+Try\s+"'] },
+]
+
+[[rules]]
+id = "composer_idle"
+state = "idle"
+priority = 100
+region = "bottom_non_empty_lines(8)"
+any = [
+  { line_regex = ['^\s*>\s*$'] },
+  { line_regex = ['^\s*>\s+Try\s+"'] },
+]
+not = [
+  { line_regex = ['^\s*(?:\S+\s+)+is(?: \S+)*… \((?:esc to interrupt(?: · .*)?|interrupting)\)\s*$'] },
+  { line_regex = ['^\s*(?:└\s*)?Running\.\.\.\s*(?:\(.*\))?$'] },
+]

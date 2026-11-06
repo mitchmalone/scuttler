@@ -1,0 +1,45 @@
+# scuttler agent screen rules (rules.rs). Format and shapes recorded from herdr's public
+# catalogue, herdr.dev/agent-detection, 2026-11-06 (its binary is Apache-2.0; the
+# catalogue files carry no licence text: STATUS, Needs Mitch). Strings are the agent's
+# own UI text. A wrong cell is a captured screen and a new rule here, with a test.
+
+id = "copilot"
+version = "2026.11.06.1"
+aliases = ["github-copilot", "ghcs"]
+
+[[rules]]
+id = "selection_blocker"
+state = "blocked"
+priority = 300
+region = "whole_recent"
+all = [
+  { any = [
+    { contains = ["esc to cancel"] },
+    { contains = ["esc cancel"] },
+  ] },
+  { any = [
+    { contains = ["enter to select"] },
+    { contains = ["enter to confirm"] },
+    { contains = ["enter to submit"] },
+    { contains = ["enter accept"] },
+  ] },
+]
+
+[[rules]]
+id = "background_agents_working"
+state = "working"
+priority = 110
+region = "bottom_non_empty_lines(6)"
+line_regex = ['^\s*◎\s+Waiting for background agents(?:\s|·|$)']
+
+[[rules]]
+id = "working_cancel_hint"
+state = "working"
+priority = 100
+region = "whole_recent"
+any = [
+  { contains = ["esc to cancel"] },
+  { contains = ["esc cancel"] },
+  { contains = ["esc again to cancel"] },
+  { contains = ["esc interrupt"] },
+]

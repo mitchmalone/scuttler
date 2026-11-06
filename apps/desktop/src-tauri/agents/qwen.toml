@@ -1,0 +1,102 @@
+# scuttler agent screen rules (rules.rs). Format and shapes recorded from herdr's public
+# catalogue, herdr.dev/agent-detection, 2026-11-06 (its binary is Apache-2.0; the
+# catalogue files carry no licence text: STATUS, Needs Mitch). Strings are the agent's
+# own UI text. A wrong cell is a captured screen and a new rule here, with a test.
+
+id = "qwen"
+version = "2026.11.06.1"
+aliases = ["qwen-code", "qwen code"]
+
+# Qwen Code keeps its composer visible while responding, so the prompt box is not
+# idle evidence by itself; status-prefixed titles are the primary signal when
+# ui.showStatusInTitle is on, and the screen shapes cover the built-in locales.
+
+[[rules]]
+id = "osc_title_blocked"
+state = "blocked"
+priority = 1200
+region = "osc_title"
+regex = ['^\x{2733}\x{FE0E}? ']
+
+[[rules]]
+id = "osc_title_working"
+state = "working"
+priority = 1100
+region = "osc_title"
+regex = ['^\x{25D0}\x{FE0E}? ']
+
+[[rules]]
+id = "waiting_for_confirmation"
+state = "blocked"
+priority = 1000
+region = "bottom_non_empty_lines(20)"
+line_regex = ['^\s*⠏\s+.*\.\.\.\s*$']
+any = [
+  { contains = ["Waiting for user confirmation..."] },
+  { contains = ["等待用户确认..."] },
+  { contains = ["等待用戶確認..."] },
+  { contains = ["Warten auf Benutzerbestätigung..."] },
+  { contains = ["En attente de la confirmation de l'utilisateur..."] },
+  { contains = ["ユーザーの確認を待っています..."] },
+  { contains = ["Aguardando confirmação do usuário..."] },
+  { contains = ["Ожидание подтверждения от пользователя..."] },
+  { contains = ["Esperant la confirmació de l'usuari..."] },
+]
+
+[[rules]]
+id = "tool_confirmation"
+state = "blocked"
+priority = 990
+region = "bottom_non_empty_lines(20)"
+contains = ["yes, allow once"]
+any = [
+  { contains = ["apply this change?"] },
+  { contains = ["allow execution of:"] },
+  { contains = ["allow execution of mcp tool"] },
+  { contains = ["do you want to proceed?"] },
+  { contains = ["shell command execution"] },
+]
+
+[[rules]]
+id = "question_dialog"
+state = "blocked"
+priority = 980
+region = "bottom_non_empty_lines(20)"
+line_regex = [
+  '^\s*[>>]\s*(?:\[(?: |✓)\]\s*)?\d+\.\s+',
+  '^\s*↑/↓\s*:.*(?:Enter|Return)\s*:',
+]
+
+[[rules]]
+id = "folder_trust_dialog"
+state = "blocked"
+priority = 970
+region = "bottom_non_empty_lines(20)"
+contains = ["do you trust this folder?", "trust folder (", "don't trust (esc)"]
+
+[[rules]]
+id = "cancel_hint_working"
+state = "working"
+priority = 900
+region = "bottom_non_empty_lines(8)"
+line_regex = ['^\s*(?:[⠁-⣿]|\.{1,2})\s+.*\(\d+(?:m(?:\s+\d+s)?|s).*\s·\sesc to cancel\)\s*$']
+
+[[rules]]
+id = "narrow_cancel_hint_working"
+state = "working"
+priority = 890
+region = "bottom_non_empty_lines(8)"
+line_regex = ['^\s*\(\d+(?:m(?:\s+\d+s)?|s)\s·\sesc to cancel\)\s*$']
+
+[[rules]]
+id = "composer_idle"
+state = "idle"
+priority = 100
+region = "bottom_non_empty_lines(30)"
+line_regex = ['^\s*>\s*(?:type\s*)?.*$']
+any = [
+  { contains = ["type your message"] },
+  { contains = ["your message or @path/to/file"] },
+  { contains = ["@path/to/file"] },
+  { contains = ["type", "mes", "sage", "@pat", "h/to", "/fil"] },
+]

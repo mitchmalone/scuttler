@@ -31,7 +31,7 @@
   hook, and any other agent's hook, supplies identity, pid, title and detail, and is a
   reason to look; its state is only a hint for sessions with no pane. `done` / `read`
   stay scuttler's rollup over the screen's idle. Plan:
-  `plans/active/2026-11-06-agent-state-from-the-screen.md`.
+  `plans/active/2026-11-06-make-agent-statuses-correct.md`.
 - **Why.** Two days of hook-order bugs (JOURNAL 2026-11-06): the away recap's
   SubagentStop revived done cells, the idle notification promoted every finished cell to
   "needs you", AskUserQuestion read as working. Hook sequences are not a state machine

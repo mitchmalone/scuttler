@@ -107,6 +107,10 @@ pub struct AgentSession {
     /// the state and so keeps the stamp.
     #[serde(default)]
     pub state_since: u64,
+    /// The screen rule that last decided this session's state (rules.rs), so
+    /// the card can say why; `None` until the pane has been looked at.
+    #[serde(default)]
+    pub rule: Option<String>,
 }
 
 /// Incoming wire event: an `AgentSession` minus the timestamp, all fields
@@ -175,6 +179,9 @@ fn own_list() -> Vec<AgentSession> {
     let now = now_secs();
     let stale = stale_secs();
     let dropped = reap(&mut sessions, &layout, layout_fresh, now, stale, comm_of);
+    let found = discover(&mut sessions, &layout, now);
+    let looked = look(&mut sessions, &layout, now);
+    let dropped = dropped || found || looked;
     let mut fresh: Vec<AgentSession> = sessions
         .iter()
         .cloned()
@@ -265,11 +272,18 @@ fn reap(
     stamped || sessions.len() != before
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 struct PaneLocation {
     session: String,
     window: u32,
     window_name: String,
+    /// `#{pane_current_command}`: the foreground process name, which names
+    /// the agent (rules.rs) or an interpreter to look behind.
+    command: String,
+    /// `#{pane_tty}`, for the `ps` behind an interpreter.
+    tty: String,
+    /// `#{pane_title}`: the agent's OSC title, a rule region.
+    title: String,
 }
 
 type Layout = std::collections::HashMap<String, PaneLocation>;
@@ -305,7 +319,7 @@ fn tmux_layout() -> (Layout, bool) {
             "list-panes",
             "-a",
             "-F",
-            "#{pane_id}\t#{session_name}\t#{window_index}\t#{window_name}",
+            "#{pane_id}\t#{session_name}\t#{window_index}\t#{window_name}\t#{pane_current_command}\t#{pane_tty}\t#{pane_title}",
         ])
         .as_deref()
         .map(parse_panes),
@@ -385,6 +399,9 @@ fn parse_panes(out: &str) -> Layout {
             let session = parts.next()?.trim();
             let window = parts.next()?.trim().parse().ok()?;
             let window_name = parts.next().unwrap_or_default().trim();
+            let command = parts.next().unwrap_or_default().trim();
+            let tty = parts.next().unwrap_or_default().trim();
+            let title = parts.next().unwrap_or_default().trim();
             (!pane.is_empty() && !session.is_empty()).then(|| {
                 (
                     pane.to_owned(),
@@ -392,6 +409,9 @@ fn parse_panes(out: &str) -> Layout {
                         session: session.to_owned(),
                         window,
                         window_name: strip_status_suffix(window_name).to_owned(),
+                        command: command.to_owned(),
+                        tty: tty.to_owned(),
+                        title: title.to_owned(),
                     },
                 )
             })
@@ -451,10 +471,14 @@ fn handle(stream: UnixStream) {
         let Ok(event) = serde_json::from_str::<AgentEvent>(&line) else {
             continue;
         };
+        let session = event.session.clone();
         let applied = {
             let mut sessions = SESSIONS.lock().unwrap();
             apply(&mut sessions, event, now_secs())
         };
+        if applied {
+            poke_look(&session);
+        }
         if applied {
             if let Err(e) = save(&state_file(), &own_list()) {
                 eprintln!("[scuttler agents] state save failed: {e}");
@@ -476,6 +500,19 @@ fn apply(sessions: &mut Vec<AgentSession>, event: AgentEvent, now: u64) -> bool 
     if event.state == "ended" {
         sessions.retain(|s| s.session != event.session);
         return true;
+    }
+    // A pane we found by looking (a `pane:%N` session) belongs to the hook's
+    // session id once the hook speaks: one cell, the hook's name and title.
+    let mut inherited_start = 0;
+    if !event.tmux.is_empty() {
+        if let Some(i) = sessions.iter().position(|s| {
+            s.session != event.session
+                && s.session.starts_with(DISCOVERED_PREFIX)
+                && s.mux_target == event.tmux
+        }) {
+            inherited_start = sessions[i].started_at;
+            sessions.remove(i);
+        }
     }
     let previous = sessions.iter().position(|s| s.session == event.session);
     let title = if is_machine_title(&event.title) {
@@ -504,11 +541,21 @@ fn apply(sessions: &mut Vec<AgentSession>, event: AgentEvent, now: u64) -> bool 
         state_since: now,
         ..Default::default()
     };
+    if next.state.is_empty() && previous.is_none() {
+        next.state = "idle".to_owned();
+    }
+    if inherited_start != 0 {
+        next.started_at = inherited_start;
+    }
     if let Some(i) = previous {
         let old = &sessions[i];
-        if event.subagent.is_some() {
+        // A stateless event (the hook sends none for notifications and
+        // subagents, 2026-11-06) and a subagent event both leave the state
+        // alone: the parent's own lifecycle, or the screen, says what it is.
+        if next.state.is_empty() || event.subagent.is_some() {
             next.state = old.state.clone();
         }
+        next.rule = old.rule.clone();
         if next.title.is_empty() {
             next.title = old.title.clone();
         }
@@ -718,6 +765,186 @@ fn tmux_out(args: &[&str]) -> Option<String> {
         }
     }
     None
+}
+
+// ---- The screen -------------------------------------------------------------
+//
+// plans/active/2026-11-06-make-agent-statuses-correct.md, DECISIONS 2026-11-06:
+// a cell says what the pane shows. Hooks identify and label; the screen decides.
+
+/// Sessions found by looking at panes rather than told about by a hook.
+const DISCOVERED_PREFIX: &str = "pane:";
+
+/// How often one pane's screen is read at most, outside a poke.
+const LOOK_EVERY: std::time::Duration = std::time::Duration::from_secs(2);
+
+/// How many lines from the bottom the classifier sees.
+const SCREEN_LINES: &str = "-40";
+
+/// How long after a hook event the pane is read. The hook runs while the
+/// agent is between frames: at PreToolUse/PostToolUse Claude Code has not
+/// drawn its activity line yet, so a look at that instant read "idle" and
+/// turned a working cell `done` on every tool call (2026-11-06). Half a
+/// second later the screen shows what the event meant; the bar's 1 Hz list
+/// picks it up.
+const POKE_DELAY: std::time::Duration = std::time::Duration::from_millis(500);
+
+/// Sessions a hook just spoke for: looked at once `POKE_DELAY` has passed,
+/// whatever their state, so a Stop or a question shows within a second.
+static POKED: Mutex<Vec<(String, std::time::Instant)>> = Mutex::new(Vec::new());
+
+fn poke_look(session: &str) {
+    let mut poked = POKED.lock().unwrap();
+    match poked.iter_mut().find(|(s, _)| s == session) {
+        Some((_, at)) => *at = std::time::Instant::now(),
+        None => poked.push((session.to_owned(), std::time::Instant::now())),
+    }
+}
+
+/// Which agent runs in a pane, from its foreground process; behind an
+/// interpreter (`node`, `bun`, …) the command line is asked. Cached per pane
+/// and command for a while: `ps` per pane per tick would be the cost herdr
+/// pays for owning the terminal, and we do not.
+type AgentCache = std::collections::HashMap<String, (std::time::Instant, Option<&'static str>)>;
+
+fn agent_of(pane: &str, loc: &PaneLocation) -> Option<&'static str> {
+    use std::time::{Duration, Instant};
+    static CACHE: Mutex<Option<AgentCache>> = Mutex::new(None);
+    if let Some(id) = crate::rules::agent_for_command(&loc.command) {
+        return Some(id);
+    }
+    if !crate::rules::is_interpreter(&loc.command) || loc.tty.is_empty() {
+        return None;
+    }
+    let key = format!("{pane}\t{}", loc.command);
+    let mut cache = CACHE.lock().unwrap();
+    let cache = cache.get_or_insert_with(Default::default);
+    if let Some((at, id)) = cache.get(&key) {
+        if at.elapsed() < Duration::from_secs(30) {
+            return *id;
+        }
+    }
+    let id = std::process::Command::new("/bin/ps")
+        .args(["-t", loc.tty.trim_start_matches("/dev/"), "-o", "command="])
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .and_then(|o| {
+            String::from_utf8_lossy(&o.stdout)
+                .lines()
+                .find_map(crate::rules::agent_for_argv)
+        });
+    cache.insert(key, (Instant::now(), id));
+    id
+}
+
+/// Every pane running a known agent that no session names becomes one, so an
+/// agent with no hook (Codex, Cursor, Gemini, …) is on the bar the way herdr
+/// would show it. Returns whether anything was added.
+fn discover(sessions: &mut Vec<AgentSession>, layout: &Layout, now: u64) -> bool {
+    let mut added = false;
+    for (pane, loc) in layout {
+        if sessions.iter().any(|s| s.mux_target == *pane) {
+            continue;
+        }
+        let Some(agent) = agent_of(pane, loc) else {
+            continue;
+        };
+        let id = format!("{DISCOVERED_PREFIX}{pane}");
+        sessions.push(AgentSession {
+            session: id.clone(),
+            agent: agent.to_owned(),
+            state: "idle".to_owned(),
+            mux: MUX_TMUX.to_owned(),
+            mux_target: pane.clone(),
+            updated_at: now,
+            started_at: now,
+            state_since: now,
+            ..Default::default()
+        });
+        poke_look(&id);
+        added = true;
+    }
+    added
+}
+
+/// Read the pane's bottom and let the rules say. Only sessions that are
+/// `working` or `attention`, or were just poked, are read: an idle or done
+/// cell changes on its next hook event, and an idle pane costs nothing.
+/// Returns whether a state changed.
+fn look(sessions: &mut [AgentSession], layout: &Layout, now: u64) -> bool {
+    use std::time::Instant;
+    static LAST: Mutex<Option<std::collections::HashMap<String, Instant>>> = Mutex::new(None);
+    let poked: Vec<String> = {
+        let mut all = POKED.lock().unwrap();
+        let (due, later): (Vec<_>, Vec<_>) = all
+            .drain(..)
+            .partition(|(_, at)| at.elapsed() >= POKE_DELAY);
+        *all = later;
+        due.into_iter().map(|(s, _)| s).collect()
+    };
+    let mut last = LAST.lock().unwrap();
+    let last = last.get_or_insert_with(Default::default);
+    let mut changed = false;
+    for s in sessions.iter_mut() {
+        let Some(loc) = layout.get(&s.mux_target) else {
+            continue;
+        };
+        let active = s.state == "working" || s.state == "attention";
+        let wanted = poked.contains(&s.session);
+        if !active && !wanted {
+            continue;
+        }
+        if !wanted
+            && last
+                .get(&s.session)
+                .is_some_and(|at| at.elapsed() < LOOK_EVERY)
+        {
+            continue;
+        }
+        last.insert(s.session.clone(), Instant::now());
+        let Some(body) = tmux_out(&[
+            "capture-pane",
+            "-p",
+            "-t",
+            &s.mux_target,
+            "-S",
+            SCREEN_LINES,
+        ]) else {
+            continue;
+        };
+        let screen = crate::rules::Screen {
+            title: loc.title.clone(),
+            lines: body.lines().map(str::to_owned).collect(),
+        };
+        if settle(s, crate::rules::classify(&s.agent, &screen), now) {
+            changed = true;
+        }
+    }
+    last.retain(|k, _| sessions.iter().any(|s| s.session == *k));
+    changed
+}
+
+/// Fold a verdict into a session: the screen's working and blocked are ours;
+/// its idle after work is `done` (unread until a jump); an overlay says
+/// nothing. Returns whether the state changed.
+fn settle(s: &mut AgentSession, verdict: Option<crate::rules::Verdict>, now: u64) -> bool {
+    use crate::rules::State;
+    let Some(v) = verdict else { return false };
+    s.rule = Some(v.rule);
+    let next = match v.state {
+        Some(State::Working) => "working",
+        Some(State::Blocked) => "attention",
+        Some(State::Idle) if s.state == "working" || s.state == "attention" => "done",
+        _ => return false,
+    };
+    if s.state == next {
+        return false;
+    }
+    s.state = next.to_owned();
+    s.state_since = now;
+    s.updated_at = now;
+    true
 }
 
 // ---- Persistence ------------------------------------------------------------
@@ -994,6 +1221,76 @@ mod tests {
     }
 
     #[test]
+    fn a_stateless_event_inherits_and_a_new_one_starts_idle() {
+        let mut sessions = Vec::new();
+        apply(&mut sessions, event("s", "attention"), 100);
+        let mut note = event("s", "");
+        note.detail = "Claude is waiting for your input".into();
+        assert!(apply(&mut sessions, note, 160));
+        assert_eq!(sessions[0].state, "attention");
+        assert_eq!(sessions[0].detail, "Claude is waiting for your input");
+        apply(&mut sessions, event("t", ""), 200);
+        assert_eq!(
+            sessions.iter().find(|s| s.session == "t").unwrap().state,
+            "idle"
+        );
+    }
+
+    #[test]
+    fn a_discovered_pane_hands_over_to_the_hooks_session() {
+        let mut sessions = Vec::new();
+        let layout = layout(&["%7"]);
+        let mut found = Layout::new();
+        for (k, mut v) in layout {
+            v.command = "codex".into();
+            found.insert(k, v);
+        }
+        assert!(discover(&mut sessions, &found, 100));
+        assert_eq!(sessions[0].session, "pane:%7");
+        assert_eq!(sessions[0].agent, "codex");
+        assert!(!discover(&mut sessions, &found, 101), "found once");
+        let mut hook = event("real-id", "working");
+        hook.tmux = "%7".into();
+        apply(&mut sessions, hook, 200);
+        assert_eq!(sessions.len(), 1, "one cell for the pane");
+        assert_eq!(sessions[0].session, "real-id");
+        assert_eq!(sessions[0].started_at, 100, "the pane's age carries over");
+    }
+
+    #[test]
+    fn the_screen_settles_the_state_and_idle_after_work_is_done() {
+        use crate::rules::{State, Verdict};
+        let v = |state| {
+            Some(Verdict {
+                rule: "r".into(),
+                state,
+            })
+        };
+        let mut s = paned("s", "%1");
+        s.state = "attention".into();
+        assert!(settle(&mut s, v(Some(State::Working)), 10));
+        assert_eq!(s.state, "working");
+        assert_eq!((s.state_since, s.updated_at), (10, 10));
+        assert!(
+            !settle(&mut s, v(Some(State::Working)), 11),
+            "same state, no change"
+        );
+        assert!(!settle(&mut s, v(None), 12), "an overlay says nothing");
+        assert_eq!(s.rule.as_deref(), Some("r"));
+        assert!(settle(&mut s, v(Some(State::Idle)), 13));
+        assert_eq!(s.state, "done", "idle after work is done, unread");
+        assert!(!settle(&mut s, v(Some(State::Idle)), 14), "and stays so");
+        s.state = "read".into();
+        assert!(
+            !settle(&mut s, v(Some(State::Idle)), 15),
+            "read is not re-marked"
+        );
+        assert!(settle(&mut s, v(Some(State::Blocked)), 16));
+        assert_eq!(s.state, "attention");
+        assert!(!settle(&mut s, None, 17), "no verdict keeps the state");
+    }
+
+    #[test]
     fn apply_never_prunes_by_silence() {
         // Age is not evidence; `reap` judges liveness with the layout and the
         // process table in hand, and an event has neither.
@@ -1039,6 +1336,7 @@ mod tests {
                         session: "s".into(),
                         window: 1,
                         window_name: "w".into(),
+                        ..Default::default()
                     },
                 )
             })
@@ -1368,6 +1666,7 @@ bad
                 session: "gogogo".into(),
                 window: 1,
                 window_name: "Infisical".into(),
+                ..Default::default()
             })
         );
         assert_eq!(layout.get("%23").map(|l| l.window), Some(2));

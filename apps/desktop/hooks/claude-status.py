@@ -32,18 +32,39 @@ STATES = {
     "PreToolUse": "working",
     "PostToolUse": "working",
     "PermissionRequest": "attention",
-    "Notification": "attention",
+    # Notifications carry state only when they are an ask (permission,
+    # elicitation): the idle one a minute after every turn used to turn every
+    # finished cell into "needs you" (2026-11-06). See `state_for`.
+    "Notification": "",
     # done, not idle: a finished turn stays "unread" (blue) until visited.
     "Stop": "done",
     "SessionEnd": "ended",
-    # Subagents ride in the `subagent` field, and the store never lets one
-    # change a known session's state (agents.rs): Claude's away recap runs a
-    # subagent minutes after a turn ended, which used to re-mark a done cell
-    # "working" for good (2026-11-06). The state here only seeds an unknown
-    # session.
-    "SubagentStart": "working",
-    "SubagentStop": "working",
+    # Subagents ride in the `subagent` field and carry no state: Claude's away
+    # recap runs one minutes after a turn ended, which used to re-mark a done
+    # cell "working" for good (2026-11-06). A blank state inherits (agents.rs).
+    "SubagentStart": "",
+    "SubagentStop": "",
 }
+
+# Notification types that are a real ask. The rest (idle_prompt, auth) say
+# nothing about state.
+ASKING_NOTIFICATIONS = {"permission_prompt", "elicitation_dialog"}
+
+
+def state_for(event: str, payload: dict, tool: str) -> str:
+    """The lifecycle state an event implies, or "" for "no opinion".
+
+    Since 2026-11-06 scuttler reads the state of a tmux pane from its screen
+    (agents.rs, rules.rs) and this is only the hint for sessions it cannot
+    see, plus the trigger to look. A question asked through AskUserQuestion
+    arrives as PreToolUse and is an ask, not work.
+    """
+    if event == "Notification":
+        kind = str(payload.get("notification_type") or "")
+        return "attention" if kind in ASKING_NOTIFICATIONS else ""
+    if event == "PreToolUse" and tool == "AskUserQuestion":
+        return "attention"
+    return STATES.get(event, "unknown")
 
 # Claude Code's background daemon (`claude daemon run` → `--bg-pty-host` →
 # `bg-spare` / pty sessions) runs these hooks too, with TMUX_PANE scrubbed. It
@@ -242,7 +263,7 @@ def main() -> None:
     line = {
         "session": session,
         "agent": "claude",
-        "state": STATES.get(event, "unknown"),
+        "state": state_for(event, payload, tool),
         "title": prompt[:100],
         "detail": detail,
         "tmux": os.environ.get("TMUX_PANE", ""),
