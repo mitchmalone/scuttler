@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  DECLINED_SHOWN_SECS,
   GROUP_CAP,
+  SUDOERS_COMMAND,
   type UpdateSource,
   type UpdatesReport,
   type UpgradeRun,
+  approvalLine,
   batchFailures,
   batchHeadline,
   batchLine,
@@ -22,6 +25,7 @@ import {
   headline,
   lastLine,
   ledgerRows,
+  needsRule,
   rowCommand,
   rowDismissMessage,
   rowSelectable,
@@ -304,12 +308,60 @@ describe('updates model', () => {
       ).toBeNull()
     })
 
+    it('a root source without its rule runs nothing and offers the setup command', () => {
+      const unruled: UpdateSource = { ...masSource, admin: 'needsRule' }
+      const [band, xcode] = ledgerRows(report({ sources: [unruled] }))
+      expect(needsRule(unruled)).toBe(true)
+      expect(needsRule(masSource)).toBe(false)
+      expect(rowUpgradeMessage(band!)).toBeNull()
+      expect(rowUpgradeMessage(xcode!)).toBeNull()
+      expect(rowCommand(band!)).toBe(SUDOERS_COMMAND)
+      expect(rowCommand(xcode!)).toBe(SUDOERS_COMMAND)
+      // With the rule the same rows run as any other.
+      const ruled: UpdateSource = { ...masSource, admin: 'ready' }
+      const [, ready] = ledgerRows(report({ sources: [ruled] }))
+      expect(rowUpgradeMessage(ready!)).toEqual({
+        upgrade: 'mas',
+        item: 'Xcode',
+      })
+      expect(rowCommand(ready!)).toBe('mas upgrade 497799835')
+    })
+
     it('headline counts updates and the managers holding them', () => {
       expect(headline(report())).toBe('4 updates · 2 managers')
       expect(headline(report({ sources: [masSource] }))).toBe(
         '1 update · 1 manager',
       )
       expect(headline(report({ sources: [cleanSource] }))).toBe('up to date')
+    })
+  })
+
+  describe('approvalLine', () => {
+    it('says what the sheet waits for, by source label', () => {
+      const r = report({
+        approval: { state: 'pending', sources: ['mas'], detail: '', at: T },
+      })
+      expect(approvalLine(r, T + 5)).toEqual({
+        text: 'App Store: approve with Touch ID, Apple Watch or your password',
+        state: 'pending',
+      })
+    })
+
+    it('says why nothing ran after a refusal, then lets it go', () => {
+      const r = report({
+        approval: {
+          state: 'declined',
+          sources: ['mas'],
+          detail: 'not approved',
+          at: T,
+        },
+      })
+      expect(approvalLine(r, T + 5)).toEqual({
+        text: 'App Store skipped · not approved',
+        state: 'declined',
+      })
+      expect(approvalLine(r, T + DECLINED_SHOWN_SECS + 1)).toBeNull()
+      expect(approvalLine(report(), T)).toBeNull()
     })
   })
 

@@ -137,8 +137,8 @@ to `~/.config/scuttler/config.json`, and scuttler registers as a login item (tog
 settings). Upgrading from scuttlarr (or launcharr before it): config, state, caches,
 hooks, history and the login item migrate on first launch; nothing to do. Two things are a
 one-time pick again after the rename, because they are named by the user's own tools: the
-Claude Code theme (`custom:scuttler`) and the sleep rule (`scuttler sudoers on`, which also
-removes the old one). Signed releases: [docs/RELEASING.md](docs/RELEASING.md).
+Claude Code theme (`custom:scuttler`) and the root rule (`scuttler sudoers on`, which also
+removes the old one; it covers the sleep switch and App Store updates). Signed releases: [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Themes
 

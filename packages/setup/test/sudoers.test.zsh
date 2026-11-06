@@ -9,6 +9,8 @@ export SCUTTLER_SUDOERS_PATH="$T/sudoers.d/scuttler"
 export SCUTTLER_SUDOERS_PREVIOUS_PATH="$T/sudoers.d/scuttlarr"
 export SCUTTLER_SUDO_BIN="$SCUTTLER_BASE/test/fixtures/bin/sudo"
 export FAKE_SUDO_LOG="$T/sudo.log"
+# The mas the rule names, pinned so the test does not depend on this Mac.
+export SCUTTLER_MAS_BIN="/opt/homebrew/bin/mas"
 mkdir -p "$T/sudoers.d"
 target="$SCUTTLER_SUDOERS_PATH"
 
@@ -16,7 +18,13 @@ target="$SCUTTLER_SUDOERS_PATH"
 rule="$(sc_sudoers_rule)"
 assert_match "rule allows disablesleep 1" "$rule" "/usr/bin/pmset -a disablesleep 1"
 assert_match "rule allows disablesleep 0" "$rule" "/usr/bin/pmset -a disablesleep 0"
-assert_match "rule is for this user" "$rule" "${USER:-$(id -un)} ALL=(root) NOPASSWD: SCUTTLER_SLEEP"
+assert_match "rule allows mas upgrade" "$rule" "/opt/homebrew/bin/mas upgrade, /opt/homebrew/bin/mas upgrade *"
+assert_match "rule allows mas update" "$rule" "/opt/homebrew/bin/mas update, /opt/homebrew/bin/mas update *"
+assert_match "rule is for this user" "$rule" "${USER:-$(id -un)} ALL=(root) NOPASSWD: SCUTTLER_SLEEP, SCUTTLER_UPDATES"
+# Without mas the sleep alias stands alone and the rule says what to rerun.
+no_mas="$(SCUTTLER_MAS_BIN= PATH=/usr/bin:/bin sc_sudoers_rule)"
+assert_eq "${USER:-$(id -un)} ALL=(root) NOPASSWD: SCUTTLER_SLEEP" "$(print -r -- "$no_mas" | tail -1)" "no mas: sleep alone"
+assert_match "no mas: says to rerun" "$no_mas" "rerun"
 print -r -- "$rule" > "$T/rule"
 assert_ok "visudo accepts the rule" /usr/sbin/visudo -cf "$T/rule"
 

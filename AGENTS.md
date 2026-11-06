@@ -87,8 +87,11 @@ it in `docs/DECISIONS.md`.
    ever prompts unless that toggle is flipped.
    Root, once, by the user's own hand: `scuttler sudoers on` (terminal, one password)
    installs a rule allowing exactly `pmset -a disablesleep 0|1`, so `awake` can switch
-   macOS sleep off while a hold is armed. The app only runs `sudo -n` — it never asks
-   (DECISIONS 2026-10-01).
+   macOS sleep off while a hold is armed, and `mas upgrade|update`, so the updates panel
+   can upgrade App Store apps after the system approval sheet (Touch ID, Apple Watch or
+   password, `localauth.rs`). The app only runs `sudo -n` — it never asks; panel
+   children find a `sudo -n` shim first on PATH for the same reason (DECISIONS
+   2026-10-01, 2026-11-06).
 2. **Network is allowed; telemetry is not.** The desktop app may talk to the network
    wherever a feature needs it (retired the zero-network invariant, DECISIONS
    2026-09-04). Fetches are fail-visible, cached, and off the hot path. What stays
@@ -152,8 +155,9 @@ it in `docs/DECISIONS.md`.
 13. **No native alerts.** Never `NSAlert`, AppleScript `display dialog`/`display alert`,
     `window.alert`/`confirm`/`prompt`, or a system popover. A question is a row with a
     labelled Enter, a report is a panel line or a bar cell; both keep the prompt's focus
-    discipline (invariant 6), a modal breaks it. The one AppleScript dialog is the file
-    picker in `desktop.rs`, which the user asked for by clicking.
+    discipline (invariant 6), a modal breaks it. Two OS sheets are the exceptions, both
+    asked for by a click: the file picker in `desktop.rs`, and the LocalAuthentication
+    approval sheet before a root upgrade runs (`localauth.rs`, DECISIONS 2026-11-06).
 14. **No emoji.** Never as a glyph in the app, the bar, plugins or the site — a glyph is
     a lucide icon (or a `packages/tui` icon) sized with `ICON_PROPS`, coloured by theme
     tokens. Never in docs, comments, commit messages or copy either. The only emoji

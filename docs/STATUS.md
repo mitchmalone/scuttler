@@ -4,7 +4,9 @@
 > history lives in git, `plans/done/`, `releases/` and `JOURNAL.md`; the backlog with its
 > triggers lives in `ROADMAP.md`.
 >
-> Last updated: 2026-11-06 (session closed, Mitch offline a few days: v0.8.5 released,
+> Last updated: 2026-11-06 (root upgrades in the panel built on
+> `feat/admin-updates-in-panel`, awaiting Mitch's `scuttler sudoers on` and a live run;
+> earlier the same day: v0.8.5 released,
 > fan-out green; agent statuses now come from the pane's screen, 22 agents, herdr-derived
 > rules credited under Apache-2.0, dev-installed and watched; the shell stays Tauri,
 > DECISIONS 2026-11-06, reaffirmed against a "snappy" rewrite the same day; next: make
@@ -19,6 +21,15 @@
   (`plans/done/2026-11-01-rename-to-scuttler.md`,
   `plans/done/2026-11-04-v0.8.5-fast-bar-and-shell-spike.md`); the shell stays Tauri
   (DECISIONS 2026-11-06). Previous: v0.8.0 (2026-11-01).
+- **In flight: updates that need root run in the panel**
+  (`plans/active/2026-11-06-admin-updates-in-panel.md`, DECISIONS 2026-11-06, branch
+  `feat/admin-updates-in-panel` in a worktree while v0.9.0 ships from main): mas is a
+  root source; the sudoers rule now names it; a click puts up the system approval sheet
+  (Touch ID, Apple Watch, password) and runs `sudo -n mas upgrade` on yes; the runner's
+  children get a `sudo -n` shim, process groups, TERM→KILL cancel and a silence
+  watchdog. Verify green; needs Mitch: `scuttler sudoers on` once, then `a` in the
+  panel with Hand Mirror outdated. Found because `mas upgrade` hung the runner for
+  twenty minutes on a sudo nobody could answer (JOURNAL 2026-11-06).
 - **Fixed 2026-11-06: quicklinks fire by name as well as shortcode** (`youtube gcn` searches
   YouTube; bare `youtube ⏎` opens the site root, not the raw template; `you` ⇥ completes to
   `youtube `; DECISIONS 2026-11-06). Dev-installed, unreleased.

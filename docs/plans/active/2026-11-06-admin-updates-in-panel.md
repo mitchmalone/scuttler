@@ -1,0 +1,113 @@
+---
+title: Updates that need root run in the panel, approved by Touch ID, Apple Watch or password
+status: active
+created: 2026-11-06
+updated: 2026-11-06
+links:
+  - DECISIONS 2026-10-01 (awake's sudoers rule — the pattern this extends)
+  - DECISIONS 2026-11-06 (this plan's decision)
+  - docs/SETUP.md (the sudoers verb)
+  - packages/plugins/updates, apps/desktop/src-tauri/src/updates.rs
+---
+
+# Updates that need root run in the panel, approved by Touch ID, Apple Watch or password
+
+## Goal
+
+"Upgrade everything" upgrades everything, App Store apps included, from the panel, with
+one OS approval sheet (Touch ID, Apple Watch or the account password) and no terminal.
+And the runner can never again sit for twenty minutes on a `sudo` nobody can answer.
+
+## Context
+
+Found 2026-11-06. `mas` 7 requires root for `update`/`upgrade` and re-executes itself
+under `sudo`. The runner closes stdin assuming `sudo` fails fast without a terminal
+(`updates.rs` `upgrade()` doc). It does not: `/etc/pam.d/sudo` starts with `pam_tid.so`,
+and from a launchd-spawned app `sudo` neither shows the Touch ID sheet (confirmed: no
+prompt appeared on two tries) nor can read a password, so it blocks forever, ignores
+SIGTERM while inside PAM, and holds the runner's pipes so the queue behind it never runs.
+Mitch killed five of them by hand (SIGKILL works: sudo's real uid is still the user's).
+
+What exists: `scuttler sudoers on` installs a NOPASSWD rule for two `pmset` commands and
+`sleep_override.rs` runs `sudo -n` against it (DECISIONS 2026-10-01). The rule file is
+root-owned 0444 so the app can read it without sudo. The panel already routes `t` to the
+terminal and `c` to the clipboard. The host message for a click is `{ upgrade, item }`;
+no Tauri command is involved and none is added here.
+
+## Approach
+
+Root is granted by the existing sudoers rule, extended once; the approval is
+LocalAuthentication, not sudo. Two pieces:
+
+1. **The rule.** `sc_sudoers_rule` gains `SCUTTLER_UPDATES`: the resolved `mas` path
+   (`command -v mas`, or `SCUTTLER_MAS_BIN`) with `upgrade`, `upgrade *`, `update`,
+   `update *`. Same file, same install, same `off`/`remove`. The runner's job for a root
+   source is `/usr/bin/sudo -n <that path> upgrade [ids]`, the path taken from the same
+   resolution so the strings match sudoers byte for byte. `t` and `c` keep the plain
+   `mas upgrade` form, where a tty's sudo prompts properly.
+2. **The approval.** Before root jobs are queued, a small `localauth.rs` (objc2 +
+   `objc2-local-authentication`, raw bindings in one module with safety comments) runs
+   `LAContext.evaluatePolicy(deviceOwnerAuthentication)`: the one system sheet that
+   offers Touch ID, Apple Watch and password. Non-root jobs of the same batch start at
+   once; root jobs join the queue when the sheet is approved, or are dropped and the
+   band says "not approved". Needs no permission grant or entitlement.
+
+Readiness is read, not probed: a root source is `ready` when `/etc/sudoers.d/scuttler`
+(or the pre-rename file) names its path, else `needsRule`. A `needsRule` row says so and
+offers `scuttler sudoers on` to copy; "upgrade everything" skips it and says so. Mitch
+chose this over a terminal hand-off ("the UX is the point") and over an askpass password
+row (password only, the one option least wanted).
+
+Independently, the runner stops trusting children: a `sudo` shim first on their PATH
+execs `/usr/bin/sudo -n "$@"`, so anything that reaches for root (a cask) fails in
+milliseconds with "a password is required" in the tail; children run in their own
+process group; cancel is TERM then KILL after a grace; a run with no output for
+`UPGRADE_STALL` is killed and says so.
+
+Alternatives considered: a terminal pane (rejected: not the product); `SUDO_ASKPASS` to
+a panel row (rejected: password only); an `SMAppService` helper (deferred as in
+2026-10-01: signing, XPC, days). The sheet is a UX gate, not a boundary: once the rule
+exists anything running as the user can run `mas upgrade` as root. Recorded as such.
+
+## Steps
+
+- [x] `packages/setup/lib/sudoers.zsh`: `SCUTTLER_UPDATES` alias from the resolved mas
+      path (omitted with a comment when mas is absent); help text; test with a fake mas.
+- [x] `updates.rs`: `SourceDef.root`; `locate`-based root command; `admin` readiness on
+      `UpdateSource` read from the rule file (path override for tests); `jobs_for` splits
+      root jobs; `Approval` on the report; stall watchdog; process groups; TERM→KILL
+      cancel; the `sudo` shim dir written once under the app's state dir and prepended
+      to children's PATH. Tests: rule parsing, command building, split, stall.
+- [x] `localauth.rs`: `approve(reason) -> Result<bool, String>`, blocking, one module.
+      Cargo: `objc2-local-authentication`.
+- [x] `packages/plugins/updates`: `admin` and `approval` on the types; `needsRule` row
+      copy and `c` target; band lines for pending/declined approval; stalled run line;
+      tests in `model.test.ts`; a story for each state.
+- [x] Docs: DECISIONS entry; AGENTS invariants 1 and 13 name the carve-outs; SETUP.md
+      and the README's `sudoers` line; JOURNAL gotcha (sudo + pam_tid + no tty).
+- [ ] Mitch runs `scuttler sudoers on` once; Hand Mirror upgrades from the panel.
+
+## Acceptance criteria
+
+- [ ] With the rule installed: `a` in the panel shows the approval sheet at once, brew
+      runs meanwhile, mas runs after approval, Hand Mirror leaves the count.
+- [ ] Cancel on the sheet: brew still runs, mas is skipped, the band says not approved.
+- [ ] Without the rule: the App Store row reads "needs setup once", nothing hangs, `c`
+      copies `scuttler sudoers on`.
+- [ ] A child that calls `sudo` fails within a second with the reason in its tail.
+- [ ] A silent child is killed at the stall limit with a line saying so.
+- [x] `pnpm verify` green; `packages/setup/test/sudoers.test.zsh` covers the new alias.
+- [x] Memory: nothing resident is added (the LA context is transient, the shim is a
+      file); covered by the release receipt.
+
+## Out of scope
+
+Brew casks that need root (they now fail fast and honestly; joining the rule is a later
+call). A privileged helper. Any password field in the prompt.
+
+## Risks / open questions
+
+- `mas upgrade` as root against the user's App Store session: mas 7 documents root as
+  required, so this is its supported shape; verified live in the last step.
+- The rule names the mas path at install time; a moved binary makes `status` report a
+  differing rule and the row fall back to `needsRule`.

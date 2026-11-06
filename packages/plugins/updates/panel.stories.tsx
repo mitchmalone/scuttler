@@ -43,6 +43,42 @@ export const updatesPanelStories = defineStories('UpdatesPanel (plugin)', [
     render: () => panel(updatesReportAt(nowSecs())),
   },
   {
+    name: 'App Store waits on the approval sheet',
+    notes:
+      'mas needs root. `a` queued Homebrew at once and put the system sheet up for the App Store job: Touch ID, Apple Watch or password. Approved, it joins the queue as `sudo -n`; declined, the line says so.',
+    keys: 'approve on the sheet · x cancel the running job',
+    render: () => {
+      const t = nowSecs()
+      const r = updatesReportAt(t)
+      return panel({
+        ...r,
+        approval: { state: 'pending', sources: ['mas'], detail: '', at: t - 3 },
+      })
+    },
+  },
+  {
+    name: 'App Store needs setup once',
+    notes:
+      'No sudoers rule names mas yet: its band says what to run once (`scuttler sudoers on`, one admin password), `c` copies it, ↵ runs nothing. Everything else upgrades as usual.',
+    keys: 'c copy the setup command · t terminal',
+    render: () => {
+      const t = nowSecs()
+      const r = idleUpdatesReportAt(t)
+      return panel({
+        ...r,
+        sources: r.sources.map((s) =>
+          s.id === 'mas' ? { ...s, admin: 'needsRule' as const } : s,
+        ),
+        approval: {
+          state: 'declined',
+          sources: ['mas'],
+          detail: 'not approved',
+          at: t - 5,
+        },
+      })
+    },
+  },
+  {
     name: 'batch finished: one upgraded, one failed',
     render: () => {
       const t = nowSecs()

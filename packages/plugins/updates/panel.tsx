@@ -6,6 +6,7 @@ import {
   CircleDashed,
   Download,
   EyeOff,
+  Fingerprint,
   Loader,
   Package,
 } from 'lucide-react'
@@ -15,10 +16,12 @@ import { useEffect, useState } from 'react'
 import {
   type PanelRow,
   STATUS_LABEL,
+  SUDOERS_COMMAND,
   UPDATES_ALL,
   type UpdateSource,
   type UpdatesReport,
   type UpgradeStatus,
+  approvalLine,
   batchFailures,
   batchHeadline,
   batchLine,
@@ -29,6 +32,7 @@ import {
   headline,
   lastLine,
   ledgerRows,
+  needsRule,
   rowCommand,
   rowDismissMessage,
   rowSelectable,
@@ -145,6 +149,7 @@ function Band({
 }) {
   const status = upgradeStatus(report, source.id)
   const clean = source.error == null && source.items.length === 0
+  const setup = !clean && needsRule(source)
   const chip =
     status !== 'idle' ? (
       <span className={`tui-updates-chip tui-updates-chip-${status}`}>
@@ -166,9 +171,13 @@ function Band({
       <span className="tui-updates-band-name">{source.label}</span>
       {chip}
       <span className="tui-updates-band-cmd">
-        {clean ? 'up to date' : source.upgradeCommand}
+        {clean
+          ? 'up to date'
+          : setup
+            ? `needs setup once · ${SUDOERS_COMMAND} in a terminal · c copies it`
+            : source.upgradeCommand}
       </span>
-      {!clean && (
+      {!clean && !setup && (
         <Button
           keyHint="u"
           disabled={status === 'running' || status === 'queued'}
@@ -261,6 +270,7 @@ export default function UpdatesPanel({
       : batchOver
         ? batchHeadline(state, batch)
         : upgradeLine(state, run, nowSecs)
+  const approval = approvalLine(state, nowSecs)
 
   const upgradeGroup = (source: UpdateSource | undefined) => {
     if (source) host.send({ upgrade: source.id })
@@ -371,6 +381,25 @@ export default function UpdatesPanel({
       onKeyDown={onKeyDown}
       footer={<KeyHints hints={hints} />}
     >
+      {approval && (
+        <ListRow
+          dim={approval.state === 'pending'}
+          icon={
+            approval.state === 'pending' ? (
+              <Fingerprint {...ICON} />
+            ) : (
+              <AlertTriangle {...ICON} />
+            )
+          }
+          label={
+            approval.state === 'declined' ? (
+              <span className="tui-updates-error">{approval.text}</span>
+            ) : (
+              approval.text
+            )
+          }
+        />
+      )}
       {run && (
         <div
           className={`tui-updates-run ${
@@ -446,6 +475,8 @@ export default function UpdatesPanel({
                           {lastLine(fail) || 'failed'} · t to retry in the
                           terminal
                         </span>
+                      ) : needsRule(row.source) ? (
+                        `${row.item.upgradeCommand} · needs setup once`
                       ) : (
                         row.item.upgradeCommand
                       )

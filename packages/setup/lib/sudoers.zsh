@@ -1,8 +1,11 @@
 # sudoers.zsh — scuttler's one root-owned path: a sudoers rule that lets the
 # app's `awake` switch macOS sleep off while a hold is armed, and back on
-# (DECISIONS 2026-10-01). Exactly two commands, for this user only, no
-# password; nothing else gains root. The app runs `sudo -n`, so without this
-# file it never asks — it just holds on power assertions alone.
+# (DECISIONS 2026-10-01), and lets the updates panel run `mas upgrade`, which
+# mas 7 requires root for (DECISIONS 2026-11-06; the app shows the system
+# approval sheet — Touch ID, Apple Watch or password — before each run). Exact
+# commands, for this user only, no password; nothing else gains root. The app
+# runs `sudo -n`, so without this file it never asks: awake holds on power
+# assertions alone and the App Store row says it needs setup.
 #
 # Installed 0444 (root-owned, never writable but readable) so `doctor` can
 # check its hash without sudo. Recorded in the manifest as mode `root`, which
@@ -16,14 +19,33 @@ sc_sudoers_previous_path() { print -r -- "${SCUTTLER_SUDOERS_PREVIOUS_PATH:-/etc
 # sudo, or the test fixture standing in for it.
 _sc_sudo() { "${SCUTTLER_SUDO_BIN:-/usr/bin/sudo}" "$@"; }
 
+# The mas binary the rule names: `SCUTTLER_MAS_BIN` (tests), else the one on
+# PATH. The app runs exactly this path under `sudo -n`, so the strings must
+# agree byte for byte; a moved mas makes `status` report a differing rule.
+sc_sudoers_mas_bin() {
+  if [[ -n "${SCUTTLER_MAS_BIN:-}" ]]; then print -r -- "$SCUTTLER_MAS_BIN"; return 0; fi
+  command -v mas 2>/dev/null
+}
+
 sc_sudoers_rule() {
-  local user="${USER:-$(id -un)}"
+  local user="${USER:-$(id -un)}" mas aliases="SCUTTLER_SLEEP"
+  mas="$(sc_sudoers_mas_bin)"
   cat <<RULE
 # Written by \`scuttler sudoers on\`; \`scuttler sudoers off\` removes it.
 # Lets scuttler's awake switch macOS sleep off while a hold is armed, and back on.
 Cmnd_Alias SCUTTLER_SLEEP = /usr/bin/pmset -a disablesleep 1, /usr/bin/pmset -a disablesleep 0
-${user} ALL=(root) NOPASSWD: SCUTTLER_SLEEP
 RULE
+  if [[ -n "$mas" ]]; then
+    aliases="SCUTTLER_SLEEP, SCUTTLER_UPDATES"
+    cat <<RULE
+# Lets the updates panel upgrade App Store apps (mas requires root); the app
+# asks for Touch ID, Apple Watch or your password before each run.
+Cmnd_Alias SCUTTLER_UPDATES = ${mas} upgrade, ${mas} upgrade *, ${mas} update, ${mas} update *
+RULE
+  else
+    print -r -- "# mas was not installed when this was written; rerun \`scuttler sudoers on\` after installing it."
+  fi
+  print -r -- "${user} ALL=(root) NOPASSWD: ${aliases}"
 }
 
 # on | off | status

@@ -74,10 +74,14 @@ Adopt **moves, never overwrites**: a foreign file at a path we are about to writ
 than aspirational: the defaults snapshot (`defaults.before`) is taken before the first
 write of each key and never updated afterwards, and nothing is ever overwritten in place.
 
-`scuttler sudoers on` installs a two-command rule — `pmset -a disablesleep 1` and `0`,
-this user, no password — so the app's `awake` can switch macOS sleep off while a hold is
-armed. The app only ever runs `sudo -n`: without the rule it asks nothing and holds on
-power assertions alone. `off` removes it (DECISIONS 2026-10-01).
+`scuttler sudoers on` installs one rule, this user, no password, naming exactly:
+`pmset -a disablesleep 1` and `0`, so the app's `awake` can switch macOS sleep off while
+a hold is armed (DECISIONS 2026-10-01); and the `mas` on PATH with `upgrade`/`update`,
+so the updates panel can upgrade App Store apps — mas 7 requires root — after the
+system approval sheet (Touch ID, Apple Watch or password; DECISIONS 2026-11-06). The app
+only ever runs `sudo -n`: without the rule it asks nothing, awake holds on power
+assertions alone and the App Store row says it needs setup once. Install mas after the
+rule and rerun `on`: the rule names the binary's path. `off` removes it.
 
 ## The verbs
 

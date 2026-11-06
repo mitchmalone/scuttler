@@ -51,6 +51,9 @@ export function updatesReportAt(nowSecs: number): UpdatesReport {
         upgradeCommand: 'mas upgrade',
         checkedAt: nowSecs - 60,
         error: null,
+        // mas needs root: the rule is in place, so the panel runs it after
+        // the approval sheet.
+        admin: 'ready',
         items: [
           {
             name: 'Xcode',

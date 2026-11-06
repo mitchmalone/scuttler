@@ -6,6 +6,21 @@
 
 ---
 
+### 2026-11-06 · sudo without a terminal does not fail fast on this Mac: pam_tid blocks it, forever, deaf to TERM
+
+The updates runner ran `mas upgrade` with stdin closed, trusting sudo to fail at once
+with no tty. mas 7 re-executes itself as `sudo mas update --force <id>`; `/etc/pam.d/sudo`
+here starts with `pam_tid.so` (Touch ID), and from a launchd-spawned app that module
+shows no sheet and sudo then has no tty for the password fallback — so it sat, twenty
+minutes, holding the runner's pipes and the queue behind it. Two retries made two more.
+A bare `sudo true </dev/null` from a no-tty shell reproduces it. Facts worth keeping:
+sudo ignores SIGTERM while inside PAM; SIGKILL from the user's own shell works (its real
+uid is still the user's until it authenticates); `kill -KILL -- -<pgid>` reaches the
+grandchild. Hence `sudo -n` everywhere the app spawns (the PATH shim), process groups,
+TERM-then-KILL cancel and the 15-minute silence watchdog (DECISIONS 2026-11-06).
+`mole clean` launched from the launcher hangs the same way on its `sudo -v`: a bang
+command is the terminal's business, not a `sh -c` from the app.
+
 ### 2026-11-06 · Four agent cells spun for a day: Claude's away recap is a subagent
 
 PR608 read "working" with the detail "Claude is waiting for your input", 25 hours after

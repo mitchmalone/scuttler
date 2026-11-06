@@ -38,6 +38,7 @@ mod herdr;
 mod hooks;
 mod icons;
 mod indexer;
+mod localauth;
 mod logbook;
 mod login_item;
 mod loupe;

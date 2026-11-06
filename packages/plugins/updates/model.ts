@@ -23,7 +23,26 @@ export interface UpdatesReport {
   recent?: UpgradeRun[]
   /** Jobs enqueued since the runner was last idle, and how many finished. */
   batch?: UpgradeBatch
+  /** The system approval sheet for root jobs (localauth.rs): present while it
+   * is up, and after a refusal until the next click. Absent before 2026-11-06. */
+  approval?: Approval | null
 }
+
+/** Mirrors `updates.rs`'s `Approval`. */
+export interface Approval {
+  state: 'pending' | 'declined'
+  /** Source ids the sheet covers. */
+  sources: SourceId[]
+  /** Why, when declined; '' while pending. */
+  detail: string
+  /** Epoch secs the sheet went up, or the refusal came back. */
+  at: number
+}
+
+/** Mirrors `updates.rs`'s `AdminAccess`: root sources only (mas). `ready`,
+ * the sudoers rule names the binary and the panel runs it after the approval
+ * sheet; `needsRule`, `scuttler sudoers on` has not run with mas present. */
+export type AdminAccess = 'ready' | 'needsRule'
 
 /** Mirrors `updates.rs`'s `UpgradeBatch`. */
 export interface UpgradeBatch {
@@ -75,6 +94,8 @@ export interface UpdateSource {
   /** Outdated packages the user put aside (`d`): out of the count until
    * `dismissedUntil` or a newer version. Absent in reports before 2026-11-01. */
   dismissed?: UpdateItem[]
+  /** Root sources only; absent on sources that run as the user. */
+  admin?: AdminAccess
 }
 
 export interface UpdateItem {
@@ -90,6 +111,42 @@ export interface UpdateItem {
 
 /** How long `d` puts a package aside. */
 export const DISMISS_HOURS = 24
+
+/** The one-time setup a root source needs: the terminal command that
+ * installs the sudoers rule (one admin password). */
+export const SUDOERS_COMMAND = 'scuttler sudoers on'
+
+/** A root source the rule does not cover yet: its rows run nothing from the
+ * panel and say what to run once. */
+export const needsRule = (source: UpdateSource): boolean =>
+  source.admin === 'needsRule'
+
+/** How long a refusal's line stays after the sheet came back (Rust also
+ * clears it on the next click). */
+export const DECLINED_SHOWN_SECS = 60
+
+/**
+ * The approval block's line: what the sheet is waiting for while it is up,
+ * or why the root jobs did not run; null when there is nothing to say.
+ */
+export function approvalLine(
+  report: UpdatesReport,
+  nowSecs: number,
+): { text: string; state: 'pending' | 'declined' } | null {
+  const a = report.approval
+  if (!a) return null
+  const labels = a.sources
+    .map((id) => report.sources.find((s) => s.id === id)?.label ?? id)
+    .join(', ')
+  if (a.state === 'pending') {
+    return {
+      text: `${labels}: approve with Touch ID, Apple Watch or your password`,
+      state: 'pending',
+    }
+  }
+  if (nowSecs - a.at > DECLINED_SHOWN_SECS) return null
+  return { text: `${labels} skipped · ${a.detail}`, state: 'declined' }
+}
 
 /** The `host.send` messages the panel speaks (`plugins.rs::native_send`). */
 export type UpdatesMessage =
@@ -432,8 +489,11 @@ export function ledgerRows(
   return rows
 }
 
-/** The command a row would run — what `c` copies and `t` hands to the terminal. */
+/** The command a row would run — what `c` copies and `t` hands to the
+ * terminal. For a root source still without its rule, `c` copies the setup
+ * command instead: that is the one thing to run. */
 export function rowCommand(row: PanelRow): string {
+  if (needsRule(row.source) && row.kind !== 'dismissed') return SUDOERS_COMMAND
   return row.kind === 'item' || row.kind === 'dismissed'
     ? row.item.upgradeCommand
     : row.source.upgradeCommand
@@ -445,9 +505,12 @@ export function rowCommand(row: PanelRow): string {
 export function rowUpgradeMessage(row: PanelRow): UpdatesMessage | null {
   switch (row.kind) {
     case 'item':
+      // Nothing to run from the panel until the rule exists; the row says so.
+      if (needsRule(row.source)) return null
       return { upgrade: row.source.id, item: row.item.name }
     case 'band':
     case 'error':
+      if (needsRule(row.source)) return null
       return { upgrade: row.source.id }
     case 'dismissed':
       return { restore: row.source.id, item: row.item.name }

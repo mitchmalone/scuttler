@@ -34,7 +34,7 @@ scuttler ${SCUTTLER_VERSION} — scuttle the ship, sail the wreck.
   scuttler shell --apply          write them (adopting what's there), clone the zsh plugins
   scuttler link | unlink          put scuttler on PATH (~/.local/bin), or take it off
   scuttler migrate                run the base migrations this machine hasn't yet
-  scuttler sudoers on | off       let awake switch macOS sleep off while it holds (one password)
+  scuttler sudoers on | off       root for awake (sleep off while it holds) and App Store updates (one password)
   scuttler remove                 undo every owned path and default; asks, --yes skips
   scuttler help | version
 

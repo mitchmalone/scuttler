@@ -5,6 +5,46 @@
 
 ---
 
+### 2026-11-06 · Root upgrades run in the panel: the sudoers rule grants, the system approval sheet gates; the runner never waits on sudo
+
+- **Decision.** `mas` 7 requires root to update, so the App Store source is a _root
+  source_ (`SourceDef::root`). Its jobs do not run as the user: with
+  `/etc/sudoers.d/scuttler` naming the mas binary (`scuttler sudoers on` now writes
+  `SCUTTLER_UPDATES` beside `SCUTTLER_SLEEP`, the path from `command -v mas`), a click
+  first puts up `LAContext.evaluatePolicy(deviceOwnerAuthentication)` — the one system
+  sheet that offers Touch ID, Apple Watch and the account password (`localauth.rs`, crate
+  `objc2-local-authentication`) — and on yes queues the job as
+  `/usr/bin/sudo -n <that path> upgrade …`, the string the rule names, matched byte for
+  byte. The other jobs of the batch start at once; no leaves a "skipped · not approved"
+  line; two minutes without an answer is a no. Without the rule the row reads "needs
+  setup once", `c` copies `scuttler sudoers on`, Enter runs nothing, "upgrade everything"
+  skips it. Readiness is read off the 0444 rule file, not probed with `sudo -l` (an
+  admin's password-gated `ALL` says yes there). Independently, every panel child now
+  finds a `sudo` shim first on its PATH (`exec /usr/bin/sudo -n "$@"`, written under the
+  state dir), runs in its own process group, is killed after 15 min of silence with a
+  line saying so, and cancel is TERM then KILL. No Tauri command added: the click is the
+  plugin's existing `upgrade` message.
+- **Why.** The runner closed stdin believing sudo fails fast without a terminal. On a
+  Mac with `pam_tid.so` first in `/etc/pam.d/sudo` it does not: from a launchd-spawned
+  app sudo shows no sheet and cannot read a password, so it blocked for twenty minutes,
+  ignored TERM inside PAM, and held the queue (JOURNAL 2026-11-06). "The whole point is
+  to take a user and make it really easy and unified for them to update packages. The UX
+  is the point" (Mitch): the fix had to keep the run in the panel and offer the three
+  ways a Mac authenticates. sudo from the app can never show them; LocalAuthentication
+  can, and the root itself is the 2026-10-01 trade already made for `pmset`, extended by
+  four commands. The sheet is a UX gate, not a security boundary: once the rule exists
+  anything running as the user can run `mas upgrade` as root — App Store updates, the
+  same class as the sleep rule. It is an OS sheet, which invariant 13 now names as its
+  second exception, beside the file picker.
+- **Alternatives.** Hand the row to a terminal pane (rejected: "opening a terminal
+  doesn't meet it"). `SUDO_ASKPASS` into a panel row (rejected: password only, a password
+  field in the prompt). An `SMAppService` helper (deferred as on 2026-10-01). Letting mas
+  reach sudo itself with a `SETENV` rule on the Cellar path (rejected: the path moves per
+  version and mas passes `MAS_NO_AUTO_INDEX` through sudo; naming the `bin` symlink and
+  running sudo ourselves is one string, stable across upgrades). Casks that want root
+  now fail in milliseconds with the reason in their tail; joining the rule is a later
+  call.
+
 ### 2026-11-06 · A quicklink's name is a trigger word, equal to its shortcode
 
 - **Decision.** A quicklink (a link with `{query}`) fires by its shortcode (`yt`) _and_ by

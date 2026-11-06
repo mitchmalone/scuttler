@@ -12,6 +12,8 @@
 
 use std::collections::{BTreeMap, VecDeque};
 use std::io::{BufRead, Read};
+use std::os::unix::fs::PermissionsExt;
+use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -30,6 +32,17 @@ const SLOW: Duration = Duration::from_secs(30 * 60);
 const ERROR_RETRY: Duration = Duration::from_secs(5 * 60);
 /// A source's check command is killed if it runs longer than this.
 const CHECK_TIMEOUT: Duration = Duration::from_secs(60);
+/// A panel upgrade with no output for this long is stalled: killed, its tail
+/// saying so, rather than holding the queue (the twenty-minute sudo of
+/// 2026-11-06, JOURNAL).
+const UPGRADE_STALL: Duration = Duration::from_secs(15 * 60);
+/// Cancel sends TERM to the child's process group, then KILL to whatever is
+/// still there after this: sudo inside PAM ignores TERM.
+const KILL_GRACE: Duration = Duration::from_secs(5);
+/// The `sudo` a panel child finds first on its PATH: `sudo -n`, so anything
+/// that reaches for root fails at once with "a password is required" instead
+/// of waiting on a terminal that is not there.
+const SUDO_SHIM: &str = "#!/bin/sh\n# Written by scuttler (updates.rs): a panel upgrade never waits on a password.\nexec /usr/bin/sudo -n \"$@\"\n";
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -51,6 +64,41 @@ pub struct UpdatesReport {
     /// Progress of the current batch: jobs enqueued since the runner was
     /// last idle, and how many of them have finished.
     pub batch: UpgradeBatch,
+    /// The system approval sheet for root jobs (localauth.rs): present while
+    /// it is up, and after a refusal until the next click, so the panel can
+    /// say why nothing ran.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub approval: Option<Approval>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Approval {
+    pub state: ApprovalState,
+    /// Source ids the sheet covers.
+    pub sources: Vec<String>,
+    /// Why, when declined (`localauth::Declined`'s wording); empty while pending.
+    pub detail: String,
+    /// Unix seconds the sheet went up, or the refusal came back.
+    pub at: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ApprovalState {
+    Pending,
+    Declined,
+}
+
+/// Root sources only: whether the sudoers rule names this binary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum AdminAccess {
+    /// `scuttler sudoers on` has run with this binary present: the panel runs
+    /// it under `sudo -n` after the approval sheet.
+    Ready,
+    /// No rule names it: the row says to run `scuttler sudoers on` once.
+    NeedsRule,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -115,6 +163,10 @@ pub struct UpdateSource {
     /// report; `apply_dismissals` fills it on read.
     #[serde(default)]
     pub dismissed: Vec<UpdateItem>,
+    /// Root sources only (mas 7 requires root to update): see `AdminAccess`.
+    /// Absent on sources that run as the user.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub admin: Option<AdminAccess>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -145,6 +197,9 @@ struct Runner {
     queue: VecDeque<UpgradeJob>,
     recent: Vec<UpgradeRun>,
     batch: UpgradeBatch,
+    /// Unix seconds the current run last wrote a line (or started): the
+    /// stall watchdog's clock.
+    last_output: u64,
 }
 
 static RUNNER: Mutex<Runner> = Mutex::new(Runner {
@@ -157,7 +212,11 @@ static RUNNER: Mutex<Runner> = Mutex::new(Runner {
         failed: 0,
         started_at: 0,
     },
+    last_output: 0,
 });
+/// The approval sheet's state (`Approval`); None when no root job is waiting
+/// on one and the last answer was yes.
+static APPROVAL: Mutex<Option<Approval>> = Mutex::new(None);
 /// Lines of output kept per run — enough to see what brew is doing.
 const TAIL_LINES: usize = 40;
 /// Finished runs remembered for the panel's "upgraded" marks.
@@ -232,6 +291,7 @@ impl Runner {
     }
 
     fn push_tail(&mut self, line: String) {
+        self.last_output = now_secs();
         if let Some((run, _)) = self.current.as_mut() {
             run.tail.push(line);
             if run.tail.len() > TAIL_LINES {
@@ -256,6 +316,7 @@ pub fn report() -> UpdatesReport {
     r.queue = runner.queue.iter().cloned().collect();
     r.recent = runner.recent.clone();
     r.batch = runner.batch;
+    r.approval = APPROVAL.lock().unwrap().clone();
     r
 }
 
@@ -264,17 +325,29 @@ pub fn report() -> UpdatesReport {
 /// so a failure in one does not stop the rest. Jobs run one at a time in
 /// order; a job already running or waiting is not queued twice. Each child
 /// is `/bin/sh -c <command>` with the environment the checks get
-/// (`check_env`), stdin closed so anything that wants a terminal (sudo for a
-/// cask) fails fast instead of hanging, both streams merged into the run's
-/// tail. The bar/panel read the runner through `report()`; when the queue
-/// drains a re-check runs so the count drops. Err for an unknown source or
-/// package.
+/// (`check_env`) plus the `sudo -n` shim first on PATH, stdin closed, in its
+/// own process group, both streams merged into the run's tail; a child silent
+/// for `UPGRADE_STALL` is killed. Jobs of a root source (`SourceDef::root`)
+/// take another door: with the sudoers rule in place they wait on the system
+/// approval sheet (localauth.rs) and join the queue when it is approved, as
+/// `/usr/bin/sudo -n <binary> …`; without the rule they are skipped and the
+/// row says what to run once. The bar/panel read the runner through
+/// `report()`; when the queue drains a re-check runs so the count drops. Err
+/// for an unknown source or package.
 pub fn upgrade(source: &str, item: Option<&str>) -> Result<(), String> {
     let jobs = jobs_for(source, item)?;
     if let Some(name) = item {
         // Upgrading a dismissed package by hand is the end of its dismissal.
         forget_dismissal(source, name);
     }
+    // A new click retires the last refusal's line.
+    {
+        let mut approval = APPROVAL.lock().unwrap();
+        if matches!(approval.as_ref(), Some(a) if a.state == ApprovalState::Declined) {
+            *approval = None;
+        }
+    }
+    let (root_jobs, jobs) = split_root(jobs);
     let mut runner = RUNNER.lock().unwrap();
     let added = runner.enqueue(jobs);
     if added > 0 {
@@ -287,7 +360,170 @@ pub fn upgrade(source: &str, item: Option<&str>) -> Result<(), String> {
         );
     }
     pump(&mut runner);
+    drop(runner);
+    let (ready, unruled): (Vec<_>, Vec<_>) = root_jobs
+        .into_iter()
+        .partition(|job| admin_access_of(&job.source) == Some(AdminAccess::Ready));
+    for job in &unruled {
+        crate::logbook::breadcrumb(
+            "updates",
+            &format!(
+                "skipped {}: no sudoers rule (scuttler sudoers on)",
+                job.source
+            ),
+        );
+    }
+    if !ready.is_empty() {
+        request_approval(ready);
+    }
     Ok(())
+}
+
+/// Root jobs out of a batch: (root, the rest), order kept.
+fn split_root(jobs: Vec<UpgradeJob>) -> (Vec<UpgradeJob>, Vec<UpgradeJob>) {
+    jobs.into_iter().partition(|job| is_root(&job.source))
+}
+
+fn is_root(source: &str) -> bool {
+    SOURCES.iter().any(|def| def.id == source && def.root)
+}
+
+/// The cached row's `admin`; None for a source that is not root or not in
+/// the last report.
+fn admin_access_of(source: &str) -> Option<AdminAccess> {
+    REPORT
+        .lock()
+        .unwrap()
+        .as_ref()?
+        .sources
+        .iter()
+        .find(|s| s.id == source)?
+        .admin
+}
+
+/// Put the approval sheet up for `jobs` (all root, all ruled) on its own
+/// thread; yes queues them as `root_command`s, no leaves a `Declined` for
+/// the panel. One sheet at a time: a click while one is up is ignored.
+fn request_approval(jobs: Vec<UpgradeJob>) {
+    let mut sources: Vec<String> = Vec::new();
+    for job in &jobs {
+        if !sources.contains(&job.source) {
+            sources.push(job.source.clone());
+        }
+    }
+    {
+        let mut approval = APPROVAL.lock().unwrap();
+        if matches!(approval.as_ref(), Some(a) if a.state == ApprovalState::Pending) {
+            crate::logbook::breadcrumb("updates", "approval sheet already up; click ignored");
+            return;
+        }
+        *approval = Some(Approval {
+            state: ApprovalState::Pending,
+            sources: sources.clone(),
+            detail: String::new(),
+            at: now_secs(),
+        });
+    }
+    let reason = approval_reason(&jobs);
+    crate::logbook::breadcrumb("updates", &format!("approval sheet up: {reason}"));
+    std::thread::spawn(move || match crate::localauth::approve(&reason) {
+        Ok(()) => {
+            *APPROVAL.lock().unwrap() = None;
+            let jobs: Vec<UpgradeJob> = jobs
+                .into_iter()
+                .filter_map(|mut job| {
+                    let def = SOURCES.iter().find(|def| def.id == job.source)?;
+                    let path = locate(def.binary)?;
+                    job.command = root_command(&job.command, def.binary, &path);
+                    Some(job)
+                })
+                .collect();
+            let mut runner = RUNNER.lock().unwrap();
+            let added = runner.enqueue(jobs);
+            crate::logbook::breadcrumb(
+                "updates",
+                &format!("approved: queued {added} root upgrade job(s)"),
+            );
+            pump(&mut runner);
+        }
+        Err(declined) => {
+            crate::logbook::breadcrumb("updates", &format!("approval: {declined}"));
+            *APPROVAL.lock().unwrap() = Some(Approval {
+                state: ApprovalState::Declined,
+                sources,
+                detail: declined.to_string(),
+                at: now_secs(),
+            });
+        }
+    });
+}
+
+/// The sheet's line, in Apple's template ("scuttler is trying to …"): the
+/// one package by name, else the source's apps.
+fn approval_reason(jobs: &[UpgradeJob]) -> String {
+    match jobs {
+        [job] if job.item.is_some() => format!("upgrade {}", job.item.as_deref().unwrap_or("")),
+        _ => {
+            let labels: Vec<&str> = jobs
+                .iter()
+                .filter_map(|job| SOURCES.iter().find(|def| def.id == job.source))
+                .map(|def| def.label)
+                .fold(Vec::new(), |mut acc, l| {
+                    if !acc.contains(&l) {
+                        acc.push(l);
+                    }
+                    acc
+                });
+            format!("upgrade your {} apps", labels.join(" and "))
+        }
+    }
+}
+
+/// `mas upgrade 1 && mas upgrade 2` → each segment that starts with the bare
+/// binary runs as `/usr/bin/sudo -n <path> …`: the string the sudoers rule
+/// names (`scuttler sudoers on` resolves the same binary), matched byte for
+/// byte. Segments that are not the binary are left alone.
+fn root_command(command: &str, binary: &str, path: &Path) -> String {
+    let prefix = format!("{binary} ");
+    command
+        .split(" && ")
+        .map(str::trim)
+        .map(|seg| {
+            if seg == binary {
+                format!("/usr/bin/sudo -n {}", path.display())
+            } else if let Some(rest) = seg.strip_prefix(&prefix) {
+                format!("/usr/bin/sudo -n {} {rest}", path.display())
+            } else {
+                seg.to_owned()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" && ")
+}
+
+/// Does the installed sudoers rule name `bin`? Read, not probed: the file is
+/// root-owned 0444 for exactly this (`sudoers.zsh`); `sudo -l` would say yes
+/// for an admin's password-gated `ALL` too.
+fn admin_access(bin: &Path) -> AdminAccess {
+    let ruled = ["/etc/sudoers.d/scuttler", "/etc/sudoers.d/scuttlarr"]
+        .iter()
+        .filter_map(|f| std::fs::read_to_string(f).ok())
+        .any(|rule| rule_names(&rule, bin));
+    if ruled {
+        AdminAccess::Ready
+    } else {
+        AdminAccess::NeedsRule
+    }
+}
+
+/// A non-comment line of `sudoers` grants `<bin> upgrade`.
+fn rule_names(sudoers: &str, bin: &Path) -> bool {
+    let needle = format!("{} upgrade", bin.display());
+    sudoers
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.starts_with('#'))
+        .any(|line| line.contains(&needle))
 }
 
 /// The jobs an `upgrade` request expands to.
@@ -354,9 +590,12 @@ fn pump(runner: &mut Runner) {
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
+        // Its own group, so cancel and the watchdog reach grandchildren too.
+        .process_group(0)
         // Quiet brew's post-run advice; the tail is short.
         .env("HOMEBREW_NO_ENV_HINTS", "1");
     for (k, v) in check_env(Path::new("/bin/sh")) {
+        let v = if k == "PATH" { with_sudo_shim(v) } else { v };
         cmd.env(k, v);
     }
     let run = UpgradeRun {
@@ -377,7 +616,11 @@ fn pump(runner: &mut Runner) {
             return;
         }
     };
+    let started_at = run.started_at;
     runner.current = Some((run, Some(child.id())));
+    runner.last_output = now_secs();
+    let pid = child.id();
+    std::thread::spawn(move || watchdog(pid, started_at));
     let out_h = tail_lines(child.stdout.take());
     let err_h = tail_lines(child.stderr.take());
     std::thread::spawn(move || {
@@ -433,12 +676,84 @@ pub fn cancel_upgrade() {
     runner.batch.total = runner.batch.total.saturating_sub(dropped);
     if let Some((run, Some(pid))) = runner.current.as_mut() {
         run.cancelled = true;
-        // SIGTERM via /bin/kill: no libc dep for one signal. brew forwards it
-        // to whatever it's running.
-        let _ = Command::new("/bin/kill")
-            .args(["-TERM", &pid.to_string()])
-            .status();
+        let pid = *pid;
+        // TERM to the group (brew forwards it anyway); KILL after the grace
+        // for anything that ignored it, if the same run is still in flight.
+        kill_group(pid, "-TERM");
+        std::thread::spawn(move || {
+            std::thread::sleep(KILL_GRACE);
+            if run_live(&RUNNER.lock().unwrap(), pid) {
+                kill_group(pid, "-KILL");
+            }
+        });
     }
+}
+
+/// `/bin/kill <sig> -- -<pid>`: the child's whole process group, no libc dep
+/// for one signal.
+fn kill_group(pid: u32, sig: &str) {
+    let _ = Command::new("/bin/kill")
+        .args([sig, "--", &format!("-{pid}")])
+        .status();
+}
+
+/// The run with child `pid` is still the one in flight.
+fn run_live(runner: &Runner, pid: u32) -> bool {
+    matches!(runner.current.as_ref(), Some((run, Some(p))) if *p == pid && run.finished_at == 0)
+}
+
+/// Kill a run that has gone silent for `UPGRADE_STALL`; returns when the run
+/// ends either way. One per run, sleeping between looks.
+fn watchdog(pid: u32, started_at: u64) {
+    loop {
+        std::thread::sleep(Duration::from_secs(30));
+        let mut runner = RUNNER.lock().unwrap();
+        let same =
+            matches!(runner.current.as_ref(), Some((run, _)) if run.started_at == started_at);
+        if !same || !run_live(&runner, pid) {
+            return;
+        }
+        if stalled(runner.last_output, now_secs()) {
+            runner.push_tail(format!(
+                "no output for {} min: killed",
+                UPGRADE_STALL.as_secs() / 60
+            ));
+            crate::logbook::breadcrumb("updates", "upgrade stalled: killed");
+            kill_group(pid, "-KILL");
+            return;
+        }
+    }
+}
+
+fn stalled(last_output: u64, now: u64) -> bool {
+    now.saturating_sub(last_output) >= UPGRADE_STALL.as_secs()
+}
+
+/// The shim dir (`SUDO_SHIM`) ahead of `path`. Written under the state dir
+/// when missing or stale; on any failure the plain PATH is used.
+fn with_sudo_shim(path: std::ffi::OsString) -> std::ffi::OsString {
+    let Some(dir) = sudo_shim_dir() else {
+        return path;
+    };
+    let mut all = vec![dir];
+    all.extend(std::env::split_paths(&path));
+    std::env::join_paths(all).unwrap_or(path)
+}
+
+fn sudo_shim_dir() -> Option<PathBuf> {
+    let dir = crate::config::state_dir().join("shim");
+    write_sudo_shim(&dir).ok()?;
+    Some(dir)
+}
+
+fn write_sudo_shim(dir: &Path) -> std::io::Result<()> {
+    let shim = dir.join("sudo");
+    if std::fs::read_to_string(&shim).ok().as_deref() == Some(SUDO_SHIM) {
+        return Ok(());
+    }
+    std::fs::create_dir_all(dir)?;
+    std::fs::write(&shim, SUDO_SHIM)?;
+    std::fs::set_permissions(&shim, std::fs::Permissions::from_mode(0o755))
 }
 
 /// Pipe → the run's tail, line by line as they arrive (so the panel sees
@@ -783,6 +1098,9 @@ struct SourceDef {
     upgrade_command: &'static str,
     parser: fn(&str) -> Result<Vec<UpdateItem>, String>,
     interval: Duration,
+    /// Upgrading needs root (mas 7): the panel runs it as `sudo -n <binary>`
+    /// under the sudoers rule, after the approval sheet (DECISIONS 2026-11-06).
+    root: bool,
 }
 
 /// Table order from the plan; the report preserves it.
@@ -796,6 +1114,7 @@ const SOURCES: &[SourceDef] = &[
         upgrade_command: "brew upgrade",
         parser: parse_brew,
         interval: SLOW,
+        root: false,
     },
     SourceDef {
         id: "mas",
@@ -805,6 +1124,7 @@ const SOURCES: &[SourceDef] = &[
         upgrade_command: "mas upgrade",
         parser: parse_mas,
         interval: CHEAP,
+        root: true,
     },
     SourceDef {
         id: "pnpm",
@@ -814,6 +1134,7 @@ const SOURCES: &[SourceDef] = &[
         upgrade_command: "pnpm update -g",
         parser: parse_pnpm,
         interval: CHEAP,
+        root: false,
     },
     SourceDef {
         id: "mise",
@@ -823,6 +1144,7 @@ const SOURCES: &[SourceDef] = &[
         upgrade_command: "mise upgrade",
         parser: parse_mise,
         interval: CHEAP,
+        root: false,
     },
 ];
 
@@ -891,6 +1213,7 @@ fn check_source(def: &'static SourceDef, bin: &Path) -> UpdateSource {
         error,
         items,
         dismissed: Vec::new(),
+        admin: def.root.then(|| admin_access(bin)),
     }
 }
 
@@ -1220,6 +1543,98 @@ mod tests {
 
     /// Runner tests share the one static RUNNER; they take this in turn.
     static RUNNER_TEST_LOCK: Mutex<()> = Mutex::new(());
+
+    // ---- root sources: the rule, the command, the split -----------------
+
+    #[test]
+    fn rule_names_the_binary_on_a_granting_line_only() {
+        let bin = Path::new("/opt/homebrew/bin/mas");
+        let rule = "# Lets the updates panel run /opt/homebrew/bin/mas upgrade\n\
+                    Cmnd_Alias SCUTTLER_UPDATES = /opt/homebrew/bin/mas upgrade, /opt/homebrew/bin/mas upgrade *\n\
+                    mitch ALL=(root) NOPASSWD: SCUTTLER_SLEEP, SCUTTLER_UPDATES\n";
+        assert!(rule_names(rule, bin));
+        let comment_only = "# /opt/homebrew/bin/mas upgrade would be nice\n";
+        assert!(!rule_names(comment_only, bin));
+        let sleep_only = "Cmnd_Alias SCUTTLER_SLEEP = /usr/bin/pmset -a disablesleep 1\n";
+        assert!(!rule_names(sleep_only, bin));
+        assert!(!rule_names(rule, Path::new("/usr/local/bin/mas")));
+    }
+
+    #[test]
+    fn root_command_rewrites_each_segment_that_is_the_binary() {
+        let mas = Path::new("/opt/homebrew/bin/mas");
+        assert_eq!(
+            root_command("mas upgrade 1502839586", "mas", mas),
+            "/usr/bin/sudo -n /opt/homebrew/bin/mas upgrade 1502839586"
+        );
+        assert_eq!(
+            root_command("mas upgrade 1 && mas upgrade 2", "mas", mas),
+            "/usr/bin/sudo -n /opt/homebrew/bin/mas upgrade 1 && /usr/bin/sudo -n /opt/homebrew/bin/mas upgrade 2"
+        );
+        assert_eq!(
+            root_command("mas", "mas", mas),
+            "/usr/bin/sudo -n /opt/homebrew/bin/mas"
+        );
+        // A segment that is some other command is not touched (nor is `masX`).
+        assert_eq!(
+            root_command("brew upgrade && mastodon up", "mas", mas),
+            "brew upgrade && mastodon up"
+        );
+    }
+
+    #[test]
+    fn split_root_keeps_order_and_sends_mas_the_other_way() {
+        let jobs = vec![
+            job("brew", None),
+            job("mas", Some("Hand Mirror")),
+            job("pnpm", None),
+        ];
+        let (root, rest) = split_root(jobs);
+        assert_eq!(root, vec![job("mas", Some("Hand Mirror"))]);
+        assert_eq!(rest, vec![job("brew", None), job("pnpm", None)]);
+        assert!(is_root("mas"));
+        assert!(!is_root("brew"));
+    }
+
+    #[test]
+    fn approval_reason_names_the_one_package_else_the_source() {
+        assert_eq!(
+            approval_reason(&[job("mas", Some("Hand Mirror"))]),
+            "upgrade Hand Mirror"
+        );
+        assert_eq!(
+            approval_reason(&[job("mas", None)]),
+            "upgrade your App Store apps"
+        );
+        assert_eq!(
+            approval_reason(&[job("mas", Some("A")), job("mas", Some("B"))]),
+            "upgrade your App Store apps"
+        );
+    }
+
+    #[test]
+    fn stall_is_measured_from_the_last_line() {
+        assert!(!stalled(1_000, 1_000 + UPGRADE_STALL.as_secs() - 1));
+        assert!(stalled(1_000, 1_000 + UPGRADE_STALL.as_secs()));
+    }
+
+    #[test]
+    fn sudo_shim_is_written_executable_once() {
+        let dir = std::env::temp_dir().join(format!("scuttler-shim-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        write_sudo_shim(&dir).unwrap();
+        let shim = dir.join("sudo");
+        assert_eq!(std::fs::read_to_string(&shim).unwrap(), SUDO_SHIM);
+        assert!(crate::deps::is_executable(&shim));
+        assert!(SUDO_SHIM.contains("exec /usr/bin/sudo -n \"$@\""));
+        let before = std::fs::metadata(&shim).unwrap().modified().unwrap();
+        write_sudo_shim(&dir).unwrap();
+        assert_eq!(
+            std::fs::metadata(&shim).unwrap().modified().unwrap(),
+            before
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn parses_brew_outdated_json_v2() {
