@@ -12,6 +12,9 @@
 
 ## Where we are
 
+- **CI:** the index-scan timing test no longer uses the 500 ms product budget as a
+  wall clock. A loaded GitHub Actions macOS runner spent 772 ms on 94 apps and
+  failed it (run 42298208633); the assert is a 5 s backstop (JOURNAL 2026-11-07).
 - **Released: v0.8.6** (2026-11-06, `releases/v0.8.6.md`): receipt 114.4 MB, cold start
   198 ms; fan-out green (check, homebrew, notion, deploy-mmcom); the tap holds
   `scuttler.rb` 0.8.6. Three pieces of work from two sessions: root upgrades in the
