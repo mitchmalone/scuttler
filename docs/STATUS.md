@@ -4,17 +4,23 @@
 > history lives in git, `plans/done/`, `releases/` and `JOURNAL.md`; the backlog with its
 > triggers lives in `ROADMAP.md`.
 >
-> Last updated: 2026-11-06 (root upgrades in the panel built on
-> `feat/admin-updates-in-panel`, awaiting Mitch's `scuttler sudoers on` and a live run;
-> earlier the same day: v0.8.5 released,
-> fan-out green; agent statuses now come from the pane's screen, 22 agents, herdr-derived
-> rules credited under Apache-2.0, dev-installed and watched; the shell stays Tauri,
-> DECISIONS 2026-11-06, reaffirmed against a "snappy" rewrite the same day; next: make
-> summon measurably fast, and the leak gauge on a day-old instance)
+> Last updated: 2026-11-06 (v0.8.6 released, fan-out green: root upgrades in the panel
+> behind the system approval sheet, agent statuses from the pane's screen, quicklinks by
+> name; the approval sheet shipped without a live run because this Mac's SecurityAgent
+> was wedged by the morning's hang, Mitch's call; the other session releases 0.8.7 next)
 
 ## Where we are
 
-- **Released: v0.8.5** (2026-11-06, `releases/v0.8.5.md`): the rename, the fast bar,
+- **Released: v0.8.6** (2026-11-06, `releases/v0.8.6.md`): receipt 114.4 MB, cold start
+  198 ms; fan-out green (check, homebrew, notion, deploy-mmcom); the tap holds
+  `scuttler.rb` 0.8.6. Carries the admin-updates work, agent statuses and quicklinks.
+- **Open after v0.8.6: the approval sheet has not been seen live.** The plan
+  (`plans/active/2026-11-06-admin-updates-in-panel.md`) stays active for one thing:
+  `scuttler sudoers on` with mas present, then `a` with an App Store app outdated, or
+  `cargo test --lib localauth -- --ignored --nocapture` at the Mac. Blocked on this
+  machine by a wedged `SecurityAgent` (pid 96598, started 15:28:46 by the app's first
+  hung sudo; `kill` it, then sudo works again) — Mitch said he will deal with it later.
+- **Previously released: v0.8.5** (2026-11-06, `releases/v0.8.5.md`): the rename, the fast bar,
   the agents fix; receipt 113.5 MB, cold start 179 ms. Fan-out green (check, homebrew,
   notion, deploy-mmcom); the tap holds `scuttler.rb` 0.8.5 with `auto_updates` and
   `scuttlarr.rb` deprecated to it; `www.scuttler.app` and `/install` serve 0.8.5. Both plans closed
