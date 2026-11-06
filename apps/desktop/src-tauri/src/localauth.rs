@@ -101,3 +101,17 @@ pub fn approve(reason: &str) -> Result<(), Declined> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    /// The sheet itself, for a human at the Mac: `cargo test --lib localauth --
+    /// --ignored --nocapture`, then approve (or cancel, and read the verdict).
+    /// Ignored because it needs a finger, a watch or a password.
+    #[test]
+    #[ignore = "shows the system approval sheet; run by hand"]
+    fn shows_the_sheet_and_reports_the_verdict() {
+        let verdict = super::approve("test the scuttler approval sheet");
+        eprintln!("verdict: {verdict:?}");
+        assert!(matches!(verdict, Ok(()) | Err(super::Declined::Cancelled)));
+    }
+}

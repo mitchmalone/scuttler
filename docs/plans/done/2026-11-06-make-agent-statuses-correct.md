@@ -1,8 +1,8 @@
 ---
 title: Make agent statuses correct
-status: active
+status: done
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-06 (shipped in v0.8.6)
 links:
   - ../../DECISIONS.md 2026-11-06
   - ../../JOURNAL.md 2026-11-06 (the away recap)
@@ -120,11 +120,14 @@ you` (test `claude_bare_prompt_box_is_idle_whatever_the_title_says`); a question
       the screen does not show: the hook sends no state for the first two, and the
       screen look settles the third on its next 2 s tick.
 - [x] A transcript viewer or model picker left open does not change the cell (test).
-- [ ] `pnpm verify` green on the final commit; every rule file parses and every
-      pattern compiles (test); live check on Mitch's panes after dev-install.
-- [ ] Memory: `scripts/mem.sh --receipt` unchanged in kind (no new process; rule tables
-      are a few KB of text); recorded at the next release.
-- [ ] Idle CPU with eight idle agents unchanged (no capture for idle sessions).
+- [x] `pnpm verify` green on the final commit; every rule file parses and every
+      pattern compiles (test); live check on Mitch's panes after dev-install
+      (watched 2026-11-06, dev-installed the same day).
+- [x] Memory: `scripts/mem.sh --receipt` unchanged in kind (no new process; rule tables
+      are a few KB of text); recorded in `releases/v0.8.6.md`.
+- [ ] Idle CPU with eight idle agents unchanged (no capture for idle sessions): not
+      measured before shipping; the design reads no idle pane, so a regression would
+      show as `capture-pane` in `mem.sh` child processes. Watch.
 
 ## Out of scope
 

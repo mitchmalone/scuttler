@@ -37,12 +37,12 @@
   receipt, STATUS/ROADMAP/PRD as cursors, SETUP.md true, STANDARDS re-vendored, the
   extension docs split, the logs re-sorted and marked, the site on the kit's own panel
   registry, bar layout and launcher.
-- **In flight: make agent statuses correct**
-  (`plans/active/2026-11-06-make-agent-statuses-correct.md`, DECISIONS 2026-11-06):
+- **Shipped in v0.8.6: agent statuses come from the pane's screen**
+  (`plans/done/2026-11-06-make-agent-statuses-correct.md`, DECISIONS 2026-11-06):
   built 2026-11-06 — a rule engine over 22 bundled per-agent rule files (herdr's
   catalogue shapes), screens read from tmux for working/attention panes and on every
   hook event, agent panes discovered without a hook, the Claude hook reduced to a
-  hint; dev-installed, watching it on Mitch's panes before the next release. The rule
+  hint; dev-installed and watched on Mitch's panes before the release. The rule
   files are herdr-derived under Apache-2.0: credited in `THIRD-PARTY-LICENSES.md`
   (bundled), the README and each file's header (Mitch's call, 2026-11-06).
 - **Parked:** `plans/done/lights-plugin.md` (built, in daily use; Nanoleaf waits on
