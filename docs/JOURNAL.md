@@ -6,6 +6,16 @@
 
 ---
 
+### 2026-11-07 · The index-scan test's 500 ms wall is the product budget, and CI is not a dev Mac
+
+`indexer::tests::scan_is_inside_the_index_budget_with_keywords` asserted `ms < 500`,
+the AGENTS full-rebuild budget, and its comment called that bound generous enough
+that CI noise would never fail it. On `macos-latest` it did: 772 ms for 94 apps
+(run 42298208633), while the other 319 tests passed. The runner is slower and the
+suite runs in parallel; the product number is the wrong wall. The assert is 5 s
+now — still a backstop against a scan that does real work per file, not a reading
+of the 500 ms budget. That budget stays a dev-Mac measurement.
+
 ### 2026-11-07 · Two sessions in one checkout, both committing to main, cannot ship separate releases
 
 Two agent sessions worked this repo on 2026-11-06, one on agent statuses and
