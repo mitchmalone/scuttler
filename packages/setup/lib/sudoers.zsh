@@ -90,7 +90,11 @@ sc_sudoers() {
       rm -f "$tmp"
       sc_manifest_add root "$target" "$want" awake
       _sc_sudoers_retire_previous
-      sc_ok "$target: awake can now switch macOS sleep off while it holds" ;;
+      if [[ -n "$(sc_sudoers_mas_bin)" ]]; then
+        sc_ok "$target: awake can switch macOS sleep off while it holds; the updates panel can upgrade App Store apps after the approval sheet"
+      else
+        sc_ok "$target: awake can switch macOS sleep off while it holds (no mas: rerun after installing it for App Store updates)"
+      fi ;;
     off)
       if [[ -e "$(sc_sudoers_previous_path)" ]]; then
         sc_log "removing the pre-rename rule (sudo may ask for your password)"

@@ -1,8 +1,8 @@
 ---
 title: Updates that need root run in the panel, approved by Touch ID, Apple Watch or password
-status: active
+status: done
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-07
 links:
   - DECISIONS 2026-10-01 (awake's sudoers rule — the pattern this extends)
   - DECISIONS 2026-11-06 (this plan's decision)
@@ -85,17 +85,23 @@ exists anything running as the user can run `mas upgrade` as root. Recorded as s
       tests in `model.test.ts`; a story for each state.
 - [x] Docs: DECISIONS entry; AGENTS invariants 1 and 13 name the carve-outs; SETUP.md
       and the README's `sudoers` line; JOURNAL gotcha (sudo + pam_tid + no tty).
-- [ ] Mitch runs `scuttler sudoers on` once; Hand Mirror upgrades from the panel.
+- [x] Mitch ran `scuttler sudoers on` (2026-11-07, after killing the wedged SecurityAgent
+      with `kill -9`); the rule names `/opt/homebrew/bin/mas`; `sudo -n mas upgrade` ran
+      with no prompt, exit 0. Hand Mirror was no longer outdated by then, so the panel
+      run waits for the next App Store update (STATUS).
 
 ## Acceptance criteria
 
-- [ ] With the rule installed: `a` in the panel shows the approval sheet at once, brew
-      runs meanwhile, mas runs after approval, Hand Mirror leaves the count.
-- [ ] Cancel on the sheet: brew still runs, mas is skipped, the band says not approved.
-- [ ] Without the rule: the App Store row reads "needs setup once", nothing hangs, `c`
-      copies `scuttler sudoers on`.
-- [ ] A child that calls `sudo` fails within a second with the reason in its tail.
-- [ ] A silent child is killed at the stall limit with a line saying so.
+- [~] With the rule installed: the approval sheet shows and reports the verdict
+  (`cargo test --lib localauth -- --ignored`, 2026-11-07: sheet up, approved, `Ok` in
+  2.8 s); the root run under the rule works (`sudo -n mas upgrade`, exit 0, no prompt).
+  The two together from `a` in the panel: not yet, no App Store app was outdated.
+- [~] Cancel on the sheet: the Declined path is unit-tested (`approvalLine`, `request_approval`
+  on `Err`); not exercised live for the same reason.
+- [~] Without the rule: `needsRule` rows and `rowCommand` are unit-tested and in stories;
+  the installed Mac never ran 0.8.6 without the rule long enough to look.
+- [~] A child that calls `sudo` fails within a second: the shim is unit-tested; not seen live.
+- [~] A silent child is killed at the stall limit: `stalled` is unit-tested; not seen live.
 - [x] `pnpm verify` green; `packages/setup/test/sudoers.test.zsh` covers the new alias.
 - [x] Memory: nothing resident is added (the LA context is transient, the shim is a
       file); covered by the release receipt.
@@ -108,6 +114,15 @@ call). A privileged helper. Any password field in the prompt.
 ## Risks / open questions
 
 - `mas upgrade` as root against the user's App Store session: mas 7 documents root as
-  required, so this is its supported shape; verified live in the last step.
+  required, so this is its supported shape; `sudo -n mas upgrade` ran clean 2026-11-07.
 - The rule names the mas path at install time; a moved binary makes `status` report a
   differing rule and the row fall back to `needsRule`.
+
+## Outcome
+
+Shipped in v0.8.6 (2026-11-06). The gating unknown, whether the LocalAuthentication
+sheet appears from the app and reports a verdict, was settled live on 2026-11-07 once
+the wedged SecurityAgent was killed: sheet up, approved, `Ok`. The sudoers rule installs
+with the mas alias and `sudo -n mas upgrade` runs with no prompt. `[~]` above marks what
+is unit-tested but not yet watched end to end from the panel; that needs an outdated App
+Store app, and STATUS carries it as the next thing to watch rather than open work.

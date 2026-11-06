@@ -6,8 +6,8 @@
 >
 > Last updated: 2026-11-07 (v0.8.6 released, fan-out green: root upgrades in the panel
 > behind the system approval sheet, agent statuses from the pane's screen, quicklinks by
-> name, work of two sessions in one release; the approval sheet shipped without a live
-> run because this Mac's SecurityAgent was wedged by the morning's hang, Mitch's call;
+> name, work of two sessions in one release; the approval sheet verified live on
+> 2026-11-07 once the wedged SecurityAgent was killed; the admin-updates plan is done;
 > nothing unshipped is left on main)
 
 ## Where we are
@@ -15,16 +15,18 @@
 - **Released: v0.8.6** (2026-11-06, `releases/v0.8.6.md`): receipt 114.4 MB, cold start
   198 ms; fan-out green (check, homebrew, notion, deploy-mmcom); the tap holds
   `scuttler.rb` 0.8.6. Three pieces of work from two sessions: root upgrades in the
-  panel (`plans/active/2026-11-06-admin-updates-in-panel.md`), agent statuses from the
+  panel (`plans/done/2026-11-06-admin-updates-in-panel.md`), agent statuses from the
   pane's screen (`plans/done/2026-11-06-make-agent-statuses-correct.md`) and quicklinks
   by name (DECISIONS 2026-11-06); the second session's commits were on main before the
   first branched, so one release carried all three (JOURNAL 2026-11-07).
-- **Open after v0.8.6: the approval sheet has not been seen live.** The plan
-  (`plans/active/2026-11-06-admin-updates-in-panel.md`) stays active for one thing:
-  `scuttler sudoers on` with mas present, then `a` with an App Store app outdated, or
-  `cargo test --lib localauth -- --ignored --nocapture` at the Mac. Blocked on this
-  machine by a wedged `SecurityAgent` (pid 96598, started 15:28:46 by the app's first
-  hung sudo; `kill` it, then sudo works again) — Mitch said he will deal with it later.
+- **Verified 2026-11-07: the approval sheet works live.** After Mitch killed the wedged
+  `SecurityAgent` (`kill -9`; plain `kill` is ignored, like sudo inside PAM),
+  `scuttler sudoers on` installed the rule with the mas alias, `sudo -n mas upgrade`
+  ran with no prompt, and the LocalAuthentication sheet came up and approved
+  (`cargo test --lib localauth -- --ignored`). Plan closed
+  (`plans/done/2026-11-06-admin-updates-in-panel.md`). Still to watch, not open work:
+  the first real App Store upgrade from the panel (`a` with an app outdated) and the
+  decline path; nothing was outdated on 2026-11-07.
 - **Previously released: v0.8.5** (2026-11-06, `releases/v0.8.5.md`): the rename, the fast bar,
   the agents fix; receipt 113.5 MB, cold start 179 ms. Fan-out green (check, homebrew,
   notion, deploy-mmcom); the tap holds `scuttler.rb` 0.8.5 with `auto_updates` and
