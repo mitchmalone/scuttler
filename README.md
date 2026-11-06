@@ -189,11 +189,15 @@ point at `~/.config/scuttler/hooks/claude-status.py`; they're inert once it's go
 delete them if you want a clean file. (The hook only names and titles a session; what a
 cell says comes from the pane's own screen, read against the rule file for that agent
 in `apps/desktop/src-tauri/agents/` — 22 agents, Claude Code and Codex among them, any
-of them in a tmux pane with or without a hook.)
+of them in a tmux pane with or without a hook. Those rule files are derived from
+[herdr](https://herdr.dev)'s agent-detection catalogue, Apache-2.0; see
+`THIRD-PARTY-LICENSES.md`.)
 
 ## Credit
 
 The shape is Omarchy's — an opinionated base with themes and a lifecycle — for a platform
 that doesn't have one. Themes follow the [Dracula](https://draculatheme.com) model: one
-palette, shipped into every app. scuttler began life as launcharr, an app launcher for
+palette, shipped into every app. Agent statuses read the screen the way
+[herdr](https://herdr.dev) does, and the per-agent rule files are derived from its
+catalogue (Apache-2.0, `THIRD-PARTY-LICENSES.md`). scuttler began life as launcharr, an app launcher for
 pirates, then sailed as scuttlarr for a season; the launcher is still in there. Yarr.

@@ -8,7 +8,7 @@ links:
   - ../../JOURNAL.md 2026-11-06 (the away recap)
   - ../done/agent-daemon-and-subagents.md (the hook adapter this shrinks)
   - herdr docs: https://herdr.dev/docs/agents/ ("How status works", "Blocked state")
-  - herdr catalogue: https://herdr.dev/agent-detection/index.toml (public, unlicensed)
+  - herdr catalogue: https://herdr.dev/agent-detection/index.toml (public; the project is Apache-2.0, THIRD-PARTY-LICENSES.md)
 ---
 
 # Make agent statuses correct
@@ -141,4 +141,7 @@ you` (test `claude_bare_prompt_box_is_idle_whatever_the_title_says`); a question
 - `capture-pane` of a pane in copy-mode or with an alternate screen returns what is
   shown, which may be scrollback: herdr reads the live bottom regardless. Check `-S`
   against `#{pane_in_mode}` and skip classification while in mode.
-- Whether to ask herdr for the catalogue under a licence: Mitch's call.
+- ~~Whether to ask herdr for the catalogue under a licence~~: settled 2026-11-06, herdr
+  is Apache-2.0 and the files are treated as such: licence text shipped in
+  `THIRD-PARTY-LICENSES.md` (source and bundle), each file's header says it is derived
+  and modified, the README credits herdr.

@@ -49,6 +49,7 @@
       "../../../packages/setup/lib/": "setup/lib/",
       "../../../packages/setup/defaults/": "setup/defaults/",
       "../../../packages/setup/migrations/": "setup/migrations/",
+      "../../../THIRD-PARTY-LICENSES.md": "THIRD-PARTY-LICENSES.md",
       "../../../packages/setup/shell/": "setup/shell/",
       "../../../packages/setup/prompt/": "setup/prompt/",
       "../../../packages/setup/terminal/": "setup/terminal/",

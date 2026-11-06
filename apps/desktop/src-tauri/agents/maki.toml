@@ -1,7 +1,7 @@
-# scuttler agent screen rules (rules.rs). Format and shapes recorded from herdr's public
-# catalogue, herdr.dev/agent-detection, 2026-11-06 (its binary is Apache-2.0; the
-# catalogue files carry no licence text: STATUS, Needs Mitch). Strings are the agent's
-# own UI text. A wrong cell is a captured screen and a new rule here, with a test.
+# scuttler agent screen rules (rules.rs). Derived from herdr's agent-detection catalogue
+# (herdr.dev/agent-detection, Apache License 2.0; see THIRD-PARTY-LICENSES.md) and modified
+# for scuttler's rule engine on 2026-11-06. Strings are the agent's own UI text. A wrong
+# cell is a captured screen and a new rule here, with a test.
 
 id = "maki"
 version = "2026.11.06.1"

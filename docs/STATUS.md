@@ -28,7 +28,9 @@
   built 2026-11-06 — a rule engine over 22 bundled per-agent rule files (herdr's
   catalogue shapes), screens read from tmux for working/attention panes and on every
   hook event, agent panes discovered without a hook, the Claude hook reduced to a
-  hint; dev-installed, watching it on Mitch's panes before the next release.
+  hint; dev-installed, watching it on Mitch's panes before the next release. The rule
+  files are herdr-derived under Apache-2.0: credited in `THIRD-PARTY-LICENSES.md`
+  (bundled), the README and each file's header (Mitch's call, 2026-11-06).
 - **Parked:** `plans/done/lights-plugin.md` (built, in daily use; Nanoleaf waits on
   Mitch's Home.app shortcuts, outside the repo); `plans/active/opensource-readiness-review.md`
   (`planned`, rewritten for the current scope; ROADMAP carries its trigger).
@@ -43,10 +45,6 @@
 
 ## Needs Mitch (decisions)
 
-- The 22 rule files under `apps/desktop/src-tauri/agents/` carry herdr's catalogue
-  shapes (herdr.dev/agent-detection, no licence text on those files; the binary is
-  Apache-2.0). Ask herdr, credit them in the README, or rewrite the files from our own
-  captures over time: your call before the next release ships them.
 - Whether the receipt should now count WebKit's helpers (`mem.sh --webkit` can see
   them: ~140 MB of WebContent and GPU at idle on top of the 41 MB app). The budget
   line in AGENTS says 120 MB for the app alone; a floor that honest would need a new
