@@ -4,11 +4,11 @@
 > history lives in git, `plans/done/`, `releases/` and `JOURNAL.md`; the backlog with its
 > triggers lives in `ROADMAP.md`.
 >
-> Last updated: 2026-11-06 (v0.8.5 released, fan-out green; the shell stays Tauri, DECISIONS 2026-11-06;
-> agent state will come from the screen, planned; cells no longer stick on "working" after Claude's away recap,
-> JOURNAL 2026-11-06; the bar is one push stream with cheaper snapshots and
-> no per-frame paint, DECISIONS 2026-11-05; the 20-hour instance was found at 4 GB and
-> is now watched with `mem.sh --webkit`, JOURNAL 2026-11-05; next: the shell spike)
+> Last updated: 2026-11-06 (session closed, Mitch offline a few days: v0.8.5 released,
+> fan-out green; agent statuses now come from the pane's screen, 22 agents, herdr-derived
+> rules credited under Apache-2.0, dev-installed and watched; the shell stays Tauri,
+> DECISIONS 2026-11-06, reaffirmed against a "snappy" rewrite the same day; next: make
+> summon measurably fast, and the leak gauge on a day-old instance)
 
 ## Where we are
 
@@ -116,5 +116,17 @@ hero.
 
 ## Next
 
-Agent state from the screen (the plan is written). Then the memory leak's gauge after
-a day of uptime, and the ROADMAP's open items by trigger.
+Three commits sit on main unpushed (c823ff3, 6e33631 and this one); push with the next
+release or the next reason. Then, in order agreed 2026-11-06:
+
+1. **Make summon measurably fast** (ROADMAP, Product): a Tauri replacement was asked
+   for and declined again on the spike's numbers; what the user feels is after the
+   0.32 ms show call and has never been measured end to end. Instrument hotkey → first
+   painted frame, keystroke → results paint, Enter → hidden; fix what the numbers name
+   (a webview WebKit suspends while hidden is the first suspect); numbers into the
+   receipts. Open question for Mitch: which of summon, typing, Enter or the bar feels slow.
+2. `scripts/mem.sh --webkit` on the launchd instance after a day up (1 h 44 m in, it
+   read 5.2 MB owned-but-unmapped: clean so far).
+3. Watch the agent cells; a wrong cell is a captured screen (`SCUTTLER_SCREEN=…
+cargo test --lib rules::tests::explain -- --ignored --nocapture`) and a rule.
+4. Light mode first-class (closes the theme policy gate bug), then the ROADMAP by trigger.
