@@ -1,3 +1,5 @@
+import { quicklinkWords } from '@scuttler/core/rows'
+
 import { PANEL_INFO } from './demo-data'
 
 export type ItemKind = 'app' | 'settings' | 'command' | 'link' | 'panel'
@@ -363,6 +365,6 @@ export const QUICKLINKS: Quicklink[] = [
 ]
 
 export const TRIGGERS: ReadonlySet<string> = new Set([
-  ...QUICKLINKS.map((l) => l.trigger),
+  ...QUICKLINKS.flatMap(quicklinkWords),
   ...PANEL_INFO.map((p) => p.id),
 ])

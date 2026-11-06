@@ -19,6 +19,9 @@
   (`plans/done/2026-11-01-rename-to-scuttler.md`,
   `plans/done/2026-11-04-v0.8.5-fast-bar-and-shell-spike.md`); the shell stays Tauri
   (DECISIONS 2026-11-06). Previous: v0.8.0 (2026-11-01).
+- **Fixed 2026-11-06: quicklinks fire by name as well as shortcode** (`youtube gcn` searches
+  YouTube; bare `youtube ⏎` opens the site root, not the raw template; `you` ⇥ completes to
+  `youtube `; DECISIONS 2026-11-06). Dev-installed, unreleased.
 - **Docs sweep done** (`plans/done/2026-11-01-docs-sweep.md`, six commits): the memory
   receipt, STATUS/ROADMAP/PRD as cursors, SETUP.md true, STANDARDS re-vendored, the
   extension docs split, the logs re-sorted and marked, the site on the kit's own panel

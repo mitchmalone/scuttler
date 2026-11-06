@@ -5,6 +5,23 @@
 
 ---
 
+### 2026-11-06 · A quicklink's name is a trigger word, equal to its shortcode
+
+- **Decision.** A quicklink (a link with `{query}`) fires by its shortcode (`yt`) _and_ by
+  its name when the name is one word (`youtube`), case forgiven; a multi-word name fires by
+  shortcode only. On collision the shortcode wins. A fuzzy-matched quicklink in launch mode
+  is the bare trigger: Enter opens the site root, Tab completes the prompt to the name word
+  (`you` ⇥ → `youtube `). Rows carry an optional `complete`; Tab is swallowed in the prompt
+  so focus never leaves it. All in `packages/core` (`quicklinkWords`, `findQuicklink`),
+  the app and the site demo consume the same functions.
+- **Why.** People forget shortcodes, and the name and the code are one and the same (Mitch,
+  2026-11-06). Before: `youtube gcn` fell to the Google fallback, and bare `youtube ⏎` opened
+  the literal template (`…search_query=%7Bquery%7D`) because the index item carried the raw
+  URL and Enter executed it.
+- **Not done.** Opening via the quicklink path records no frecency and ignores the link's
+  `browser` (same as the existing `yt` trigger path); fold both into one path if either is
+  missed.
+
 ### 2026-11-06 · The shell stays Tauri; the spike closes on arm (a)
 
 - **Decision.** scuttler keeps Tauri 2 as its shell. The lighter-shell spike (plan

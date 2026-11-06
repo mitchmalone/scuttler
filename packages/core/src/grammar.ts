@@ -37,13 +37,22 @@ export function parseInput(
   }
 
   // First-token trigger: the trigger word followed by end-of-input or a space. A trigger
-  // only fires as a whole word, so `jso` still fuzzy-matches apps.
+  // only fires as a whole word, so `jso` still fuzzy-matches apps. Case is forgiven
+  // (`YouTube gcn` is `youtube gcn`); the set's own spelling is what comes back.
   const spaceIndex = raw.indexOf(' ')
   const firstToken = spaceIndex === -1 ? raw : raw.slice(0, spaceIndex)
-  if (firstToken.length > 0 && triggers.has(firstToken)) {
+  const trigger =
+    firstToken.length === 0
+      ? null
+      : triggers.has(firstToken)
+        ? firstToken
+        : triggers.has(firstToken.toLowerCase())
+          ? firstToken.toLowerCase()
+          : null
+  if (trigger !== null) {
     return {
       mode: 'trigger',
-      trigger: firstToken,
+      trigger,
       args: spaceIndex === -1 ? '' : raw.slice(spaceIndex + 1),
     }
   }

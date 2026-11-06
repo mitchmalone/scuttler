@@ -2,6 +2,7 @@ import { parseInput } from '@scuttler/core/grammar'
 import {
   type Row,
   emojiRows,
+  findQuicklink,
   launchRows,
   panelRows,
   quicklinkRows,
@@ -75,9 +76,15 @@ export function computeDemoRows(raw: string, frecency: FrecencyMap): Row[] {
   if (parsed.mode === 'trigger') {
     const panel = PANEL_INFO.find((p) => p.id === parsed.trigger)
     if (panel) return panelRows(panel.id, panel.title, panel.hint)
-    const link = QUICKLINKS.find((l) => l.trigger === parsed.trigger)
+    const link = findQuicklink(QUICKLINKS, parsed.trigger)
     if (!link) return []
     return quicklinkRows(link, parsed.args)
   }
-  return launchRows(parsed.query, CORE_INDEX, frecency, SEARCH_FALLBACK)
+  return launchRows(
+    parsed.query,
+    CORE_INDEX,
+    frecency,
+    SEARCH_FALLBACK,
+    QUICKLINKS,
+  )
 }

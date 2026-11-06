@@ -22,6 +22,8 @@ export type Row = {
   enter: RowEnter
   /** Secondary action on ⌥⏎; the hint column shows `label` while ⌥ is held. */
   alt?: { label: string; enter: RowEnter }
+  /** Tab replaces the prompt with this (`you` ⇥ → `youtube `): the row's trigger word. */
+  complete?: string
 }
 
 export type RowEnter =
@@ -91,6 +93,7 @@ export function launchRows(
   index: IndexItem[],
   frecency: FrecencyMap,
   searchFallback: string,
+  links: readonly Link[] = [],
 ): Row[] {
   const rows: Row[] = []
 
@@ -132,6 +135,27 @@ export function launchRows(
   }
 
   for (const { item, positions } of rank(query, index, frecency)) {
+    // A fuzzy-matched quicklink (`youtu` → YouTube) is the bare trigger: Enter goes to the
+    // site root, never the raw template, and Tab completes to the word.
+    const quicklink =
+      item.kind === 'link'
+        ? links.find((l) => l.url === item.path && isQuicklink(l))
+        : undefined
+    if (quicklink) {
+      // Complete to the last word: the name when it is one (`you` ⇥ finishes `youtube `),
+      // else the shortcode.
+      const word = quicklinkWords(quicklink).at(-1)
+      const row = quicklinkRows(quicklink, '')[0]!
+      rows.push({
+        ...row,
+        key: item.id,
+        title: item.name,
+        positions,
+        icon: item.icon,
+        ...(word ? { complete: `${word} ` } : {}),
+      })
+      continue
+    }
     rows.push({
       key: item.id,
       title: item.name,
@@ -146,6 +170,7 @@ export function launchRows(
             ? { kind: 'builtin', trigger: item.path }
             : { kind: 'execute', id: item.id },
       alt: itemAlt(item),
+      ...(item.kind === 'builtin' ? { complete: `${item.path} ` } : {}),
     })
   }
 
@@ -212,6 +237,38 @@ export function draftRows(
       enter: { kind: 'pick-browser', browser: b } as RowEnter,
     })),
   ]
+}
+
+/** A link with a `{query}` placeholder: a search template, not a plain bookmark. */
+export function isQuicklink(link: Link): boolean {
+  return link.url.includes('{query}')
+}
+
+/**
+ * The words that fire a quicklink: its shortcode (`yt`) and its name when that is one word
+ * (`youtube`). People forget shortcodes; the name and the code are one and the same. A
+ * multi-word name (`Chill Institute`) only fires by its shortcode.
+ */
+export function quicklinkWords(link: Link): string[] {
+  const words: string[] = []
+  if (link.trigger) words.push(link.trigger)
+  const name = link.name.trim().toLowerCase()
+  if (name.length > 0 && !/\s/.test(name) && !words.includes(name)) {
+    words.push(name)
+  }
+  return words
+}
+
+/** The quicklink a trigger word fires, by shortcode first, then by name. */
+export function findQuicklink(
+  links: readonly Link[],
+  word: string,
+): Link | undefined {
+  const quicklinks = links.filter(isQuicklink)
+  return (
+    quicklinks.find((l) => l.trigger === word) ??
+    quicklinks.find((l) => quicklinkWords(l).includes(word))
+  )
 }
 
 /** Raycast-style quicklink in trigger mode: `yt cute otters ⏎`; bare trigger opens the site. */

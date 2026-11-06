@@ -66,6 +66,14 @@ describe('parseInput', () => {
     })
   })
 
+  it('forgives case on the trigger word and reports the set spelling', () => {
+    expect(parseInput('Lorem 3', TRIGGERS)).toEqual({
+      mode: 'trigger',
+      trigger: 'lorem',
+      args: '3',
+    })
+  })
+
   it('a partial trigger word stays a launch query', () => {
     expect(parseInput('jso', TRIGGERS)).toEqual({
       mode: 'launch',

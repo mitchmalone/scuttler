@@ -9,11 +9,14 @@ import {
   clipRows,
   draftRows,
   emojiRows,
+  findQuicklink,
+  isQuicklink,
   launchRows,
   loremEntryRow,
   loremRows,
   panelRows,
   quicklinkRows,
+  quicklinkWords,
   scriptRows,
 } from '@scuttler/core/rows'
 import type {
@@ -309,7 +312,7 @@ export default function App() {
 
   // Trigger precedence on collision: clip (built-in) > scripts > quicklinks.
   const quicklinks = useMemo(
-    () => config.links.filter((l) => l.trigger && l.url.includes('{query}')),
+    () => config.links.filter(isQuicklink),
     [config.links],
   )
   const triggers = useMemo(
@@ -321,7 +324,7 @@ export default function App() {
           .filter(([, id]) => id in PANELS && panelEnabled(id, config))
           .map(([word]) => word),
         ...scripts.map((s) => s.trigger),
-        ...quicklinks.map((l) => l.trigger as string),
+        ...quicklinks.flatMap(quicklinkWords),
       ]),
     [scripts, quicklinks, config, PANELS, PANEL_TRIGGERS],
   )
@@ -548,6 +551,7 @@ export default function App() {
           [...index, ...panelItems, ...builtinItems],
           frecency,
           config.searchFallback,
+          quicklinks,
         )
       case 'trigger': {
         if (parsed.trigger === 'clip') return clipRows(parsed.args, clips)
@@ -562,7 +566,7 @@ export default function App() {
           : undefined
         if (panel) return panelRows(panelId, panel.title, panel.hint)
         if (isScript(parsed.trigger)) return scriptRows(scriptItems)
-        const link = quicklinks.find((l) => l.trigger === parsed.trigger)
+        const link = findQuicklink(quicklinks, parsed.trigger)
         return link ? quicklinkRows(link, parsed.args) : []
       }
       case 'emoji':
@@ -833,6 +837,18 @@ export default function App() {
       }
       if (e.key === 'ArrowDown' || (e.ctrlKey && e.key === 'n')) return move(1)
       if (e.key === 'ArrowUp' || (e.ctrlKey && e.key === 'p')) return move(-1)
+
+      // Tab completes the selected row to its trigger word (`you` → `youtube `). Always
+      // swallowed: focus never leaves the prompt (invariant 6).
+      if (e.key === 'Tab') {
+        e.preventDefault()
+        const row = rows[clampedSelection]
+        if (row?.complete && !e.shiftKey) {
+          setRaw(row.complete)
+          setSelected(0)
+        }
+        return
+      }
 
       if (e.metaKey && e.key >= '1' && e.key <= '8') {
         e.preventDefault()

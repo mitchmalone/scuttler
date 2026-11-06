@@ -1,3 +1,4 @@
+import { isQuicklink, quicklinkWords } from '@scuttler/core/rows'
 import type { IndexItem, ScriptInfo } from '@scuttler/core/types'
 import { invoke } from '@tauri-apps/api/core'
 import { useEffect, useMemo, useState } from 'react'
@@ -111,13 +112,13 @@ export function buildSections(
   })
 
   const quicklinks = (config?.links ?? []).filter(
-    (l) => l.trigger && l.url.includes('{query}'),
+    (l) => isQuicklink(l) && quicklinkWords(l).length > 0,
   )
   if (quicklinks.length > 0) {
     sections.push({
       label: 'Quicklinks',
       entries: quicklinks.map((l) => ({
-        left: l.trigger as string,
+        left: quicklinkWords(l).join(' · '),
         right: l.name,
       })),
     })

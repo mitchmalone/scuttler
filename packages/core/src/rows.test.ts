@@ -3,11 +3,13 @@ import { describe, expect, it } from 'vitest'
 import {
   awakeRows,
   draftRows,
+  findQuicklink,
   launchRows,
   loremEntryRow,
   loremRows,
   panelRows,
   quicklinkRows,
+  quicklinkWords,
   searchEngineLabel,
 } from './rows'
 import type { IndexItem, Link } from './types'
@@ -81,12 +83,106 @@ describe('launchRows', () => {
   })
 })
 
-describe('quicklinkRows', () => {
-  const yt: Link = {
-    name: 'YouTube',
-    trigger: 'yt',
-    url: 'https://www.youtube.com/results?search_query={query}',
+const YT: Link = {
+  name: 'YouTube',
+  trigger: 'yt',
+  url: 'https://www.youtube.com/results?search_query={query}',
+}
+
+function linkItem(link: Link): IndexItem {
+  return {
+    id: `link:${link.url}`,
+    name: link.name,
+    kind: 'link',
+    path: link.url,
+    hint: 'link',
+    icon: null,
+    aliases: [],
   }
+}
+
+describe('launchRows with quicklinks', () => {
+  it('a fuzzy-matched quicklink opens the site root, never the raw template', () => {
+    const rows = launchRows('youtu', [...ITEMS, linkItem(YT)], {}, GOOGLE, [YT])
+    const row = rows.find((r) => r.key === `link:${YT.url}`)!
+    expect(row.enter).toEqual({
+      kind: 'open-url',
+      url: 'https://www.youtube.com/',
+    })
+    expect(row.title).toBe('YouTube')
+    expect(row.hint).toBe('quicklink')
+  })
+
+  it('a fuzzy-matched quicklink Tab-completes to its name word', () => {
+    const rows = launchRows('you', [linkItem(YT)], {}, GOOGLE, [YT])
+    expect(rows[0]!.complete).toBe('youtube ')
+  })
+
+  it('without the links list a link item still executes as before', () => {
+    const rows = launchRows('you', [linkItem(YT)], {}, GOOGLE)
+    expect(rows[0]!.enter).toEqual({ kind: 'execute', id: `link:${YT.url}` })
+    expect(rows[0]!.complete).toBeUndefined()
+  })
+
+  it('a plain link (no placeholder) executes even when listed', () => {
+    const hn: Link = { name: 'HN', url: 'https://news.ycombinator.com' }
+    const rows = launchRows('hn', [linkItem(hn)], {}, GOOGLE, [hn])
+    expect(rows[0]!.enter).toEqual({ kind: 'execute', id: `link:${hn.url}` })
+  })
+})
+
+describe('quicklinkWords / findQuicklink', () => {
+  it('a quicklink fires by shortcode and by one-word name alike', () => {
+    expect(quicklinkWords(YT)).toEqual(['yt', 'youtube'])
+    expect(findQuicklink([YT], 'yt')).toBe(YT)
+    expect(findQuicklink([YT], 'youtube')).toBe(YT)
+    expect(findQuicklink([YT], 'you')).toBeUndefined()
+  })
+
+  it('a multi-word name fires only by shortcode', () => {
+    const chill: Link = {
+      name: 'Chill Institute',
+      trigger: 'chill',
+      url: 'https://chill.institute/search?q={query}',
+    }
+    expect(quicklinkWords(chill)).toEqual(['chill'])
+  })
+
+  it('a name that equals the shortcode is one word, not two', () => {
+    const wiki: Link = {
+      name: 'wiki',
+      trigger: 'wiki',
+      url: 'https://en.wikipedia.org/w/index.php?search={query}',
+    }
+    expect(quicklinkWords(wiki)).toEqual(['wiki'])
+  })
+
+  it('a quicklink with no shortcode fires by name', () => {
+    const gh: Link = {
+      name: 'GitHub',
+      url: 'https://github.com/search?q={query}',
+    }
+    expect(quicklinkWords(gh)).toEqual(['github'])
+    expect(findQuicklink([gh], 'github')).toBe(gh)
+  })
+
+  it('a plain link is never a quicklink', () => {
+    const hn: Link = {
+      name: 'hn',
+      trigger: 'hn',
+      url: 'https://news.ycombinator.com',
+    }
+    expect(findQuicklink([hn], 'hn')).toBeUndefined()
+  })
+
+  it("shortcode beats another link's name on collision", () => {
+    const other: Link = { name: 'yt', url: 'https://example.com/?q={query}' }
+    expect(findQuicklink([other, YT], 'yt')).toBe(YT)
+  })
+})
+
+describe('quicklinkRows', () => {
+  const yt = YT
 
   it('substitutes the encoded args into the template', () => {
     const rows = quicklinkRows(yt, 'cute otters')
