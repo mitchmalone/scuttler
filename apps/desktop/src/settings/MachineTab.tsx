@@ -28,6 +28,9 @@ export default function MachineTab({
   const [error, setError] = useState<string | null>(null)
   const [planned, setPlanned] = useState(false)
   const [shellPlanned, setShellPlanned] = useState(false)
+  // The sudoers rule: on, off, or not yet asked. Read from the file by the
+  // CLI (`sudoers status`), never probed with sudo.
+  const [admin, setAdmin] = useState<boolean | null>(null)
 
   const run = useCallback(async (verb: SetupVerb) => {
     setBusy(verb)
@@ -39,6 +42,9 @@ export default function MachineTab({
       if (verb === 'defaults-apply') setPlanned(false)
       if (verb === 'shell-plan') setShellPlanned(out.ok)
       if (verb === 'shell-apply') setShellPlanned(false)
+      if (verb === 'sudoers-on' || verb === 'sudoers-off') {
+        setAdmin((await runSetup('sudoers-status')).ok)
+      }
     } catch (e) {
       setError(String(e))
     } finally {
@@ -49,6 +55,10 @@ export default function MachineTab({
   // Opening the tab shows the doctor's view first — read-only, cheap.
   useEffect(() => {
     void run('doctor')
+    runSetup('sudoers-status').then(
+      (out) => setAdmin(out.ok),
+      () => setAdmin(null),
+    )
   }, [run])
 
   const enable = (enabled: boolean) => {
@@ -133,6 +143,44 @@ export default function MachineTab({
           onClick={() => run(machine.enabled ? 'link' : 'unlink')}
         >
           {machine.enabled ? 'relink CLI' : 'unlink CLI'}
+        </button>
+      </div>
+
+      <p className="hint">
+        <strong>Admin, once.</strong> One rule in{' '}
+        <code>/etc/sudoers.d/scuttler</code> lets awake switch macOS sleep off
+        while a hold runs and lets the updates panel upgrade App Store apps,
+        each after Touch ID. Writing it is the one time scuttler needs your Mac
+        password, typed into the system&apos;s own dialog; the app never asks
+        for it itself. The App Store row in <code>updates</code> offers the
+        same.
+      </p>
+      <div className="row">
+        <button
+          className="ghost"
+          disabled={busy !== null || admin === true}
+          title={
+            admin === true
+              ? 'The rule is in place'
+              : 'The system admin dialog: your Mac password, once'
+          }
+          onClick={() => run('sudoers-on')}
+        >
+          {busy === 'sudoers-on'
+            ? 'waiting for the dialog…'
+            : admin === true
+              ? 'admin allowed'
+              : 'allow admin'}
+        </button>
+        <button
+          className="ghost"
+          disabled={busy !== null || admin !== true}
+          title="Remove the rule (the same dialog); awake holds on power assertions alone, the App Store row says it needs admin"
+          onClick={() => run('sudoers-off')}
+        >
+          {busy === 'sudoers-off'
+            ? 'waiting for the dialog…'
+            : 'remove the rule'}
         </button>
       </div>
 

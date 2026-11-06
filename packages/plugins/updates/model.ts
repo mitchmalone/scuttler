@@ -41,7 +41,7 @@ export interface Approval {
 
 /** Mirrors `updates.rs`'s `AdminAccess`: root sources only (mas). `ready`,
  * the sudoers rule names the binary and the panel runs it after the approval
- * sheet; `needsRule`, `scuttler sudoers on` has not run with mas present. */
+ * sheet; `needsRule`, no rule names mas yet: ↵ offers the admin dialog. */
 export type AdminAccess = 'ready' | 'needsRule'
 
 /** Mirrors `updates.rs`'s `UpgradeBatch`. */
@@ -112,14 +112,17 @@ export interface UpdateItem {
 /** How long `d` puts a package aside. */
 export const DISMISS_HOURS = 24
 
-/** The one-time setup a root source needs: the terminal command that
- * installs the sudoers rule (one admin password). */
-export const SUDOERS_COMMAND = 'scuttler sudoers on'
-
-/** A root source the rule does not cover yet: its rows run nothing from the
- * panel and say what to run once. */
+/** A root source the rule does not cover yet: its rows ask for the rule
+ * (the system admin dialog, one Mac password) instead of upgrading. */
 export const needsRule = (source: UpdateSource): boolean =>
   source.admin === 'needsRule'
+
+/** What `↵` on such a row sends: the rule, written behind the dialog. */
+export const ADMIN_RULE_MESSAGE: UpdatesMessage = { sudoers: 'on' }
+
+/** The band's words for a root source without its rule. */
+export const NEEDS_ADMIN_LINE =
+  'needs admin once · ↵ asks for your Mac password'
 
 /** How long a refusal's line stays after the sheet came back (Rust also
  * clears it on the next click). */
@@ -139,8 +142,11 @@ export function approvalLine(
     .map((id) => report.sources.find((s) => s.id === id)?.label ?? id)
     .join(', ')
   if (a.state === 'pending') {
+    // The sheet's wait has no detail; the admin dialog's names itself.
     return {
-      text: `${labels}: approve with Touch ID, Apple Watch or your password`,
+      text: a.detail
+        ? `${labels}: ${a.detail}`
+        : `${labels}: approve with Touch ID, Apple Watch or your password`,
       state: 'pending',
     }
   }
@@ -153,6 +159,7 @@ export type UpdatesMessage =
   | { upgrade: string; item?: string }
   | { dismiss: SourceId; item: string; hours: number }
   | { restore: SourceId; item: string }
+  | { sudoers: 'on' | 'off' }
 
 /** A source's dismissed packages, by name. */
 export function dismissedItems(source: UpdateSource): UpdateItem[] {
@@ -490,27 +497,24 @@ export function ledgerRows(
 }
 
 /** The command a row would run — what `c` copies and `t` hands to the
- * terminal. For a root source still without its rule, `c` copies the setup
- * command instead: that is the one thing to run. */
+ * terminal. */
 export function rowCommand(row: PanelRow): string {
-  if (needsRule(row.source) && row.kind !== 'dismissed') return SUDOERS_COMMAND
   return row.kind === 'item' || row.kind === 'dismissed'
     ? row.item.upgradeCommand
     : row.source.upgradeCommand
 }
 
 /** The `host.send` message a row's ↵ sends — an upgrade, or for a dismissed
- * row its return — or null for a row that opens rather than runs ("+N
- * more", a clean band). */
+ * row its return, or for a root source without its rule the rule itself —
+ * or null for a row that opens rather than runs ("+N more", a clean band). */
 export function rowUpgradeMessage(row: PanelRow): UpdatesMessage | null {
   switch (row.kind) {
     case 'item':
-      // Nothing to run from the panel until the rule exists; the row says so.
-      if (needsRule(row.source)) return null
+      if (needsRule(row.source)) return ADMIN_RULE_MESSAGE
       return { upgrade: row.source.id, item: row.item.name }
     case 'band':
     case 'error':
-      if (needsRule(row.source)) return null
+      if (needsRule(row.source)) return ADMIN_RULE_MESSAGE
       return { upgrade: row.source.id }
     case 'dismissed':
       return { restore: row.source.id, item: row.item.name }

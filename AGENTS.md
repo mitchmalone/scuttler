@@ -85,13 +85,15 @@ it in `docs/DECISIONS.md`.
    `colorpicker` ask for **Screen Recording** once (2× magnifier, DECISIONS 2026-08-17);
    off — and until granted — it's Apple's `NSColorSampler`, which needs nothing. Nothing
    ever prompts unless that toggle is flipped.
-   Root, once, by the user's own hand: `scuttler sudoers on` (terminal, one password)
-   installs a rule allowing exactly `pmset -a disablesleep 0|1`, so `awake` can switch
-   macOS sleep off while a hold is armed, and `mas upgrade|update`, so the updates panel
-   can upgrade App Store apps after the system approval sheet (Touch ID, Apple Watch or
-   password, `localauth.rs`). The app only runs `sudo -n` — it never asks; panel
-   children find a `sudo -n` shim first on PATH for the same reason (DECISIONS
-   2026-10-01, 2026-11-06).
+   Root, once, by the user's own hand: one rule allowing exactly `pmset -a
+disablesleep 0|1`, so `awake` can switch macOS sleep off while a hold is armed, and
+   `mas upgrade|update`, so the updates panel can upgrade App Store apps after the
+   system approval sheet (Touch ID, Apple Watch or password, `localauth.rs`). The rule
+   is written from a click through the system admin dialog, one Mac password typed into
+   Apple's dialog (`authorization.rs`, `sudoers.rs`), or by `scuttler sudoers on` in a
+   terminal; the text is the CLI's either way. The app only runs `sudo -n` — it never
+   asks; panel children find a `sudo -n` shim first on PATH for the same reason
+   (DECISIONS 2026-10-01, 2026-11-06, 2026-11-07).
 2. **Network is allowed; telemetry is not.** The desktop app may talk to the network
    wherever a feature needs it (retired the zero-network invariant, DECISIONS
    2026-09-04). Fetches are fail-visible, cached, and off the hot path. What stays
@@ -155,9 +157,11 @@ it in `docs/DECISIONS.md`.
 13. **No native alerts.** Never `NSAlert`, AppleScript `display dialog`/`display alert`,
     `window.alert`/`confirm`/`prompt`, or a system popover. A question is a row with a
     labelled Enter, a report is a panel line or a bar cell; both keep the prompt's focus
-    discipline (invariant 6), a modal breaks it. Two OS sheets are the exceptions, both
-    asked for by a click: the file picker in `desktop.rs`, and the LocalAuthentication
-    approval sheet before a root upgrade runs (`localauth.rs`, DECISIONS 2026-11-06).
+    discipline (invariant 6), a modal breaks it. Three OS sheets are the exceptions, each
+    asked for by a click: the file picker in `desktop.rs`, the LocalAuthentication
+    approval sheet before a root upgrade runs (`localauth.rs`, DECISIONS 2026-11-06), and
+    the admin-rights dialog that writes the sudoers rule once (`authorization.rs`,
+    DECISIONS 2026-11-07).
 14. **No emoji.** Never as a glyph in the app, the bar, plugins or the site — a glyph is
     a lucide icon (or a `packages/tui` icon) sized with `ICON_PROPS`, coloured by theme
     tokens. Never in docs, comments, commit messages or copy either. The only emoji

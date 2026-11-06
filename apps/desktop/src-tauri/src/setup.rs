@@ -33,6 +33,12 @@ pub enum SetupVerb {
     /// Apply it (foreign files adopted, never overwritten).
     ShellApply,
     Version,
+    /// The sudoers rule, on or off, through the system admin dialog
+    /// (`sudoers.rs`): the one verb pair that does not run as the user.
+    SudoersOn,
+    SudoersOff,
+    /// Read-only: is the rule in place, as the CLI would write it.
+    SudoersStatus,
 }
 
 /// The argv each verb maps to. `--yes` where the CLI would otherwise `read -q`
@@ -48,6 +54,11 @@ pub fn argv(verb: SetupVerb) -> &'static [&'static str] {
         SetupVerb::ShellPlan => &["shell"],
         SetupVerb::ShellApply => &["shell", "--apply", "--yes"],
         SetupVerb::Version => &["version"],
+        // The app never runs these two bare: `run` routes them through the
+        // dialog with the pins `sudoers.rs` adds. Here for completeness.
+        SetupVerb::SudoersOn => &["sudoers", "on"],
+        SetupVerb::SudoersOff => &["sudoers", "off"],
+        SetupVerb::SudoersStatus => &["sudoers", "status"],
     }
 }
 
@@ -82,9 +93,15 @@ pub fn base_dir(resource_dir: Option<PathBuf>) -> Option<PathBuf> {
 
 /// Run one verb against `base`, capturing everything. Never interactive.
 pub fn run_at(base: &Path, verb: SetupVerb) -> CmdResult<SetupOutput> {
+    run_args(base, argv(verb))
+}
+
+/// The CLI with an argv built at runtime (`sudoers.rs` pins paths): still
+/// only reachable from an enum arm, never from a string off the wire.
+pub fn run_args(base: &Path, args: &[&str]) -> CmdResult<SetupOutput> {
     let out = std::process::Command::new("/bin/zsh")
         .arg(base.join("bin/scuttler"))
-        .args(argv(verb))
+        .args(args)
         .env("SCUTTLER_BASE", base)
         .env("NO_COLOR", "1")
         .env_remove("SCUTTLER_STATE")
@@ -110,12 +127,36 @@ pub fn run(app: &tauri::AppHandle, verb: SetupVerb) -> CmdResult<SetupOutput> {
     use tauri::Manager;
     let base = base_dir(app.path().resource_dir().ok())
         .ok_or_else(|| CmdError::NotFound("setup cli not bundled".into()))?;
-    run_at(&base, verb)
+    match verb {
+        SetupVerb::SudoersOn | SetupVerb::SudoersOff => {
+            crate::sudoers::set(&base, verb == SetupVerb::SudoersOn).or_else(|declined| {
+                Ok(SetupOutput {
+                    ok: false,
+                    output: declined.to_string(),
+                    base: base.display().to_string(),
+                })
+            })
+        }
+        _ => run_at(&base, verb),
+    }
+}
+
+/// The CLI's base, remembered at boot for callers without an app handle
+/// (the updates panel's `host.send`). `None` under a build with no bundled
+/// CLI, which `run` reports the same way.
+static BASE: std::sync::OnceLock<Option<PathBuf>> = std::sync::OnceLock::new();
+
+pub fn remembered_base() -> Option<PathBuf> {
+    BASE.get().cloned().flatten()
 }
 
 /// Startup, machine rung on: run migrations once, off the main thread. A
 /// failure is a log line, never a blocked launcher.
 pub fn boot(app: &tauri::AppHandle, enabled: bool) {
+    {
+        use tauri::Manager;
+        let _ = BASE.set(base_dir(app.path().resource_dir().ok()));
+    }
     if !enabled {
         return;
     }

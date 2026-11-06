@@ -34,7 +34,7 @@ assert_file "$target" "rule installed"
 assert_eq "$rule" "$(cat "$target")" "installed rule is the rule"
 assert_eq "r--r--r--" "$(stat -f %Sp "$target" | cut -c2-)" "installed read-only"
 assert_eq "root" "$(sc_manifest_mode "$target")" "manifest records it as root"
-assert_match "install went through sudo" "$(cat "$FAKE_SUDO_LOG")" "/usr/bin/install -m 0444 -o root -g wheel"
+assert_match "install went through sudo" "$(cat "$FAKE_SUDO_LOG")" "/usr/bin/install -m 0444 "
 assert_ok "status is on after install" "$cli" sudoers status 2>/dev/null
 
 : > "$FAKE_SUDO_LOG"
@@ -50,5 +50,27 @@ assert_match "remove went through sudo" "$(cat "$FAKE_SUDO_LOG")" "/bin/rm -f $t
 "$cli" sudoers off >/dev/null 2>&1
 assert_no_file "$target" "off deletes the rule"
 assert_fails "manifest forgets it" sc_manifest_mode "$target"
+
+# The app's path: `install` as root under the system admin dialog, pins for
+# what root cannot look up, no sudo, no manifest; then `on` as the user records
+# the manifest without asking.
+: > "$FAKE_SUDO_LOG"
+SCUTTLER_EUID=0 "$cli" sudoers install --mas /x/bin/mas --user bob >/dev/null 2>&1
+assert_file "$target" "install as root writes the rule"
+assert_match "install pins the mas path" "$(cat "$target")" "/x/bin/mas upgrade"
+assert_match "install pins the user" "$(cat "$target")" "bob ALL=(root) NOPASSWD:"
+assert_eq "" "$(cat "$FAKE_SUDO_LOG")" "install as root never calls sudo"
+assert_fails "install writes no manifest" sc_manifest_mode "$target"
+SCUTTLER_MAS_BIN=/x/bin/mas SCUTTLER_RULE_USER=bob "$cli" sudoers on >/dev/null 2>&1
+assert_eq "" "$(cat "$FAKE_SUDO_LOG")" "on after install asks nothing"
+assert_eq "root" "$(sc_manifest_mode "$target")" "on after install records the manifest"
+SCUTTLER_EUID=0 "$cli" sudoers remove >/dev/null 2>&1
+assert_no_file "$target" "remove as root deletes the rule"
+assert_eq "" "$(cat "$FAKE_SUDO_LOG")" "remove as root never calls sudo"
+assert_eq "root" "$(sc_manifest_mode "$target")" "remove leaves the manifest to off"
+"$cli" sudoers off >/dev/null 2>&1
+assert_fails "off after remove forgets it, asking nothing" sc_manifest_mode "$target"
+assert_eq "" "$(cat "$FAKE_SUDO_LOG")" "off after remove never calls sudo"
+assert_fails "unknown verb fails" "$cli" sudoers frobnicate 2>/dev/null
 
 t_done

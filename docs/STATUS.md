@@ -4,7 +4,7 @@
 > history lives in git, `plans/done/`, `releases/` and `JOURNAL.md`; the backlog with its
 > triggers lives in `ROADMAP.md`.
 >
-> Last updated: 2026-11-07 (v0.8.6 released, fan-out green: root upgrades in the panel
+> Last updated: 2026-11-07 (the admin rule installs from the app, in flight; v0.8.6 released, fan-out green: root upgrades in the panel
 > behind the system approval sheet, agent statuses from the pane's screen, quicklinks by
 > name, work of two sessions in one release; the approval sheet verified live on
 > 2026-11-07 once the wedged SecurityAgent was killed; the admin-updates plan is done;
@@ -19,6 +19,14 @@
   pane's screen (`plans/done/2026-11-06-make-agent-statuses-correct.md`) and quicklinks
   by name (DECISIONS 2026-11-06); the second session's commits were on main before the
   first branched, so one release carried all three (JOURNAL 2026-11-07).
+- **In flight: the admin rule installs from the app**
+  (`plans/active/2026-11-07-admin-rule-from-the-app.md`, DECISIONS 2026-11-07, branch
+  `feat/admin-rule-from-the-app` in a worktree): `↵` on an App Store band that reads
+  "needs admin once", or Settings → Machine → "allow admin", puts up the system admin
+  dialog (password only, spike 2026-11-07) and the CLI's root half writes the rule as
+  root; `sudoers on` as the user records the manifest. No terminal, no `scuttler
+sudoers on` in any user-facing copy. Verify green; needs Mitch: the dialog from the
+  built app (Settings → Machine, remove then allow), the header naming scuttler.
 - **Verified 2026-11-07: the approval sheet works live.** After Mitch killed the wedged
   `SecurityAgent` (`kill -9`; plain `kill` is ignored, like sudo inside PAM),
   `scuttler sudoers on` installed the rule with the mas alias, `sudo -n mas upgrade`

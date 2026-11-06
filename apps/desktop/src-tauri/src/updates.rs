@@ -94,10 +94,11 @@ pub enum ApprovalState {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum AdminAccess {
-    /// `scuttler sudoers on` has run with this binary present: the panel runs
+    /// The rule names this binary: the panel runs
     /// it under `sudo -n` after the approval sheet.
     Ready,
-    /// No rule names it: the row says to run `scuttler sudoers on` once.
+    /// No rule names it: the row offers the admin dialog once (`admin_rule`).
+    /// From a terminal, `scuttler sudoers on` does the same.
     NeedsRule,
 }
 
@@ -368,7 +369,7 @@ pub fn upgrade(source: &str, item: Option<&str>) -> Result<(), String> {
         crate::logbook::breadcrumb(
             "updates",
             &format!(
-                "skipped {}: no sudoers rule (scuttler sudoers on)",
+                "skipped {}: no sudoers rule (allow admin on the row)",
                 job.source
             ),
         );
@@ -1216,6 +1217,74 @@ fn check_source(def: &'static SourceDef, bin: &Path) -> UpdateSource {
         admin: def.root.then(|| admin_access(bin)),
     }
 }
+
+/// The mas the panel runs, for the sudoers rule to name (`sudoers.rs`).
+pub fn locate_mas() -> Option<PathBuf> {
+    locate("mas")
+}
+
+/// The updates panel's `{"sudoers":"on"|"off"}`: the admin dialog on a
+/// worker thread, the rule written or removed, the report refreshed. A
+/// refusal shows in the approval block like a declined sheet, with its own
+/// words; while the dialog is up the block says what it is waiting for.
+pub fn admin_rule(on: bool) -> Result<(), String> {
+    let base = crate::setup::remembered_base().ok_or("setup cli not bundled")?;
+    let sources: Vec<String> = SOURCES
+        .iter()
+        .filter(|d| d.root)
+        .map(|d| d.id.to_string())
+        .collect();
+    {
+        let mut approval = APPROVAL.lock().unwrap();
+        if matches!(approval.as_ref(), Some(a) if a.state == ApprovalState::Pending) {
+            return Err("already waiting on an approval".into());
+        }
+        *approval = Some(Approval {
+            state: ApprovalState::Pending,
+            sources: sources.clone(),
+            detail: ADMIN_DIALOG_WAIT.into(),
+            at: now_secs(),
+        });
+    }
+    std::thread::spawn(move || {
+        let verdict = crate::sudoers::set(&base, on);
+        let mut approval = APPROVAL.lock().unwrap();
+        match verdict {
+            Ok(out) if out.ok => {
+                crate::logbook::breadcrumb(
+                    "updates",
+                    &format!("admin rule {}", if on { "installed" } else { "removed" }),
+                );
+                *approval = None;
+            }
+            Ok(out) => {
+                let why =
+                    last_nonempty_line(&out.output).unwrap_or_else(|| "rule not written".into());
+                crate::logbook::breadcrumb("updates", &format!("admin rule: {why}"));
+                *approval = Some(Approval {
+                    state: ApprovalState::Declined,
+                    sources,
+                    detail: format!("admin rule not written: {why}"),
+                    at: now_secs(),
+                });
+            }
+            Err(declined) => {
+                crate::logbook::breadcrumb("updates", &format!("admin rule: {declined}"));
+                *approval = Some(Approval {
+                    state: ApprovalState::Declined,
+                    sources,
+                    detail: format!("admin rule not written: {declined}"),
+                    at: now_secs(),
+                });
+            }
+        }
+    });
+    Ok(())
+}
+
+/// The approval block's words while the admin dialog is up (the sheet's
+/// pending line has none; the model reads this one).
+pub const ADMIN_DIALOG_WAIT: &str = "type your Mac password in the dialog";
 
 /// Find `bin` on PATH or under Homebrew (deps.rs, shared with the desktop
 /// deps rows), plus the homes deps.rs doesn't check (`extra_dirs`).

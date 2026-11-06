@@ -96,24 +96,25 @@ running as the user with no sheet at all, never).
 
 ## Steps
 
-- [ ] Spike in-process: a `#[ignore]` test in `authorization.rs` that runs `/usr/bin/id
-  -u` under the dialog; confirm the header names scuttler (from the built app, since
+- [x] Spike in-process: a `#[ignore]` test in `authorization.rs` that runs `/usr/bin/id
+-u` under the dialog; confirm the header names scuttler (from the built app, since
       a `cargo test` binary is not the bundle) and the body is ours; record what the
       dialog shows in this file.
-- [ ] `packages/setup`: `sudoers install --mas <path>` and `sudoers remove`, root-direct
+- [x] `packages/setup`: `sudoers install --mas <path>` and `sudoers remove`, root-direct
       when `EUID == 0`; `on`/`off` compose them; tests cover the root path (fixture sudo
       must not be called), the `--mas` pin, and that `on` still works from a terminal.
       `doctor` unchanged.
-- [ ] `authorization.rs` with `Declined`, the cancel code (`errAuthorizationCanceled`,
+- [x] `authorization.rs` with `Declined`, the cancel code (`errAuthorizationCanceled`,
       -60006) mapped to `Cancelled`, non-zero exit of the child to `Unavailable(tail)`.
-- [ ] `sudoers.rs`: `install`/`remove`/`status`, the prompt text, the manifest step as
+- [x] `sudoers.rs`: `install`/`remove`/`status`, the prompt text, the manifest step as
       the user, `updates::refresh()` after; unit tests for the argv and the prompt.
-- [ ] `native_send` `{"sudoers":"on"|"off"}`; `SetupVerb::SudoersOn|SudoersOff` and the
+- [x] `native_send` `{"sudoers":"on"|"off"}`; `SetupVerb::SudoersOn|SudoersOff` and the
       Machine tab switch (state from `sudoers status`, busy while the dialog is up).
-- [ ] Updates model/panel: `needsRule` rows send the message on `↵`; band and sub copy;
+- [x] Updates model/panel: `needsRule` rows send the message on `↵`; band and sub copy;
       `rowCommand` no longer returns a command for them; stories and `model.test.ts`.
-- [ ] Awake panel: one row for the rule, same message; copy loses the terminal.
-- [ ] Docs: DECISIONS entry; AGENTS invariants 1 and 13 (third sheet); SETUP.md; README;
+- [x] Awake panel: the two sudoers lines now point at Settings → Machine (the panel is
+      keyboard-driven and has no button primitive; a row that sends is a later call).
+- [x] Docs: DECISIONS entry; AGENTS invariants 1 and 13 (third sheet); SETUP.md; README;
       JOURNAL if the dialog teaches anything; STATUS; this plan to `done/` with the
       live-run notes, same commit.
 - [ ] Live, Mitch at the Mac: from a fresh state (`scuttler sudoers off` first), press

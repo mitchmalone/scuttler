@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  ADMIN_RULE_MESSAGE,
   DECLINED_SHOWN_SECS,
   GROUP_CAP,
-  SUDOERS_COMMAND,
   type UpdateSource,
   type UpdatesReport,
   type UpgradeRun,
@@ -308,15 +308,16 @@ describe('updates model', () => {
       ).toBeNull()
     })
 
-    it('a root source without its rule runs nothing and offers the setup command', () => {
+    it('a root source without its rule asks for the rule instead of upgrading', () => {
       const unruled: UpdateSource = { ...masSource, admin: 'needsRule' }
       const [band, xcode] = ledgerRows(report({ sources: [unruled] }))
       expect(needsRule(unruled)).toBe(true)
       expect(needsRule(masSource)).toBe(false)
-      expect(rowUpgradeMessage(band!)).toBeNull()
-      expect(rowUpgradeMessage(xcode!)).toBeNull()
-      expect(rowCommand(band!)).toBe(SUDOERS_COMMAND)
-      expect(rowCommand(xcode!)).toBe(SUDOERS_COMMAND)
+      expect(rowUpgradeMessage(band!)).toEqual(ADMIN_RULE_MESSAGE)
+      expect(rowUpgradeMessage(xcode!)).toEqual(ADMIN_RULE_MESSAGE)
+      // c still copies the upgrade command: nothing tells anyone to open a terminal.
+      expect(rowCommand(band!)).toBe('mas upgrade')
+      expect(rowCommand(xcode!)).toBe('mas upgrade 497799835')
       // With the rule the same rows run as any other.
       const ruled: UpdateSource = { ...masSource, admin: 'ready' }
       const [, ready] = ledgerRows(report({ sources: [ruled] }))
@@ -343,6 +344,21 @@ describe('updates model', () => {
       })
       expect(approvalLine(r, T + 5)).toEqual({
         text: 'App Store: approve with Touch ID, Apple Watch or your password',
+        state: 'pending',
+      })
+    })
+
+    it('says what the admin dialog wants while it is up', () => {
+      const r = report({
+        approval: {
+          state: 'pending',
+          sources: ['mas'],
+          detail: 'type your Mac password in the dialog',
+          at: T,
+        },
+      })
+      expect(approvalLine(r, T + 5)).toEqual({
+        text: 'App Store: type your Mac password in the dialog',
         state: 'pending',
       })
     })

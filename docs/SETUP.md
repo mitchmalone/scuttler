@@ -74,14 +74,17 @@ Adopt **moves, never overwrites**: a foreign file at a path we are about to writ
 than aspirational: the defaults snapshot (`defaults.before`) is taken before the first
 write of each key and never updated afterwards, and nothing is ever overwritten in place.
 
-`scuttler sudoers on` installs one rule, this user, no password, naming exactly:
+One rule, this user, no password, naming exactly:
 `pmset -a disablesleep 1` and `0`, so the app's `awake` can switch macOS sleep off while
 a hold is armed (DECISIONS 2026-10-01); and the `mas` on PATH with `upgrade`/`update`,
 so the updates panel can upgrade App Store apps — mas 7 requires root — after the
 system approval sheet (Touch ID, Apple Watch or password; DECISIONS 2026-11-06). The app
 only ever runs `sudo -n`: without the rule it asks nothing, awake holds on power
-assertions alone and the App Store row says it needs setup once. Install mas after the
-rule and rerun `on`: the rule names the binary's path. `off` removes it.
+assertions alone and the App Store row says it needs admin once. The rule goes in from
+the app — `↵` on that row, or Settings → Machine → "allow admin" — through the system
+admin dialog, one Mac password (DECISIONS 2026-11-07); or from a terminal, `scuttler
+sudoers on`. Install mas after the rule and allow again: the rule names the binary's
+path. `off`, or "remove the rule", takes it out through the same dialog.
 
 ## The verbs
 
@@ -95,13 +98,14 @@ default, and `--apply` only ever follows a plan (`--yes` skips the one question)
 | `shell [--apply]`    | Plan: the generated files above, diffed. Apply: adopt what's there, write, record; clone the zsh plugins (p10k, autosuggestions, syntax-highlighting, history-substring-search, completions) under `~/.local/share/zsh/plugins`.                                                                                        |
 | `link` / `unlink`    | Put `scuttler` on PATH at `~/.local/bin/scuttler` (a symlink into the bundle; adopts anything foreign at that path), or take it off.                                                                                                                                                                                    |
 | `migrate`            | Run every base migration this machine has not yet run, in date order; the app runs this at startup when the rung is on (`setup::boot`). Format and rules: `packages/setup/migrations/README.md`.                                                                                                                        |
-| `sudoers on \| off`  | The root-owned rule above; one password.                                                                                                                                                                                                                                                                                |
+| `sudoers on \| off`  | The root-owned rule above; one password. `install`/`remove` are its root halves, run by the app as root under the admin dialog, then `on`/`off` as the user for the manifest.                                                                                                                                           |
 | `remove`             | The manifest in reverse: links unlinked, generated files deleted (noting any you edited since), adopted originals restored, touched stanzas stripped, the sudoers file removed; `defaults.before` restored (keys that had no value deleted); then the CLI's own records. Leaves the overlay — it's yours — and the app. |
 | `version`, `help`    |                                                                                                                                                                                                                                                                                                                         |
 
-Settings → Machine drives `doctor`, `defaults`, `shell`, `link` and `migrate` through
-`setup.rs` with the same arguments (`--apply --yes` after you have seen the plan in the
-window); `remove` and `sudoers` are terminal-only by design.
+Settings → Machine drives `doctor`, `defaults`, `shell`, `link`, `migrate` and
+`sudoers` through `setup.rs` with the same arguments (`--apply --yes` after you have
+seen the plan in the window; `sudoers` through the admin dialog); `remove` is
+terminal-only by design.
 
 ## The install, as the user sees it
 

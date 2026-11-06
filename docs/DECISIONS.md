@@ -5,6 +5,37 @@
 
 ---
 
+### 2026-11-07 · The sudoers rule installs from the app: the system admin dialog, one password, no terminal
+
+- **Decision.** The rule in `/etc/sudoers.d/scuttler` is written and removed from a
+  click. `↵` (or `u`) on an App Store band that reads "needs admin once", or Settings →
+  Machine → "allow admin", puts up the system admin-rights dialog
+  (`system.privilege.admin`, `authorization.rs` over `security-framework`) with our own
+  body text; a password runs the bundled CLI's root half, `scuttler sudoers install
+--mas <path> --user <name>`, as root, then `sudoers on` as the user records the
+  manifest without asking (`sudoers.rs`). `remove`/`off` mirror it. The rule text stays
+  the CLI's (`sudoers.zsh`); the app passes what root cannot look up. No new Tauri
+  command: `{"sudoers":"on"|"off"}` on the updates plugin, and `SetupVerb::SudoersOn |
+SudoersOff | SudoersStatus` behind the existing `setup_run`. A third OS sheet joins
+  invariant 13's exceptions, asked for by a click like the other two.
+- **Why.** v0.8.6 gated root upgrades on the approval sheet but still sent the user to a
+  terminal for the rule, with a CLI that is not on PATH until `link` and a sudo that on
+  this Mac hung behind pam_tid (JOURNAL 2026-11-06). Mitch's bar: install the app,
+  confirm in a dialog, done. Spike 2026-11-07, four runs: the dialog appears, runs as
+  root, returns in seconds; it is **password only**, lid open or closed, and the rights
+  database that could change that is root-owned. So: one password, once, into Apple's
+  dialog, never ours and never in a terminal; Touch ID for every run after.
+- **Not chosen.** A privileged helper (`SMAppService`): a resident root process, XPC in
+  Rust, an approval in System Settings; heavier and worse. `osascript … with
+administrator privileges`: the same call with "osascript wants to make changes" as
+  its header. `NOPASSWD: ALL`: root for any process running as the user, no sheet.
+- **Cost.** `AuthorizationExecuteWithPrivileges` is deprecated since 10.7 and still
+  shipped; it lives in one module so the fallback (osascript) is one function away. Its
+  API reports no exit status: the effect is read back (`sudoers status`) before the
+  panel says ready.
+
+---
+
 ### 2026-11-06 · Root upgrades run in the panel: the sudoers rule grants, the system approval sheet gates; the runner never waits on sudo
 
 - **Decision.** `mas` 7 requires root to update, so the App Store source is a _root
