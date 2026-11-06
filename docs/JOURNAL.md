@@ -6,6 +6,21 @@
 
 ---
 
+### 2026-11-07 · Two sessions in one checkout, both committing to main, cannot ship separate releases
+
+Two agent sessions worked this repo on 2026-11-06, one on agent statuses and
+quicklinks, one on root upgrades in the panel. The first committed to main; the second
+branched from that main into a worktree. The second's release then had to carry the
+first's commits, because `scripts/release.sh` ships main as it stands and the earlier
+commits sat below the branch point. Two planned releases became one (v0.8.6) with
+notes written by one session for both, and a "0.8.7" that had nothing left to ship.
+Rule: work on a worktree branch from the first commit, never on main while another
+session is open; before any release, `git worktree list` and the peer session list say
+whose commits are on main and whether the notes cover them. Nothing in this is tooling:
+the release script did what it says.
+
+---
+
 ### 2026-11-06 · sudo without a terminal does not fail fast on this Mac: pam_tid blocks it, forever, deaf to TERM
 
 The updates runner ran `mas upgrade` with stdin closed, trusting sudo to fail at once
