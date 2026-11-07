@@ -66,7 +66,7 @@ export function updatesReportAt(nowSecs: number): UpdatesReport {
       {
         id: 'pnpm',
         label: 'pnpm',
-        upgradeCommand: 'pnpm update -g',
+        upgradeCommand: 'pnpm update -g --latest',
         checkedAt: nowSecs - 60,
         error: null,
         items: [],

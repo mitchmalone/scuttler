@@ -47,7 +47,7 @@ const T = 1_800_000_000
 const cleanSource: UpdateSource = {
   id: 'pnpm',
   label: 'pnpm',
-  upgradeCommand: 'pnpm update -g',
+  upgradeCommand: 'pnpm update -g --latest',
   checkedAt: T,
   error: null,
   items: [],

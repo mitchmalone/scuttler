@@ -1131,7 +1131,7 @@ const SOURCES: &[SourceDef] = &[
         label: "pnpm",
         binary: "pnpm",
         args: &["outdated", "-g", "--json"],
-        upgrade_command: "pnpm update -g",
+        upgrade_command: "pnpm update -g --latest",
         parser: parse_pnpm,
         interval: CHEAP,
         root: false,
@@ -1466,13 +1466,15 @@ fn parse_mas(stdout: &str) -> Result<Vec<UpdateItem>, String> {
 
 /// `pnpm outdated -g --json`: stdout may open with a `[WARN] …` line before
 /// the JSON object (observed on this machine, 2026-09-04) — parse from the
-/// first `{`.
+/// first `{`. The upgrade carries `--latest` because `pnpm update -g` alone
+/// honours the range in the global manifest, and a 0.x caret (`^0.163.0`)
+/// never reaches the `latest` the row shows (JOURNAL 2026-11-08).
 fn parse_pnpm(stdout: &str) -> Result<Vec<UpdateItem>, String> {
     let json = stdout
         .find('{')
         .map(|i| &stdout[i..])
         .ok_or("no JSON object in pnpm output")?;
-    parse_keyed_versions(json, "pnpm update -g")
+    parse_keyed_versions(json, "pnpm update -g --latest")
 }
 
 /// pnpm's shape: `{ "<name>": { "current": …, "latest": … } }`. pnpm's exit
@@ -1693,7 +1695,10 @@ mod tests {
         assert_eq!(items[0].name, "typescript");
         assert_eq!(items[0].installed, "5.5.0");
         assert_eq!(items[0].available, "5.6.2");
-        assert_eq!(items[0].upgrade_command, "pnpm update -g typescript");
+        assert_eq!(
+            items[0].upgrade_command,
+            "pnpm update -g --latest typescript"
+        );
         assert!(parse_pnpm("no brace here").is_err());
     }
 
