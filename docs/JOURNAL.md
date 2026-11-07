@@ -6,6 +6,17 @@
 
 ---
 
+### 2026-11-08 · `pnpm update -g` upgraded nothing: a 0.x caret never reaches `latest`
+
+The updates panel showed `@openai/codex 0.163.0 → 0.167.0`, "upgrade all" reported
+`pnpm upgraded · 1s`, and the row stayed. `pnpm update -g` honours the range in the
+global manifest, and codex sits there as `^0.163.0`, which on a 0.x package means below
+0.164.0; pnpm prints `+ @openai/codex 0.163.0 (0.167.0 is available)` and exits 0. The
+row's `available` is `pnpm outdated`'s `latest`, so the upgrade now runs
+`pnpm update -g --latest`, which moves to that version and rewrites the range. Lesson: an
+upgrade command must reach the version the row promises, not the version the manifest
+allows.
+
 ### 2026-11-07 · Two sessions in one checkout, both committing to main, cannot ship separate releases
 
 Two agent sessions worked this repo on 2026-11-06, one on agent statuses and
