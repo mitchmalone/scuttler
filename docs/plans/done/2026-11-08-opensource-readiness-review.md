@@ -1,12 +1,13 @@
 ---
 title: Open-source release readiness review
-status: planned # ROADMAP "Open-source readiness review"; trigger: before the first public announcement
+status: done # the report: ../../reviews/2026-11-08-opensource-readiness.md
 created: 2026-08-17
-updated: 2026-11-01 (rewritten for the current scope; not started)
+updated: 2026-11-08 (done: five parallel reviews, report written, remediation is the next plan)
 links:
   - ../../STANDARDS.md
   - ../../RELEASING.md
   - ../../ROADMAP.md
+  - ../../reviews/2026-11-08-opensource-readiness.md
 ---
 
 # Open-source release readiness review
@@ -42,26 +43,33 @@ each with severity, evidence, impact and a concrete remediation.
 
 ## Steps
 
-- [ ] Map shipped artefacts, trust boundaries, permissions, IPC, persistence and network use
+- [x] Map shipped artefacts, trust boundaries, permissions, IPC, persistence and network use
       (AGENTS invariants 1–3, 11, 12 as the checklist).
-- [ ] Rust/Tauri: native FFI, subprocesses, filesystem handling, SQLite, config, `selfupdate.rs`,
+- [x] Rust/Tauri: native FFI, subprocesses, filesystem handling, SQLite, config, `selfupdate.rs`,
       `sleep_override.rs`, `widget_secrets.rs`, `plugins.rs`/`runtime.rs` (what user code can
       reach), `hooks.rs`.
-- [ ] TypeScript: the desktop UI, the kit, the plugin loader (blob-URL modules, shared
+- [x] TypeScript: the desktop UI, the kit, the plugin loader (blob-URL modules, shared
       globals), the site, the reference widgets and bundled scripts.
-- [ ] `packages/setup`: every write outside the overlay, the sudoers rule, `remove`.
-- [ ] Release supply chain: `release.sh`, the workflow, the tap, notarization, `SHA256SUMS`.
-- [ ] Verification, dependency, secret and repository-hygiene checks; test gaps.
-- [ ] The report: open-source blockers, pre-announcement work, accepted residual risk.
+- [x] `packages/setup`: every write outside the overlay, the sudoers rule, `remove`.
+- [x] Release supply chain: `release.sh`, the workflow, the tap, notarization, `SHA256SUMS`.
+- [x] Verification, dependency, secret and repository-hygiene checks; test gaps.
+- [x] The report: open-source blockers, pre-announcement work, accepted residual risk.
       STATUS points at it; this plan closes.
+
+Done 2026-11-08: `docs/reviews/2026-11-08-opensource-readiness.md`. Five blockers
+(B1 the mas NOPASSWD pin is root for anything running as the user; B2 installed
+themes are code; B3 the admin dialog runs user-owned shell as root; B4 main, tags and
+repo security settings; B5 `next` and `rustls` advisories), a pre-announcement list,
+proposed residual risk, tool results and the inventory. Four residual checks need a
+live run (R1 to R4 in the report).
 
 ## Acceptance criteria
 
-- [ ] Every first-party source, config and workflow file is in the review inventory.
-- [ ] Findings carry severity, evidence, impact and remediation; uncertainty is explicit.
-- [ ] `pnpm verify`, `cargo audit`, `pnpm audit` and secret-scanning results are recorded.
-- [ ] The report separates blockers, pre-announcement work and accepted residual risk.
-- [ ] `docs/STATUS.md` points to the report and this plan is in `done/`.
+- [x] Every first-party source, config and workflow file is in the review inventory.
+- [x] Findings carry severity, evidence, impact and remediation; uncertainty is explicit.
+- [x] `pnpm verify`, `cargo audit`, `pnpm audit` and secret-scanning results are recorded.
+- [x] The report separates blockers, pre-announcement work and accepted residual risk.
+- [x] `docs/STATUS.md` points to the report and this plan is in `done/`.
 
 ## Out of scope
 

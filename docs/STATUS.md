@@ -4,14 +4,33 @@
 > history lives in git, `plans/done/`, `releases/` and `JOURNAL.md`; the backlog with its
 > triggers lives in `ROADMAP.md`.
 >
-> Last updated: 2026-11-07 (v0.8.6 released, fan-out green: root upgrades in the panel
-> behind the system approval sheet, agent statuses from the pane's screen, quicklinks by
-> name, work of two sessions in one release; the approval sheet verified live on
-> 2026-11-07 once the wedged SecurityAgent was killed; the admin-updates plan is done;
-> nothing unshipped is left on main)
+> Last updated: 2026-11-08 (the open-source readiness review is done:
+> `reviews/2026-11-08-opensource-readiness.md`, five blockers, the first of them a local
+> privilege escalation through the App Store sudoers rule; pnpm upgrades fixed to reach
+> `latest`; the admin-rule branch waits on the review's B1 and B3 before it merges)
 
 ## Where we are
 
+- **Reviewed 2026-11-08: open-source readiness** (`reviews/2026-11-08-opensource-readiness.md`,
+  plan `plans/done/2026-11-08-opensource-readiness-review.md`). Five read-only reviews
+  over the whole repo at one commit. Blockers before announcing: **B1** the NOPASSWD
+  rule names `/opt/homebrew/bin/mas`, a user-owned file, so anything running as the
+  user is root without a password (shipped in v0.8.6 via `scuttler sudoers on`); **B2**
+  an installed theme's palette values run unescaped in p10k, git and Neovim
+  (reproduced); **B3** the unmerged admin dialog runs the user-owned zsh CLI as root
+  under the user's environment; **B4** main and tags unprotected, a bot with write,
+  secret scanning and Dependabot off; **B5** `next 16.3.0` and `rustls` advisories
+  (routine bumps). Then a pre-announcement list (CSP and plugin UI reach, self-update
+  hardening, pipeline pins, setup CLI fixes, SECURITY.md, licences, code health) and
+  the proposed residual-risk list for Mitch to accept. Remediation is the next plan.
+- **In flight: the admin rule installs from the app** (branch
+  `feat/admin-rule-from-the-app`, worktree `../scuttler-admin-rule`, dev-installed):
+  Settings → Machine and the updates panel write the rule behind the macOS admin
+  dialog. Built and verified, the live run not yet done; holds until B1 and B3 above
+  are fixed on the branch.
+- **Fixed 2026-11-08: pnpm upgrades reach `latest`** (`pnpm update -g --latest`; a 0.x
+  caret in the global manifest pinned codex at 0.163 while the row promised 0.167,
+  JOURNAL 2026-11-08). Verified live: codex 0.167.0.
 - **Released: v0.8.6** (2026-11-06, `releases/v0.8.6.md`): receipt 114.4 MB, cold start
   198 ms; fan-out green (check, homebrew, notion, deploy-mmcom); the tap holds
   `scuttler.rb` 0.8.6. Three pieces of work from two sessions: root upgrades in the
@@ -50,8 +69,7 @@
   files are herdr-derived under Apache-2.0: credited in `THIRD-PARTY-LICENSES.md`
   (bundled), the README and each file's header (Mitch's call, 2026-11-06).
 - **Parked:** `plans/done/lights-plugin.md` (built, in daily use; Nanoleaf waits on
-  Mitch's Home.app shortcuts, outside the repo); `plans/active/opensource-readiness-review.md`
-  (`planned`, rewritten for the current scope; ROADMAP carries its trigger).
+  Mitch's Home.app shortcuts, outside the repo).
 - **Daily use on the primary Mac:** bar, launcher, panels, agents, usage, updates, awake,
   the Desktop and Theme rungs (`appearance.everywhere`, `editors`, `ghostty` on).
 - **Memory:** one measurement, the receipt (DECISIONS 2026-11-01, `scripts/mem.sh
@@ -71,7 +89,15 @@
   instance: if "owned but unmapped" is above single-digit MB the leak is still live and
   the spike's bare-WKWebView arm should test for it first.
 
-- `opensource-readiness-review`: run before the first public announcement, or not.
+- **Readiness review B1**: which way to close the mas rule (root-owned copy of mas named
+  in the rule; per-batch admin dialog instead of NOPASSWD; the SMAppService helper), or
+  accept and say plainly that "allow admin" is passwordless root for anything running
+  as you. The review recommends the root-owned copy.
+- **Readiness review B4**: GitHub settings only Mitch can change: rulesets on `main` and
+  `v*` (both repos), `beebeebot` write → triage or behind the rules, secret scanning,
+  push protection, Dependabot, private vulnerability reporting.
+- **Readiness review section 5**: confirm or strike each proposed residual risk; each
+  accepted one becomes a DECISIONS or DEVIATIONS line.
 - Usage pace thresholds (±15/25 pts) and worst-across-accounts for the cell.
 - Whether "hidden when clean" is right for the updates cell.
 - p10k dir colour: follow the theme or the host?
@@ -134,17 +160,20 @@ hero.
 
 ## Next
 
-Three commits sit on main unpushed (c823ff3, 6e33631 and this one); push with the next
-release or the next reason. Then, in order agreed 2026-11-06:
+Main is pushed. In order:
 
-1. **Make summon measurably fast** (ROADMAP, Product): a Tauri replacement was asked
+1. **Remediate the readiness review's blockers** (a plan from the report's section 3):
+   B1 on the admin-rule branch with B3, then merge and do the live run; B2 in
+   `packages/theme` with tests first; B5 as two dependency bumps; B4 is Mitch's
+   settings. Then the section 4 list by value.
+2. **Make summon measurably fast** (ROADMAP, Product): a Tauri replacement was asked
    for and declined again on the spike's numbers; what the user feels is after the
    0.32 ms show call and has never been measured end to end. Instrument hotkey → first
    painted frame, keystroke → results paint, Enter → hidden; fix what the numbers name
    (a webview WebKit suspends while hidden is the first suspect); numbers into the
    receipts. Open question for Mitch: which of summon, typing, Enter or the bar feels slow.
-2. `scripts/mem.sh --webkit` on the launchd instance after a day up (1 h 44 m in, it
+3. `scripts/mem.sh --webkit` on the launchd instance after a day up (1 h 44 m in, it
    read 5.2 MB owned-but-unmapped: clean so far).
-3. Watch the agent cells; a wrong cell is a captured screen (`SCUTTLER_SCREEN=…
+4. Watch the agent cells; a wrong cell is a captured screen (`SCUTTLER_SCREEN=…
 cargo test --lib rules::tests::explain -- --ignored --nocapture`) and a rule.
-4. Light mode first-class (closes the theme policy gate bug), then the ROADMAP by trigger.
+5. Light mode first-class (closes the theme policy gate bug), then the ROADMAP by trigger.

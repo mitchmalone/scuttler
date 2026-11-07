@@ -6,6 +6,28 @@
 
 ---
 
+### 2026-11-08 · A fresh worktree's first site build needs the network for `next/font/google`
+
+`pnpm verify` failed in a new worktree with "Can't resolve
+`@vercel/turbopack-next/internal/font/google/font`" and "next/font/google queries have
+exactly one entry", while the same commit built in the main checkout. The difference
+was `apps/www/.next/cache/turbopack`: the first build downloads IBM Plex from Google
+Fonts and caches it; an agent shell with no outbound network gets the resolver error
+instead of a fetch error. Copying the cache directory from a checkout that has built
+once makes the worktree build offline. The error text never mentions the network.
+
+### 2026-11-08 · A NOPASSWD rule on a Homebrew path is `NOPASSWD: ALL`
+
+The App Store sudoers rule pins `/opt/homebrew/bin/mas`. sudo checks the path, not who
+owns it, and on every default Apple-silicon Mac the Homebrew prefix is owned by the
+user. So anything running as the user can replace that file and run
+`sudo -n /opt/homebrew/bin/mas upgrade` for root with no password: the capability
+DECISIONS 2026-11-07 lists as "not chosen". The sleep rule is different only because
+`/usr/bin/pmset` is SIP-protected. Lesson: a sudoers allowlist is only as strong as the
+ownership of every path in it; pin root-owned binaries or copy the binary somewhere
+root-owned first. Found by the readiness review
+(`reviews/2026-11-08-opensource-readiness.md`, B1).
+
 ### 2026-11-08 · `pnpm update -g` upgraded nothing: a 0.x caret never reaches `latest`
 
 The updates panel showed `@openai/codex 0.163.0 → 0.167.0`, "upgrade all" reported
