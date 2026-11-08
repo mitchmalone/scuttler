@@ -3,7 +3,11 @@
 //! directory overrides the built-in (one file, so the override is whole). Paid
 //! themes live here and never in the repo. `theme install <git-url>` clones into it
 //! with Omarchy's naming rules and its security filter: a cloned theme contributes
-//! only `colors.toml` and known hand files — never symlinks, never scripts.
+//! only `colors.toml` and the data hand files (`DATA_HAND_FILES`) — never symlinks,
+//! never a file something executes (`p10k-colors.zsh` is sourced by every prompt,
+//! `delta.gitconfig` is included by git, `neovim.lua` is loaded, `tmux.conf` and
+//! `ghostty` can run commands); those are rendered from its palette instead
+//! (DECISIONS 2026-11-08). A hand-made theme in the directory may ship all of them.
 //!
 //! Rust reads bytes and runs git; parsing and rendering stay in `@scuttler/theme`.
 
@@ -15,7 +19,7 @@ use tauri::{AppHandle, Emitter};
 use crate::error::{CmdError, CmdResult};
 
 /// Hand-written files a theme directory may ship beside `colors.toml`; anything
-/// else in a cloned theme is ignored (an installed theme is someone else's code).
+/// else is ignored.
 pub const HAND_FILES: [&str; 8] = [
     "ghostty",
     "tmux.conf",
@@ -26,6 +30,19 @@ pub const HAND_FILES: [&str; 8] = [
     "vscode-theme.json",
     "btop.theme",
 ];
+
+/// The subset an installed (cloned) theme may contribute: files nothing executes.
+/// The rest are rendered from its `colors.toml` like any other theme's.
+pub const DATA_HAND_FILES: [&str; 3] = ["claude.json", "vscode-theme.json", "btop.theme"];
+
+/// Which hand files a theme directory may contribute.
+fn allowed_hand_files(installed: bool) -> &'static [&'static str] {
+    if installed {
+        &DATA_HAND_FILES
+    } else {
+        &HAND_FILES
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -112,8 +129,9 @@ pub fn read_theme(dir: &Path) -> Option<UserTheme> {
         return None;
     }
     let text = std::fs::read_to_string(&colors).ok()?;
+    let installed = dir.join(".git").exists();
     let mut hand_files = std::collections::BTreeMap::new();
-    for file in HAND_FILES {
+    for &file in allowed_hand_files(installed) {
         let p = dir.join(file);
         if std::fs::symlink_metadata(&p)
             .map(|m| m.is_file())
@@ -128,7 +146,7 @@ pub fn read_theme(dir: &Path) -> Option<UserTheme> {
         name,
         text,
         hand_files,
-        installed: dir.join(".git").exists(),
+        installed,
         dir: dir.display().to_string(),
         backgrounds: backgrounds_in(dir),
     })
@@ -308,6 +326,23 @@ mod tests {
         assert_eq!(th.hand_files.keys().collect::<Vec<_>>(), vec!["ghostty"]);
         assert!(!th.installed);
         assert!(th.backgrounds.is_empty());
+    }
+
+    #[test]
+    fn an_installed_theme_contributes_data_hand_files_only() {
+        let cfg = scratch();
+        let d = themes_dir(&cfg).join("omarchy-evil-theme");
+        std::fs::create_dir_all(d.join(".git")).unwrap();
+        std::fs::write(d.join("colors.toml"), "mode = \"dark\"\n").unwrap();
+        for f in HAND_FILES {
+            std::fs::write(d.join(f), "x\n").unwrap();
+        }
+        let th = read_theme(&d).unwrap();
+        assert!(th.installed);
+        assert_eq!(
+            th.hand_files.keys().map(String::as_str).collect::<Vec<_>>(),
+            vec!["btop.theme", "claude.json", "vscode-theme.json"]
+        );
     }
 
     #[test]

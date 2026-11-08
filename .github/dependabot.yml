@@ -1,0 +1,18 @@
+# Readiness review B4 (docs/reviews/2026-11-08-opensource-readiness.md): keep the three
+# dependency surfaces fresh and the actions pinned. Alerts themselves are a repo setting.
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /apps/desktop/src-tauri
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
