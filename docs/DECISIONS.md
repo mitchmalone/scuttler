@@ -5,6 +5,32 @@
 
 ---
 
+### 2026-11-08 · A theme is data, enforced: colours are hex, names are plain, cloned themes ship no executable files
+
+- **Context.** The readiness review (`reviews/2026-11-08-opensource-readiness.md`, B2)
+  reproduced arbitrary code execution from a theme repo: `render()` substitutes
+  `{{ key }}` by raw string replacement, `p10k-colors.zsh` is sourced on every prompt,
+  `delta.gitconfig` is included by git and `neovim.lua` is loaded, so
+  `muted = "'; touch /tmp/x #"` in a cloned `colors.toml` ran a command. A cloned theme
+  could also ship those files verbatim as hand files, while THEMES.md promised "never
+  scripts".
+- **Decision.** `renderTheme` validates the whole palette before any template sees
+  it: colour keys are `#rrggbb` (what `mix` needs anyway), name keys match
+  `^[A-Za-z0-9 _.()-]+$`, the theme name too; a violation is a `PaletteError` and no
+  file is produced. An installed theme (one with `.git`) contributes only data hand
+  files (`claude.json`, `vscode-theme.json`, `btop.theme`); the files something
+  executes (`ghostty`, `tmux.conf`, `p10k-colors.zsh`, `delta.gitconfig`,
+  `neovim.lua`) are rendered from its palette. A hand-made theme in the directory
+  keeps the full hand-file list: it is the user's own.
+- **Not chosen.** Escaping per template language (zsh single quotes, gitconfig
+  values, Lua strings): three escapers to keep right forever, for values that have no
+  business being anything but a colour or a name. Documenting "installing a theme runs
+  its code" (the plugin model): a theme is the one tier the docs call data, and a
+  palette repo is what people will paste.
+- **Consequences.** An Omarchy theme repo that relied on its own `tmux.conf` or
+  `neovim.lua` now gets scuttler's rendering of its palette instead; a palette with a
+  stray non-hex value fails loudly where it used to render a broken file quietly.
+
 ### 2026-11-06 · Root upgrades run in the panel: the sudoers rule grants, the system approval sheet gates; the runner never waits on sudo
 
 - **Decision.** `mas` 7 requires root to update, so the App Store source is a _root

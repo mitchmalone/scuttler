@@ -1,7 +1,8 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
+import { PaletteError } from './palette.ts'
 import { renderTheme } from './render.ts'
 import { TemplateError } from './template.ts'
 
@@ -140,5 +141,65 @@ describe('renderTheme', () => {
     expect(JSON.parse(out.files['zed-theme.json']!).themes[0].appearance).toBe(
       'light',
     )
+  })
+})
+
+describe('renderTheme refuses a palette that is not data', () => {
+  // The readiness review's B2 (docs/reviews/2026-11-08-opensource-readiness.md):
+  // rendered files are sourced by zsh, included by git and loaded by Neovim, so every
+  // value must be a colour or a plain name before it reaches a template.
+  const ALL = {
+    'p10k-colors.zsh.tpl': template('p10k-colors.zsh.tpl'),
+    'delta.gitconfig.tpl': template('delta.gitconfig.tpl'),
+    'tmux.conf.tpl': template('tmux.conf.tpl'),
+    ...EDITOR_TEMPLATES,
+  }
+  const attempt = (extra: string) => () =>
+    renderTheme({ name: 'evil', text: MINIMAL + extra, templates: ALL })
+
+  it('rejects a colour key that is not #rrggbb', () => {
+    expect(attempt(`muted = "'; touch /tmp/pwned #"`)).toThrow(PaletteError)
+    expect(attempt(`selection = "#fff"`)).toThrow(PaletteError)
+    expect(attempt(`bright_magenta = "rgb(1,2,3)"`)).toThrow(PaletteError)
+    expect(attempt(`muted = "#414868"`)).not.toThrow()
+  })
+
+  it('rejects a name key with anything beyond letters, digits, space, _ . - ( )', () => {
+    expect(
+      attempt(`bat_theme = "ansi\\n[core]\\n\\tpager = touch /tmp/x"`),
+    ).toThrow(PaletteError)
+    expect(
+      attempt(`neovim_colorscheme = "default\\" } os.execute('x')"`),
+    ).toThrow(PaletteError)
+    expect(attempt(`helix_theme = "a;b"`)).toThrow(PaletteError)
+    expect(
+      attempt(`mode = "dark"\nbat_theme = "Solarized (dark)"`),
+    ).not.toThrow()
+  })
+
+  it('rejects an unknown root key whose value is not a colour', () => {
+    expect(attempt(`extra = "$(id)"`)).toThrow(PaletteError)
+    expect(attempt(`extra = "#123456"`)).not.toThrow()
+  })
+
+  it('rejects a theme name that could break out of a quoted string', () => {
+    expect(() =>
+      renderTheme({
+        name: `x" .. os.exit() .. "`,
+        text: MINIMAL,
+        templates: ALL,
+      }),
+    ).toThrow(PaletteError)
+  })
+
+  it('still renders every built-in theme', () => {
+    const dir = fileURLToPath(new URL('../themes/', import.meta.url))
+    for (const name of readdirSync(dir)) {
+      const text = readFileSync(`${dir}${name}/colors.toml`, 'utf8')
+      expect(
+        () => renderTheme({ name, text, templates: ALL }),
+        name,
+      ).not.toThrow()
+    }
   })
 })

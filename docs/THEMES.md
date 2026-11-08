@@ -123,8 +123,10 @@ policy's mode when it is `light`, `dark` or `schedule`, and flips macOS when it 
   Pro) live here and never in the repo. The directory is watched: save the file and every
   window's picker knows. Settings → General ▸ Theme → "Your themes" lists them and
   installs one from a git URL (`omarchy-<name>-theme` naming; a cloned theme contributes
-  only `colors.toml` and known hand files — never symlinks or scripts); "update
-  installed" pulls them.
+  only `colors.toml` and the data hand files `claude.json`, `vscode-theme.json`,
+  `btop.theme` — never symlinks, never a file something executes, so its `ghostty`,
+  `tmux.conf`, `p10k-colors.zsh`, `delta.gitconfig` and `neovim.lua` are rendered from
+  its palette instead, DECISIONS 2026-11-08); "update installed" pulls them.
 - `backgrounds/*.{jpg,png,heic,webp}` in a theme directory — wallpapers. Each apply
   advances to the next one; the row "scuttler — Next wallpaper" cycles by hand.
   Built-ins ship none (images don't belong in the repo).
@@ -134,7 +136,12 @@ policy's mode when it is `light`, `dark` or `schedule`, and flips macOS when it 
 
 ## Rules
 
-- **Themes are data.** A theme is a palette; rendering is the package's job.
+- **Themes are data.** A theme is a palette; rendering is the package's job. The
+  renderer enforces it: every colour key must be `#rrggbb` and every name key
+  (`mode`, `bat_theme`, `neovim_colorscheme`, `helix_theme`, `vscode_theme`, the
+  theme's name) must be letters, digits, space, `_`, `.`, `-`, parentheses; anything else is a
+  `PaletteError` and nothing is written. Rendered files are sourced by zsh, included
+  by git and loaded by Neovim, so a value is never trusted into one unchecked.
 - **Light is first-class.** `solarized-light` ships so no template can assume dark;
   `mode` drives `color-scheme`, macOS appearance, and the bar's alert tones.
 - **Never redistribute what we don't have the licence for.**

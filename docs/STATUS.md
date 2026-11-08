@@ -11,6 +11,11 @@
 
 ## Where we are
 
+- **Remediation under way** (`plans/active/2026-11-08-readiness-remediation.md`): B5
+  done (rustls 0.23.46, webpki-roots 1.0.11, `next ^16.4.5`; both audits clean), B2 done
+  (`renderTheme` validates every palette value, cloned themes ship only data hand
+  files, DECISIONS 2026-11-08), `dependabot.yml` added. B1 and B3 are next, on the
+  admin-rule branch; B4 is Mitch's settings.
 - **Reviewed 2026-11-08: open-source readiness** (`reviews/2026-11-08-opensource-readiness.md`,
   plan `plans/done/2026-11-08-opensource-readiness-review.md`). Five read-only reviews
   over the whole repo at one commit. Blockers before announcing: **B1** the NOPASSWD
