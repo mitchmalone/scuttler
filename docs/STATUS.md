@@ -29,10 +29,12 @@
   hardening, pipeline pins, setup CLI fixes, SECURITY.md, licences, code health) and
   the proposed residual-risk list for Mitch to accept. Remediation is the next plan.
 - **In flight: the admin rule installs from the app** (branch
-  `feat/admin-rule-from-the-app`, worktree `../scuttler-admin-rule`, dev-installed):
-  Settings → Machine and the updates panel write the rule behind the macOS admin
-  dialog. Built and verified, the live run not yet done; holds until B1 and B3 above
-  are fixed on the branch.
+  `feat/admin-rule-from-the-app`, worktree `../scuttler-admin-rule`): Settings →
+  Machine and the updates panel write the rule behind the macOS admin dialog. The
+  review's B1 and B3 are built on it 2026-11-08 (DECISIONS 2026-11-08: the rule names
+  a root-owned copy of mas; the root step is a constant script under `env -i`, never
+  the CLI). Waiting on the live run (plan `2026-11-07-admin-rule-from-the-app.md`), then
+  it merges.
 - **Fixed 2026-11-08: pnpm upgrades reach `latest`** (`pnpm update -g --latest`; a 0.x
   caret in the global manifest pinned codex at 0.163 while the row promised 0.167,
   JOURNAL 2026-11-08). Verified live: codex 0.167.0.
@@ -43,14 +45,6 @@
   pane's screen (`plans/done/2026-11-06-make-agent-statuses-correct.md`) and quicklinks
   by name (DECISIONS 2026-11-06); the second session's commits were on main before the
   first branched, so one release carried all three (JOURNAL 2026-11-07).
-- **In flight: the admin rule installs from the app**
-  (`plans/active/2026-11-07-admin-rule-from-the-app.md`, DECISIONS 2026-11-07, branch
-  `feat/admin-rule-from-the-app` in a worktree): `↵` on an App Store band that reads
-  "needs admin once", or Settings → Machine → "allow admin", puts up the system admin
-  dialog (password only, spike 2026-11-07) and the CLI's root half writes the rule as
-  root; `sudoers on` as the user records the manifest. No terminal, no `scuttler
-sudoers on` in any user-facing copy. Verify green; needs Mitch: the dialog from the
-  built app (Settings → Machine, remove then allow), the header naming scuttler.
 - **Verified 2026-11-07: the approval sheet works live.** After Mitch killed the wedged
   `SecurityAgent` (`kill -9`; plain `kill` is ignored, like sudo inside PAM),
   `scuttler sudoers on` installed the rule with the mas alias, `sudo -n mas upgrade`

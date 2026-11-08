@@ -59,7 +59,7 @@ sc_tilde() {
 
 # sha256 of a file, hex only. shasum ships with macOS and Linux alike.
 sc_hash() {
-  shasum -a 256 -- "$1" | cut -d' ' -f1
+  /usr/bin/shasum -a 256 -- "$1" | /usr/bin/cut -d' ' -f1
 }
 
 # Write stdin to a file atomically (same directory, then rename).

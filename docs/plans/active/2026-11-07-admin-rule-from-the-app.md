@@ -117,6 +117,11 @@ running as the user with no sheet at all, never).
 - [x] Docs: DECISIONS entry; AGENTS invariants 1 and 13 (third sheet); SETUP.md; README;
       JOURNAL if the dialog teaches anything; STATUS; this plan to `done/` with the
       live-run notes, same commit.
+- [ ] 2026-11-08: the root half was rebuilt before the live run (readiness review B1
+      and B3, DECISIONS 2026-11-08): the rule names a root-owned copy of mas and the
+      dialog runs a constant `/bin/sh` script under `env -i`, not the CLI. The existing
+      rule on Mitch's Mac names `/opt/homebrew/bin/mas`, so Settings → Machine will read
+      "differs" until "allow admin" rewrites it; that is the first live step now.
 - [ ] Live, Mitch at the Mac: from a fresh state (`scuttler sudoers off` first), press
       `↵` on the App Store row → dialog → password → row reads ready; Settings switch
       off → dialog → row reads "needs admin once"; cancel on the dialog → band says so,

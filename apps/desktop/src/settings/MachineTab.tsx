@@ -149,11 +149,11 @@ export default function MachineTab({
       <p className="hint">
         <strong>Admin, once.</strong> One rule in{' '}
         <code>/etc/sudoers.d/scuttler</code> lets awake switch macOS sleep off
-        while a hold runs and lets the updates panel upgrade App Store apps,
-        each after Touch ID. Writing it is the one time scuttler needs your Mac
-        password, typed into the system&apos;s own dialog; the app never asks
-        for it itself. The App Store row in <code>updates</code> offers the
-        same.
+        while a hold runs and lets the updates panel upgrade App Store apps
+        through scuttler&apos;s own root-owned copy of mas, each after Touch ID.
+        Writing it is the one time scuttler needs your Mac password, typed into
+        the system&apos;s own dialog; the app never asks for it itself. The App
+        Store row in <code>updates</code> offers the same.
       </p>
       <div className="row">
         <button

@@ -5,6 +5,40 @@
 
 ---
 
+### 2026-11-08 · The sudoers rule names a root-owned copy of mas, and the root step runs nothing user-owned
+
+- **Context.** The readiness review (`reviews/2026-11-08-opensource-readiness.md`, B1
+  and B3) found two holes in the 2026-11-06 and 2026-11-07 designs. The rule pinned
+  the mas it found, `/opt/homebrew/bin/mas`, a file the user owns in a directory the
+  user owns: sudo checks the path, not the owner, so anything running as the user
+  could replace that file and be root with no password and no sheet. The 2026-11-06
+  entry called that "the same class as the sleep rule"; it is not, `/usr/bin/pmset` is
+  SIP-protected. And the admin dialog ran the bundled zsh CLI as root, from a
+  user-owned bundle, under the user's environment (`.zshenv`, PATH, TMPDIR, the
+  `SCUTTLER_*` overrides), with the rule's temp file in a user-owned directory between
+  visudo's check and install.
+- **Decision.** The rule names `/usr/local/libexec/scuttler/mas`, a copy the root step
+  makes (0755, root:wheel, from the mas the panel found); the panel runs that copy
+  under `sudo -n`. The root step behind the dialog is Rust's: the rule text is built in
+  `sudoers.rs` (a test holds it byte-equal to the CLI's), and `/usr/bin/env -i` with a
+  fixed PATH runs `/bin/sh -c` over a script that is a constant in the binary and
+  spells every command with its directory: `mktemp` inside `/etc/sudoers.d` (root-only,
+  dotted name so sudo ignores it), `visudo -cf`, two `install`s, one `rm`. Nothing
+  user-owned executes as root. The CLI's user halves are `sudoers record | forget`
+  (the manifest) and `status --mas --user` (the verdict, with the pins, so it does not
+  depend on the app's PATH); `on | off` from a terminal keep doing both halves with one
+  sudo and the same copy. A changed mas (Homebrew upgraded it) reads as "differs" in
+  status and the row asks for admin again, which refreshes the copy. The user name is
+  validated on both sides (a sudoers `User_List` is a grammar).
+- **Not chosen.** Per-batch admin dialogs instead of a rule (a password for every
+  App Store upgrade; the sheet already gates each run). A SMAppService helper (the
+  right long-term shape, still out of scope). Refusing mas unless Homebrew's prefix is
+  root-owned (it never is on Apple silicon).
+- **Residual.** The copy is taken from the user-writable path at the moment of the
+  click: an attacker already present can plant a mas before the user allows admin.
+  What the rule no longer gives is escalation on demand afterwards. Recorded in the
+  review's section 5.
+
 ### 2026-11-08 · A theme is data, enforced: colours are hex, names are plain, cloned themes ship no executable files
 
 - **Context.** The readiness review (`reviews/2026-11-08-opensource-readiness.md`, B2)

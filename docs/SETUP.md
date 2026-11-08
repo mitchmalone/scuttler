@@ -61,7 +61,7 @@ scuttler. Each owned path has exactly one mode, recorded in the manifest:
 | **generated**      | `.zshrc`, `.p10k.zsh`, Ghostty, tmux, `scuttler.gitconfig` — rendered from base ⊕ overlay              | Re-renders and diffs (hash in the manifest); remove deletes |
 | **adopted**        | A file that existed before scuttler wrote the same path                                                | Parked in `state/adopted/`; remove puts it back             |
 | **touched**        | A file that stays yours but carries one marker-bounded stanza of ours (`~/.config/git/config` include) | Hashes the block; remove strips it                          |
-| **root**           | The one root-owned file: `/etc/sudoers.d/scuttler` (`sudoers on`)                                      | Hash recorded (0444); remove sudo-deletes                   |
+| **root**           | The root-owned rule `/etc/sudoers.d/scuttler` and the mas copy it names (`sudoers on`)                 | Hash recorded (0444); remove sudo-deletes both              |
 
 Manifest line shape (one per path, tab-separated):
 
@@ -76,15 +76,20 @@ write of each key and never updated afterwards, and nothing is ever overwritten 
 
 One rule, this user, no password, naming exactly:
 `pmset -a disablesleep 1` and `0`, so the app's `awake` can switch macOS sleep off while
-a hold is armed (DECISIONS 2026-10-01); and the `mas` on PATH with `upgrade`/`update`,
-so the updates panel can upgrade App Store apps — mas 7 requires root — after the
-system approval sheet (Touch ID, Apple Watch or password; DECISIONS 2026-11-06). The app
-only ever runs `sudo -n`: without the rule it asks nothing, awake holds on power
-assertions alone and the App Store row says it needs admin once. The rule goes in from
-the app — `↵` on that row, or Settings → Machine → "allow admin" — through the system
-admin dialog, one Mac password (DECISIONS 2026-11-07); or from a terminal, `scuttler
-sudoers on`. Install mas after the rule and allow again: the rule names the binary's
-path. `off`, or "remove the rule", takes it out through the same dialog.
+a hold is armed (DECISIONS 2026-10-01); and `upgrade`/`update` on
+`/usr/local/libexec/scuttler/mas`, a root-owned copy of the mas on this Mac that the
+same step makes, so the updates panel can upgrade App Store apps — mas 7 requires root —
+after the system approval sheet (Touch ID, Apple Watch or password; DECISIONS
+2026-11-06). The copy, not Homebrew's path: sudo checks the path, not its owner, and a
+user-writable path in a NOPASSWD rule is root for anything running as you (DECISIONS
+2026-11-08). The app only ever runs `sudo -n`: without the rule it asks nothing, awake
+holds on power assertions alone and the App Store row says it needs admin once. The
+rule goes in from the app — `↵` on that row, or Settings → Machine → "allow admin" —
+through the system admin dialog, one Mac password; what runs as root is a constant
+script of absolute commands under an empty environment, never the CLI (DECISIONS
+2026-11-07, 2026-11-08); or from a terminal, `scuttler sudoers on`. Install or upgrade
+mas and allow again: `status` reports a copy behind its source as "differs". `off`, or
+"remove the rule", takes rule and copy out through the same dialog.
 
 ## The verbs
 
@@ -98,7 +103,7 @@ default, and `--apply` only ever follows a plan (`--yes` skips the one question)
 | `shell [--apply]`    | Plan: the generated files above, diffed. Apply: adopt what's there, write, record; clone the zsh plugins (p10k, autosuggestions, syntax-highlighting, history-substring-search, completions) under `~/.local/share/zsh/plugins`.                                                                                        |
 | `link` / `unlink`    | Put `scuttler` on PATH at `~/.local/bin/scuttler` (a symlink into the bundle; adopts anything foreign at that path), or take it off.                                                                                                                                                                                    |
 | `migrate`            | Run every base migration this machine has not yet run, in date order; the app runs this at startup when the rung is on (`setup::boot`). Format and rules: `packages/setup/migrations/README.md`.                                                                                                                        |
-| `sudoers on \| off`  | The root-owned rule above; one password. `install`/`remove` are its root halves, run by the app as root under the admin dialog, then `on`/`off` as the user for the manifest.                                                                                                                                           |
+| `sudoers on \| off`  | The root-owned rule and mas copy above; one password. `install`/`remove` are the root halves for a terminal; `record`/`forget` are the user halves the app calls after its own root step under the admin dialog; `status [--mas <path>] [--user <name>]` checks rule and copy.                                          |
 | `remove`             | The manifest in reverse: links unlinked, generated files deleted (noting any you edited since), adopted originals restored, touched stanzas stripped, the sudoers file removed; `defaults.before` restored (keys that had no value deleted); then the CLI's own records. Leaves the overlay — it's yours — and the app. |
 | `version`, `help`    |                                                                                                                                                                                                                                                                                                                         |
 
