@@ -38,6 +38,10 @@ pub struct Link {
 #[serde(default, rename_all = "camelCase")]
 pub struct BarConfig {
     pub enabled: bool,
+    /// Hide the bar on a display while the frontmost app covers it edge to
+    /// edge: a borderless-fullscreen game, a video (cover.rs, DECISIONS
+    /// 2026-11-13). Hot-applies.
+    pub hide_over_fullscreen: bool,
     /// Explicit alignment zones (2026-08-16, replacing the clock-anchored flat
     /// list): every module lives in left, center, or right, ordered within its
     /// zone. The clock is an ordinary module.
@@ -128,6 +132,7 @@ impl Default for BarConfig {
         // here and `DEFAULT_BAR_LAYOUT ids` in lib/config.test.ts.
         Self {
             enabled: true,
+            hide_over_fullscreen: true,
             layout: BarZones {
                 left: ["workspaces", "agents", "frontApp"].map(module).to_vec(),
                 center: vec![module("clock")],
@@ -598,6 +603,12 @@ pub fn watch(app: AppHandle) {
                     crate::plugins::configure(&app, &new_config.plugins.disabled);
                     if old.bar.enabled != new_config.bar.enabled {
                         crate::bar::set_enabled(&app, new_config.bar.enabled);
+                    }
+                    if old.bar.hide_over_fullscreen != new_config.bar.hide_over_fullscreen {
+                        crate::bar::set_hide_over_fullscreen(
+                            &app,
+                            new_config.bar.hide_over_fullscreen,
+                        );
                     }
                     let _ = app.emit("config-changed", &new_config);
                 }

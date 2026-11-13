@@ -28,6 +28,7 @@ mod commands;
 mod config;
 mod coreaudio;
 mod corewlan;
+mod cover;
 mod deps;
 mod desktop;
 mod error;
@@ -231,6 +232,7 @@ pub fn run() {
             });
 
             panel::init(app.handle())?;
+            bar::set_hide_over_fullscreen(app.handle(), cfg.bar.hide_over_fullscreen);
             if cfg.bar.enabled {
                 // Deferred like the first-run hint: monitor enumeration and
                 // panel ordering want a live event loop, not mid-setup state.

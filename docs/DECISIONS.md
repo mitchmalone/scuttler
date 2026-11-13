@@ -5,6 +5,28 @@
 
 ---
 
+### 2026-11-13 · The bar hides on a display the frontmost app covers whole
+
+- **Context.** A borderless-fullscreen game (World of Warcraft, "Windowed
+  (Fullscreen)") is a normal-level window the size of the display; the bar is a
+  floating panel above it and clipped the game's own top strip.
+- **Decision.** While the frontmost app owns a visible, normal-level window that
+  covers a display edge to edge, the bar on that display hides (the existing hide
+  path) and returns when that stops being true. `cover.rs` reads frames, layers and
+  owner pids from `CGWindowListCopyWindowInfo`, which needs no permission (titles and
+  pixels do; neither is read). The read is a few milliseconds, so it runs after an
+  app activation, a Space change or a workspace trigger and on the 5 s heartbeat,
+  never per tick. `bar.hideOverFullscreen`, default on; off asks the window server
+  nothing (invariant 12). No new IPC command.
+- **Not chosen.** The app's category (`LSApplicationCategoryType`): many games
+  declare none, and a small windowed game should keep the bar. A list of bundle ids:
+  a chore, and geometry already says what matters. Dropping `full_screen_auxiliary`:
+  it only covers native fullscreen, which AeroSpace users avoid.
+- **Consequences.** Native-fullscreen windows hide the bar too (on a notched display
+  the window stops below the housing, so the bar stays in the notch band). A game
+  behind another app keeps the bar. Plan
+  `plans/active/2026-11-13-bar-yields-to-fullscreen.md`.
+
 ### 2026-11-08 · A theme is data, enforced: colours are hex, names are plain, cloned themes ship no executable files
 
 - **Context.** The readiness review (`reviews/2026-11-08-opensource-readiness.md`, B2)

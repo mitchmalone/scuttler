@@ -112,7 +112,10 @@ fn mouse_in_bar() -> Option<(usize, f64, f64)> {
         .enumerate()
         .find_map(|(i, s)| {
             let (x, y) = (mx - s.x, my - s.y);
-            let inside = (0.0..=s.width).contains(&x) && (0.0..=wanted_height(i)).contains(&y);
+            // A bar that stepped aside for a fullscreen app hears no hover.
+            let inside = !is_covered(s.id)
+                && (0.0..=s.width).contains(&x)
+                && (0.0..=wanted_height(i)).contains(&y);
             inside.then_some((i, x, y))
         })
 }
@@ -142,6 +145,82 @@ pub(crate) fn enabled() -> bool {
     ENABLED.load(std::sync::atomic::Ordering::Relaxed)
 }
 
+/// `bar.hideOverFullscreen`, mirrored for the threads that look.
+static YIELDS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+
+/// Ids of the displays the frontmost app covers edge to edge, as of the last
+/// look (cover.rs). `sync` hides the bar on these and shows it again when the
+/// display leaves the list: a borderless-fullscreen game draws its own top
+/// strip where the bar would sit (DECISIONS 2026-11-13).
+static COVERED: std::sync::Mutex<Vec<u32>> = std::sync::Mutex::new(Vec::new());
+
+/// Until when the stream thread keeps looking after an app switch, a Space
+/// change or a workspace switch. One look is not enough: the event can beat
+/// the window to the screen (a launch, the fullscreen animation).
+static LOOK_UNTIL: std::sync::Mutex<Option<std::time::Instant>> = std::sync::Mutex::new(None);
+const LOOK_FOR: std::time::Duration = std::time::Duration::from_millis(2500);
+
+fn is_covered(display: u32) -> bool {
+    COVERED.lock().is_ok_and(|c| c.contains(&display))
+}
+
+/// Something moved in front: look now and for a little while after.
+fn arm_look() {
+    if let Ok(mut until) = LOOK_UNTIL.lock() {
+        *until = Some(std::time::Instant::now() + LOOK_FOR);
+    }
+    push();
+}
+
+fn look_armed() -> bool {
+    let Ok(mut until) = LOOK_UNTIL.lock() else {
+        return false;
+    };
+    match *until {
+        Some(t) if t > std::time::Instant::now() => true,
+        Some(_) => {
+            // One last look as the window closes, then stand down.
+            *until = None;
+            true
+        }
+        None => false,
+    }
+}
+
+/// Ask which displays the frontmost app covers and re-sync the bars if the
+/// answer changed. Any thread; the window-server read stays off the main one.
+/// Off means off: with the option off nothing is asked, and whatever was
+/// hidden comes back.
+fn look(app: &AppHandle) {
+    let now = if YIELDS.load(std::sync::atomic::Ordering::Relaxed) {
+        crate::cover::covered_now(&crate::screens::all())
+    } else {
+        Vec::new()
+    };
+    let changed = {
+        let Ok(mut covered) = COVERED.lock() else {
+            return;
+        };
+        let changed = *covered != now;
+        *covered = now;
+        changed
+    };
+    if changed {
+        let handle = app.clone();
+        let _ = app.run_on_main_thread(move || sync(&handle));
+    }
+}
+
+/// Hot-apply `bar.hideOverFullscreen` from the config watcher, and set it at
+/// startup before the bar is built.
+pub fn set_hide_over_fullscreen(app: &AppHandle, on: bool) {
+    YIELDS.store(on, std::sync::atomic::Ordering::Relaxed);
+    if enabled() {
+        let handle = app.clone();
+        std::thread::spawn(move || look(&handle));
+    }
+}
+
 /// Which display id each `bar-{i}` was last framed to and whether that display
 /// was notched — so `sync` only re-frames and re-announces the notch on change.
 static ASSIGNED: std::sync::Mutex<Vec<(u32, bool)>> = std::sync::Mutex::new(Vec::new());
@@ -164,8 +243,9 @@ pub fn set_enabled(app: &AppHandle, on: bool) {
         }
         sync(&handle);
         if on {
-            // Resume promptly instead of waiting for the next tick.
-            push();
+            // Resume promptly instead of waiting for the next tick, and find
+            // out what is in front now.
+            arm_look();
         }
     });
 }
@@ -190,8 +270,10 @@ pub fn init(app: &AppHandle) -> CmdResult<()> {
         watch_triggers(app.clone());
         watch_mouse(app.clone());
         start_stream(app.clone());
-        crate::front_app::watch(push);
+        crate::front_app::watch(arm_look);
     }
+    // Whatever is in front may already cover a display.
+    arm_look();
     Ok(())
 }
 
@@ -226,6 +308,12 @@ fn sync(app: &AppHandle) {
         };
         if !enabled {
             let _ = window.hide();
+            continue;
+        }
+        if is_covered(screen.id) {
+            if window.is_visible().unwrap_or(false) {
+                let _ = window.hide();
+            }
             continue;
         }
         frame(&window, i, screen);
@@ -400,6 +488,9 @@ fn start_stream(app: AppHandle) {
         if !enabled() {
             continue;
         }
+        if look_armed() {
+            look(&app);
+        }
         run_push(&app, what == Poke::Workspace);
     });
 }
@@ -567,6 +658,9 @@ fn watch_triggers(app: AppHandle) {
                 if let Some(name) = read_trigger_name(&workspace_file) {
                     push_focus(&app, &name);
                 }
+                // A switch can bring a fullscreen window in or take it away
+                // without changing the front app.
+                arm_look();
             }
             let mut events = vec![first];
             // Coalesce bursts, then push a fresh snapshot immediately.
@@ -632,6 +726,9 @@ fn watch(app: AppHandle) {
         if !enabled() {
             continue;
         }
+        // The backstop for what no event announces: a window going
+        // borderless-fullscreen while its app is already in front.
+        look(&app);
         let handle = app.clone();
         let _ = app.run_on_main_thread(move || sync(&handle));
     });

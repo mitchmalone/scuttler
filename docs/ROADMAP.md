@@ -35,11 +35,10 @@ surface absorbs the item.
 
 ### Bugs known, not chased
 
-| Item                                                                                                                                                                                                                      | Trigger                                               |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| Theme policy gate never holds: `config.appearance` is a plain struct so the webview always sees it; a fresh install in light mode flips to `solarized-light` (JOURNAL 2026-10-19; `it.fails` test in `lib/theme.test.ts`) | Light mode first-class, or the next `config.rs` touch |
-| Hotkeys bound to built-in `scuttler — …` rows do nothing (empty `path`; link `browser` ignored on that path)                                                                                                              | Touch of `indexer.rs` / custom shortcuts              |
-| 23 zombie children in a long-lived instance (JOURNAL 2026-08-26); amaran status replies arriving in one run of four                                                                                                       | Either recurs visibly                                 |
+| Item                                                                                                                | Trigger                                  |
+| ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| Hotkeys bound to built-in `scuttler — …` rows do nothing (empty `path`; link `browser` ignored on that path)        | Touch of `indexer.rs` / custom shortcuts |
+| 23 zombie children in a long-lived instance (JOURNAL 2026-08-26); amaran status replies arriving in one run of four | Either recurs visibly                    |
 
 ### Product
 

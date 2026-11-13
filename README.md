@@ -57,6 +57,7 @@ What `Config::default()` (`apps/desktop/src-tauri/src/config.rs`) and `DEFAULT_D
 | ------------------------------------------------------ | ------------------------------------- | ------------------ |
 | Launcher                                               | `hotkey`                              | on, `Alt+Space`    |
 | Bar                                                    | `bar.enabled`                         | on                 |
+| Bar: hide over fullscreen apps                         | `bar.hideOverFullscreen`              | on                 |
 | Desktop: AeroSpace tiling (managed `aerospace.toml`)   | `desktop.tiling.enabled` / `.managed` | off / on           |
 | Desktop: JankyBorders                                  | `desktop.borders.enabled`             | off                |
 | Theme rung (Ghostty, tmux, prompt, delta, Claude Code) | `appearance.everywhere`               | off                |

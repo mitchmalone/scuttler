@@ -4,13 +4,25 @@
 > history lives in git, `plans/done/`, `releases/` and `JOURNAL.md`; the backlog with its
 > triggers lives in `ROADMAP.md`.
 >
-> Last updated: 2026-11-08 (the open-source readiness review is done:
+> Last updated: 2026-11-13 (the bar hides over fullscreen apps, on a branch awaiting its
+> live run; the open-source readiness review is done:
 > `reviews/2026-11-08-opensource-readiness.md`, five blockers, the first of them a local
 > privilege escalation through the App Store sudoers rule; pnpm upgrades fixed to reach
 > `latest`; the admin-rule branch waits on the review's B1 and B3 before it merges)
 
 ## Where we are
 
+- **Fixed 2026-11-13: a profile with no theme policy stays on its theme.** The policy
+  gate now tests the policy's own keys (`mode`, `schedule`, `pair`, `focus`), not the
+  `appearance` object Rust always sends, so a fresh profile on a light Mac keeps
+  `scuttler` instead of being switched to `solarized-light` (JOURNAL 2026-11-13; the
+  2026-10-19 bug, closed). On `feat/bar-yields-to-fullscreen`, for 0.8.7.
+- **In flight: the bar steps aside for fullscreen apps** (branch
+  `feat/bar-yields-to-fullscreen`, `plans/active/2026-11-13-bar-yields-to-fullscreen.md`,
+  DECISIONS 2026-11-13): while the frontmost app covers a whole display (World of
+  Warcraft in borderless fullscreen was the case), the bar on that display hides.
+  `bar.hideOverFullscreen`, default on. Built, `pnpm verify` green; the live checklist
+  needs an installed build and the game running.
 - **Remediation under way** (`plans/active/2026-11-08-readiness-remediation.md`): B5
   done (rustls 0.23.46, webpki-roots 1.0.11, `next ^16.4.5`; both audits clean), B2 done
   (`renderTheme` validates every palette value, cloned themes ship only data hand
@@ -181,4 +193,4 @@ Main is pushed. In order:
    read 5.2 MB owned-but-unmapped: clean so far).
 4. Watch the agent cells; a wrong cell is a captured screen (`SCUTTLER_SCREEN=…
 cargo test --lib rules::tests::explain -- --ignored --nocapture`) and a rule.
-5. Light mode first-class (closes the theme policy gate bug), then the ROADMAP by trigger.
+5. Light mode first-class, then the ROADMAP by trigger.

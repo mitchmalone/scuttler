@@ -1837,6 +1837,26 @@ function MenubarTab({ config, set }: { config: Config; set: SetFn }) {
               immediately.
             </p>
           </Row>
+          <Row label="Fullscreen apps">
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={config.bar.hideOverFullscreen ?? true}
+                onChange={(e) =>
+                  set('bar', {
+                    ...config.bar,
+                    hideOverFullscreen: e.target.checked,
+                  })
+                }
+              />
+              Hide the bar over fullscreen apps
+            </label>
+            <p className="hint">
+              While the app in front covers a whole display (a game, a video),
+              the bar on that display steps aside and returns when you switch
+              away.
+            </p>
+          </Row>
           <hr />
           {/* Boards break the 160px-label grid on purpose (Mitch, 2026-08-16):
           three drag columns need the whole content width. */}

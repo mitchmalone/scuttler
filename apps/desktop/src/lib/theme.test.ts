@@ -50,11 +50,11 @@ describe('a config with no appearance key', () => {
     )
   })
 
-  // Known bug, out of scope for 2026-10-19 (STATUS "Theme policy gate never holds"):
-  // config.rs always serialises `appearance` with its rung defaults, so a file with no
-  // `appearance` key reaches the webview as this object and the gate opens. Turn
-  // `it.fails` into `it` with the fix.
-  it.fails('never switches the theme for the shape Rust delivers', () => {
+  // config.rs always serialises `appearance` with its rung flags, so a file with no
+  // `appearance` key reaches the webview as this object (JOURNAL 2026-10-19). The
+  // gate is the policy's own keys, not the object: this shape restyled every fresh
+  // profile on a light Mac until 2026-11-13.
+  it('never switches the theme for the shape Rust delivers', () => {
     const fromRust = cfg({
       theme: 'scuttler',
       appearance: {
@@ -65,6 +65,32 @@ describe('a config with no appearance key', () => {
       } as never,
     })
     expect(switches(fromRust)).toBe(false)
+    expect(policyConfigured(fromRust)).toBe(false)
+    // Turning the engine on from here changes nothing: both halves are the theme.
+    expect(appearanceOf(fromRust).pair).toEqual({
+      light: 'scuttler',
+      dark: 'scuttler',
+    })
+  })
+
+  it('counts any policy key as a policy, not the rung flags', () => {
+    const flags = {
+      everywhere: true,
+      macos: true,
+      editors: true,
+      ghostty: true,
+    }
+    expect(policyConfigured(cfg({ appearance: flags as never }))).toBe(false)
+    for (const key of [
+      { mode: 'system' },
+      { pair: { light: 'a', dark: 'b' } },
+      { schedule: { light: '07:00', dark: '19:00' } },
+      { focus: {} },
+    ]) {
+      expect(
+        policyConfigured(cfg({ appearance: { ...flags, ...key } as never })),
+      ).toBe(true)
+    }
   })
 })
 

@@ -37,12 +37,27 @@ export type ThemeResult = {
 /** The pre-rename default theme name still found in configs (`resolveTheme` aliases it too). */
 const ALIASES: Record<string, string> = { launcharr: 'scuttler' }
 
-/** Merged with defaults. Until the user has touched the policy (`config.appearance`
- * absent) the pair is seeded with the current theme on both halves, so turning the
- * engine on changes nothing until a light or dark theme is actually chosen. */
+/** The keys that are the policy (`@scuttler/core/appearance`), as against the rung
+ * flags stored beside them. */
+const POLICY_KEYS = ['mode', 'schedule', 'pair', 'focus'] as const
+
+/** The engine only runs once the user has a policy on disk (the first-launch setup,
+ * Settings → General ▸ Theme or `theme ⏎` write one). An upgrade or a fresh profile
+ * must never restyle a machine by itself (JOURNAL 2026-09-11). The test is the
+ * policy's own keys, not the `appearance` object: config.rs always serialises that
+ * with its rung flags, so the object is never absent in the webview (JOURNAL
+ * 2026-10-19). */
+export function policyConfigured(config: Config): boolean {
+  const a: Partial<AppearanceConfig> | undefined = config.appearance
+  return a !== undefined && POLICY_KEYS.some((key) => a[key] !== undefined)
+}
+
+/** Merged with defaults. Until the user has a policy the pair is seeded with the
+ * current theme on both halves, so turning the engine on changes nothing until a
+ * light or dark theme is actually chosen. */
 export function appearanceOf(config: Config): AppearanceConfig {
   const a: Partial<AppearanceConfig> = config.appearance ?? {}
-  const seeded = config.appearance
+  const seeded = policyConfigured(config)
     ? DEFAULT_APPEARANCE.pair
     : { light: config.theme, dark: config.theme }
   return {
@@ -52,13 +67,6 @@ export function appearanceOf(config: Config): AppearanceConfig {
     pair: { ...seeded, ...(a.pair ?? {}) },
     focus: { ...(a.focus ?? {}) },
   }
-}
-
-/** The engine only runs once the user has a policy on disk (Settings → General ▸
- * Theme or `theme ⏎` write one). An upgrade must never restyle a machine by itself
- * (JOURNAL 2026-09-11). */
-export function policyConfigured(config: Config): boolean {
-  return config.appearance !== undefined
 }
 
 /** What the policy engine would set the theme to right now, or null while it's inert. */

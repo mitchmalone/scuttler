@@ -86,6 +86,9 @@ export const DEFAULT_APPEARANCE: AppearanceConfig = {
 
 export type BarConfig = {
   enabled: boolean
+  /** Hide the bar on a display while the frontmost app covers it edge to edge
+   * (a borderless-fullscreen game, a video). Absent means on. */
+  hideOverFullscreen?: boolean
   /** Alignment zones (mirrors BarZones in config.rs): every module lives in
    * left, center, or right, ordered within its zone. Clock is ordinary. */
   layout: BarZones

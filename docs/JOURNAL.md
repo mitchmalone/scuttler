@@ -6,6 +6,21 @@
 
 ---
 
+### 2026-11-13 · A fresh-profile launch reads as "the app came back in light mode"
+
+Mitch saw the bar come up cream after a restart, "sometimes". It was never his app: it
+was the fresh-profile instance (`HOME` set to an empty directory) that the release
+smoke test runs for a few seconds and a memory receipt runs for over a minute, with
+his own app stopped meanwhile. Two things made it light. Under an empty `HOME`,
+`defaults read -g AppleInterfaceStyle` reads that profile's preferences, so the system
+always reads as light. And the policy gate from 2026-09-11 never held (2026-10-19
+below): Rust always serialises `appearance`, so the engine ran on a profile with no
+policy and wrote the default pair's `solarized-light`. Fixed by gating on the policy's
+own keys (`policyConfigured` in `lib/theme.ts`). On this run the receipt command was
+also interrupted before its relaunch step, which left his app down. Lessons: a
+fresh-profile run takes the user's bar away and must say so first; any script that
+stops the app restores it in a trap, not as its last line.
+
 ### 2026-11-08 · A fresh worktree's first site build needs the network for `next/font/google`
 
 `pnpm verify` failed in a new worktree with "Can't resolve

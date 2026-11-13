@@ -357,13 +357,17 @@ mod tests {
     use serde_json::json;
 
     fn scratch() -> PathBuf {
+        // The clock alone is not unique: it ticks in microseconds here, and two
+        // tests starting in the same one shared a home and raced on its files.
+        static NEXT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
         let dir = std::env::temp_dir().join(format!(
-            "scuttler-rename-{}-{}",
+            "scuttler-rename-{}-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
-                .as_nanos()
+                .as_nanos(),
+            NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         ));
         std::fs::create_dir_all(&dir).unwrap();
         dir
