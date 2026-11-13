@@ -6,6 +6,49 @@
 
 ---
 
+### 2026-11-13 · After a restart the keychain had neither the notary profile nor the ssh key
+
+Cutting v0.8.7 about twenty minutes after a restart (macOS 27.2.1), `release.sh`
+stopped at preflight: `notarytool history --keychain-profile launcharr-notary` said "No
+Keychain password item found", where 2026-11-06 it passed. In the same session
+`ssh-add --apple-load-keychain` found no identity and `git fetch` over ssh was refused,
+while the Developer ID signing identity was still listed. Nothing was changed by the
+failed run (preflight is before the bump). Git went over https for the session with
+`gh`'s credential (`url.https://github.com/.insteadOf` and `credential.helper` passed
+through `GIT_CONFIG_*`, no config written). The release needs
+`xcrun notarytool store-credentials launcharr-notary` run by hand first; why two
+keychain items went at once is not known.
+
+### 2026-11-13 · A receipt taken minutes after a restart reads high and slow
+
+The first fresh-profile launch for the v0.8.7 receipt read 127.0 MB and a 697 ms cold
+start; the next two, minutes later, read 113.5 and 112.8 MB and 194 and 190 ms. The
+first was about fifteen minutes after a restart with a release build just finished
+(load average 16). The receipt wants a settled machine: when the first reading
+disagrees with the last release by more than a few MB, launch again before believing
+it. The notes carry all three.
+
+### 2026-11-13 · Two rename tests failed each other: the clock is not a unique name
+
+`rename::tests` built each scratch home from the pid and `SystemTime` nanoseconds. The
+clock ticks in microseconds here, so two tests starting in the same one shared a home;
+one renamed the other's temp file away ("could not rewrite aerospace.toml: No such
+file"). It showed up as two failures in `pnpm verify`, every run, on a machine just
+restarted. A counter in the name fixes it. Any test that names a scratch directory by
+time alone has the same hole.
+
+### 2026-11-13 · Dependabot's pull requests failed CI for two reasons that were ours
+
+Five of the fourteen bumps opened 2026-11-08 were red and none of it was the bump.
+`commitlint` rejected Dependabot's own commit bodies (`body-max-line-length`), so its
+bumps are now ignored by `commitlint.config.js`. And
+`indexer::tests::scan_is_inside_the_index_budget_with_keywords` asserted the 500 ms
+product budget as a wall clock on `macos-latest`, which took 772 ms for 94 apps (run
+42298208633): the runner is slower and the suite runs in parallel. The assert is a 5 s
+backstop now, still enough to catch a scan that does real work per file; the 500 ms
+budget stays a dev-Mac measurement (the change is PR 8's, applied here because its
+docs conflicted).
+
 ### 2026-11-13 · A fresh-profile launch reads as "the app came back in light mode"
 
 Mitch saw the bar come up cream after a restart, "sometimes". It was never his app: it

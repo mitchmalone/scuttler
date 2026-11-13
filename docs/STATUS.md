@@ -4,21 +4,25 @@
 > history lives in git, `plans/done/`, `releases/` and `JOURNAL.md`; the backlog with its
 > triggers lives in `ROADMAP.md`.
 >
-> Last updated: 2026-11-13 (the bar hides over fullscreen apps, on a branch awaiting its
-> live run; the open-source readiness review is done:
-> `reviews/2026-11-08-opensource-readiness.md`, five blockers, the first of them a local
-> privilege escalation through the App Store sudoers rule; pnpm upgrades fixed to reach
-> `latest`; the admin-rule branch waits on the review's B1 and B3 before it merges)
+> Last updated: 2026-11-13 (v0.8.7 is ready on main and not released: the notary
+> credential is missing from the keychain; the admin-rule and fullscreen-bar branches
+> are merged, their live runs still open; B4's GitHub settings remain)
 
 ## Where we are
 
+- **v0.8.7 is cut but not released** (2026-11-13). Everything is on main and pushed,
+  `pnpm verify` green, notes written (`releases/v0.8.7.md`), receipt 113.5 MB, cold
+  start 194 ms. `scripts/release.sh 0.8.7` stopped at preflight, before changing
+  anything: the keychain no longer holds the `launcharr-notary` profile (JOURNAL
+  2026-11-13). It carries the fix for B1, which v0.8.6 shipped, so it should not wait
+  long. See "Needs Mitch" for the two commands.
 - **Fixed 2026-11-13: a profile with no theme policy stays on its theme.** The policy
   gate now tests the policy's own keys (`mode`, `schedule`, `pair`, `focus`), not the
   `appearance` object Rust always sends, so a fresh profile on a light Mac keeps
   `scuttler` instead of being switched to `solarized-light` (JOURNAL 2026-11-13; the
-  2026-10-19 bug, closed). On `feat/bar-yields-to-fullscreen`, for 0.8.7.
-- **In flight: the bar steps aside for fullscreen apps** (branch
-  `feat/bar-yields-to-fullscreen`, `plans/active/2026-11-13-bar-yields-to-fullscreen.md`,
+  2026-10-19 bug, closed). On main, for 0.8.7.
+- **Merged, live run open: the bar steps aside for fullscreen apps**
+  (`plans/active/2026-11-13-bar-yields-to-fullscreen.md`,
   DECISIONS 2026-11-13): while the frontmost app covers a whole display (World of
   Warcraft in borderless fullscreen was the case), the bar on that display hides.
   `bar.hideOverFullscreen`, default on. Built, `pnpm verify` green; the live checklist
@@ -26,8 +30,8 @@
 - **Remediation under way** (`plans/active/2026-11-08-readiness-remediation.md`): B5
   done (rustls 0.23.46, webpki-roots 1.0.11, `next ^16.4.5`; both audits clean), B2 done
   (`renderTheme` validates every palette value, cloned themes ship only data hand
-  files, DECISIONS 2026-11-08), `dependabot.yml` added. B1 and B3 are next, on the
-  admin-rule branch; B4 is Mitch's settings.
+  files, DECISIONS 2026-11-08), `dependabot.yml` added. B1 and B3 are built and merged
+  (2026-11-13, before the dialog's live run); B4 is Mitch's settings.
 - **Reviewed 2026-11-08: open-source readiness** (`reviews/2026-11-08-opensource-readiness.md`,
   plan `plans/done/2026-11-08-opensource-readiness-review.md`). Five read-only reviews
   over the whole repo at one commit. Blockers before announcing: **B1** the NOPASSWD
@@ -40,13 +44,17 @@
   (routine bumps). Then a pre-announcement list (CSP and plugin UI reach, self-update
   hardening, pipeline pins, setup CLI fixes, SECURITY.md, licences, code health) and
   the proposed residual-risk list for Mitch to accept. Remediation is the next plan.
-- **In flight: the admin rule installs from the app** (branch
-  `feat/admin-rule-from-the-app`, worktree `../scuttler-admin-rule`): Settings →
-  Machine and the updates panel write the rule behind the macOS admin dialog. The
-  review's B1 and B3 are built on it 2026-11-08 (DECISIONS 2026-11-08: the rule names
-  a root-owned copy of mas; the root step is a constant script under `env -i`, never
-  the CLI). Waiting on the live run (plan `2026-11-07-admin-rule-from-the-app.md`), then
-  it merges.
+- **Merged 2026-11-13, live run open: the admin rule installs from the app**
+  (`plans/active/2026-11-07-admin-rule-from-the-app.md`): Settings → Machine and the
+  updates panel write the rule behind the macOS admin dialog, with the review's B1 and
+  B3 built in (DECISIONS 2026-11-08: the rule names a root-owned copy of mas; the root
+  step is a constant script under `env -i`, never the CLI). Merged for 0.8.7 on
+  Mitch's word before the live run; the branch and its worktree are gone. This Mac's
+  rule still names `/opt/homebrew/bin/mas` until "allow admin" rewrites it.
+- **CI, 2026-11-13:** Dependabot's bumps no longer fail `commitlint` on their own
+  commit bodies, and the index-scan test no longer uses the 500 ms product budget as a
+  wall clock on a GitHub runner (JOURNAL 2026-11-13; the second is PR 8's change, so
+  PR 8 can be closed). Five merged remote branches deleted.
 - **Fixed 2026-11-08: pnpm upgrades reach `latest`** (`pnpm update -g --latest`; a 0.x
   caret in the global manifest pinned codex at 0.163 while the row promised 0.167,
   JOURNAL 2026-11-08). Verified live: codex 0.167.0.
@@ -98,6 +106,20 @@
 - **Workbench story titles are stable** (an external screenshot script keys on them):
   rename a story only with Mitch.
 
+## Needs Mitch (the 0.8.7 release)
+
+- `xcrun notarytool store-credentials launcharr-notary` (Apple ID, team `HXRC74AQZR`,
+  an app-specific password), then `scripts/release.sh 0.8.7`. The ssh key is not in
+  the agent either (`ssh-add ~/.ssh/mitch`), and `release.sh` pushes over ssh.
+- The two live runs the release notes say were not done: the admin dialog (plan
+  2026-11-07: "allow admin" rewrites this Mac's rule, then off, then cancel) and the
+  bar over a fullscreen game (plan 2026-11-13). Before or after the release; if after
+  and one fails, that is 0.8.8.
+- Fourteen Dependabot pull requests and PR 8, none merged (merging is Mitch's). The
+  four red ones were red for our reasons, fixed on main; `@dependabot rebase` re-runs
+  them. Majors to read before merging: TypeScript 6, rusqlite 0.41, dirs 7, the three
+  Actions bumps (`release.yml` is not exercised by a pull request).
+
 ## Needs Mitch (decisions)
 
 - Whether the receipt should now count WebKit's helpers (`mem.sh --webkit` can see
@@ -108,10 +130,6 @@
   instance: if "owned but unmapped" is above single-digit MB the leak is still live and
   the spike's bare-WKWebView arm should test for it first.
 
-- **Readiness review B1**: which way to close the mas rule (root-owned copy of mas named
-  in the rule; per-batch admin dialog instead of NOPASSWD; the SMAppService helper), or
-  accept and say plainly that "allow admin" is passwordless root for anything running
-  as you. The review recommends the root-owned copy.
 - **Readiness review B4**: GitHub settings only Mitch can change: rulesets on `main` and
   `v*` (both repos), `beebeebot` write → triage or behind the rules, secret scanning,
   push protection, Dependabot, private vulnerability reporting.
@@ -181,10 +199,9 @@ hero.
 
 Main is pushed. In order:
 
-1. **Remediate the readiness review's blockers** (a plan from the report's section 3):
-   B1 on the admin-rule branch with B3, then merge and do the live run; B2 in
-   `packages/theme` with tests first; B5 as two dependency bumps; B4 is Mitch's
-   settings. Then the section 4 list by value.
+1. **Release v0.8.7** (above), then the two live runs and B4, which close the
+   remediation plan. Then the review's section 4
+   (`plans/active/2026-11-13-readiness-section-4.md`, planned), by value.
 2. **Make summon measurably fast** (ROADMAP, Product): a Tauri replacement was asked
    for and declined again on the spike's numbers; what the user feels is after the
    0.32 ms show call and has never been measured end to end. Instrument hotkey → first

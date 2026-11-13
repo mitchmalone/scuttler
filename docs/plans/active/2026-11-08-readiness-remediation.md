@@ -2,7 +2,7 @@
 title: Readiness remediation, the blockers
 status: active
 created: 2026-11-08
-updated: 2026-11-08
+updated: 2026-11-13
 links:
   - ../../reviews/2026-11-08-opensource-readiness.md (section 3 is the list)
   - ../done/2026-11-08-opensource-readiness-review.md
@@ -57,7 +57,8 @@ B4 is Mitch's hands in GitHub settings; this plan lists what to flip.
       `run_as_admin` with `/usr/bin/env -i PATH=/usr/bin:/bin:/usr/sbin:/sbin`;
       `--user` validated; the zsh `install|remove` verbs stay for the terminal path
       but refuse env overrides when EUID is 0 and use absolute binaries.
-- [ ] Live run of the dialog (plan 2026-11-07), then merge the branch.
+- [x] Merge the branch (2026-11-13, for v0.8.7, on Mitch's word, before the live run).
+- [ ] Live run of the dialog (plan 2026-11-07).
 - [ ] B4: Mitch flips rulesets on `main` and `v*` in both repos, `beebeebot` to triage,
       secret scanning, push protection, Dependabot, private vulnerability reporting;
       `dependabot.yml` added here (done 2026-11-08; the settings remain).
