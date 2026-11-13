@@ -57,10 +57,10 @@ export const updatesPanelStories = defineStories('UpdatesPanel (plugin)', [
     },
   },
   {
-    name: 'App Store needs setup once',
+    name: 'App Store needs admin once',
     notes:
-      'No sudoers rule names mas yet: its band says what to run once (`scuttler sudoers on`, one admin password), `c` copies it, ↵ runs nothing. Everything else upgrades as usual.',
-    keys: 'c copy the setup command · t terminal',
+      'No sudoers rule names mas yet: its band says so and ↵ (or u) puts up the system admin dialog, one Mac password, after which the row reads as any other. Here the dialog was cancelled a moment ago. Everything else upgrades as usual.',
+    keys: '↵ allow · u allow · t terminal',
     render: () => {
       const t = nowSecs()
       const r = idleUpdatesReportAt(t)
@@ -72,8 +72,30 @@ export const updatesPanelStories = defineStories('UpdatesPanel (plugin)', [
         approval: {
           state: 'declined',
           sources: ['mas'],
-          detail: 'not approved',
+          detail: 'admin rule not written: not approved',
           at: t - 5,
+        },
+      })
+    },
+  },
+  {
+    name: 'The admin dialog is up',
+    notes:
+      'Between ↵ on the App Store band and the password: the approval block says what the dialog wants. Nothing else is blocked.',
+    keys: '',
+    render: () => {
+      const t = nowSecs()
+      const r = idleUpdatesReportAt(t)
+      return panel({
+        ...r,
+        sources: r.sources.map((s) =>
+          s.id === 'mas' ? { ...s, admin: 'needsRule' as const } : s,
+        ),
+        approval: {
+          state: 'pending',
+          sources: ['mas'],
+          detail: 'type your Mac password in the dialog',
+          at: t - 2,
         },
       })
     },

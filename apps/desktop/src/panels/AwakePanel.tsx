@@ -151,7 +151,7 @@ function ArmedView({ status, onRelease, onClose }: AwakePanelProps) {
         label={
           s.sleepOff
             ? 'macOS sleep is off: the lid can close, on battery too, and a crash leaves no gap.'
-            : 'Lid closed on battery still sleeps. Run `scuttler sudoers on` once to cover it.'
+            : 'Lid closed on battery still sleeps. Allow scuttler admin once (Settings → Machine) to cover it.'
         }
       />
       <OthersList status={status} />
@@ -491,7 +491,7 @@ function FormView({
         <ListRow
           dim
           label="Lid closed, on battery too"
-          sub="Plugged in, lid closed already works. For battery, and for no gap if scuttler crashes, run `scuttler sudoers on` once (one admin password): every hold then switches macOS sleep off until it ends."
+          sub="Plugged in, lid closed already works. For battery, and for no gap if scuttler crashes, allow scuttler admin once in Settings → Machine (one Mac password, in the system's own dialog): every hold then switches macOS sleep off until it ends."
         />
         <OthersList status={status} />
       </div>

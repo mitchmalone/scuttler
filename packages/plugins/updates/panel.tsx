@@ -14,9 +14,10 @@ import type { KeyboardEvent, ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 
 import {
+  ADMIN_RULE_MESSAGE,
+  NEEDS_ADMIN_LINE,
   type PanelRow,
   STATUS_LABEL,
-  SUDOERS_COMMAND,
   UPDATES_ALL,
   type UpdateSource,
   type UpdatesReport,
@@ -174,16 +175,16 @@ function Band({
         {clean
           ? 'up to date'
           : setup
-            ? `needs setup once · ${SUDOERS_COMMAND} in a terminal · c copies it`
+            ? NEEDS_ADMIN_LINE
             : source.upgradeCommand}
       </span>
-      {!clean && !setup && (
+      {!clean && (
         <Button
           keyHint="u"
           disabled={status === 'running' || status === 'queued'}
           onClick={onUpgrade}
         >
-          {source.error != null ? 'retry' : 'upgrade all'}
+          {setup ? 'allow' : source.error != null ? 'retry' : 'upgrade all'}
         </Button>
       )}
     </div>
@@ -273,7 +274,8 @@ export default function UpdatesPanel({
   const approval = approvalLine(state, nowSecs)
 
   const upgradeGroup = (source: UpdateSource | undefined) => {
-    if (source) host.send({ upgrade: source.id })
+    if (!source) return
+    host.send(needsRule(source) ? ADMIN_RULE_MESSAGE : { upgrade: source.id })
   }
 
   const onKeyDown = (e: KeyboardEvent) => {
@@ -313,7 +315,15 @@ export default function UpdatesPanel({
   }
 
   const hints: { keys: ReactNode; label: ReactNode }[] = [
-    { keys: '↵', label: busy ? 'queue' : 'upgrade' },
+    {
+      keys: '↵',
+      label:
+        selectedRow && needsRule(selectedRow.source)
+          ? 'allow'
+          : busy
+            ? 'queue'
+            : 'upgrade',
+    },
     { keys: 'u', label: 'group' },
     { keys: 'a', label: 'all' },
     {
@@ -476,7 +486,7 @@ export default function UpdatesPanel({
                           terminal
                         </span>
                       ) : needsRule(row.source) ? (
-                        `${row.item.upgradeCommand} · needs setup once`
+                        `${row.item.upgradeCommand} · needs admin once`
                       ) : (
                         row.item.upgradeCommand
                       )

@@ -88,11 +88,15 @@ export SCUTTLER_SUDOERS_PATH="$T/sudoers.d/scuttler"
 export SCUTTLER_SUDOERS_PREVIOUS_PATH="$T/sudoers.d/scuttlarr"
 export SCUTTLER_SUDO_BIN="$SCUTTLER_BASE/test/fixtures/bin/sudo"
 export FAKE_SUDO_LOG="$T/sudo.log"
+# No mas on this path and a scratch copy location, so nothing touches /usr/local.
+export SCUTTLER_MAS_BIN="" SCUTTLER_MAS_COPY="$T/libexec/scuttler/mas"
 mkdir -p "$T/sudoers.d"
 print -r -- "old rule" > "$SCUTTLER_SUDOERS_PREVIOUS_PATH"
 sc_manifest_add root "$SCUTTLER_SUDOERS_PREVIOUS_PATH" "$(sc_hash "$SCUTTLER_SUDOERS_PREVIOUS_PATH")" awake
+# The pre-rename rule names Homebrew's mas (the readiness review's B1), so it is
+# not "on": status says what replaces it.
 out="$("$cli" sudoers status 2>&1)"; rc=$?
-assert_eq 0 "$rc" "status is on with only the pre-rename file"
+assert_eq 1 "$rc" "status is not on with only the pre-rename file"
 assert_match "status names it" "$out" "pre-rename rule"
 assert_ok "on installs the new file" "$cli" sudoers on >/dev/null 2>&1
 assert_file "$SCUTTLER_SUDOERS_PATH" "new rule installed"

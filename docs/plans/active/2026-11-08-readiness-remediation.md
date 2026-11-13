@@ -46,12 +46,12 @@ B4 is Mitch's hands in GitHub settings; this plan lists what to flip.
       `vscode-theme.json`, `btop.theme`); `ghostty`, `tmux.conf`, `p10k-colors.zsh`,
       `delta.gitconfig`, `neovim.lua` are rendered from the palette for them. Rust
       test; `user_themes.rs` header, THEMES.md and DECISIONS say so.
-- [ ] B1 (admin-rule branch): the root half installs a root-owned copy of the resolved
+- [x] B1 (admin-rule branch): the root half installs a root-owned copy of the resolved
       mas (`/usr/local/libexec/scuttler/mas`, 0755 root:wheel) and the rule names that
       path; `updates.rs` runs that path; the status row reports a stale copy as
       "differs"; the CLI path does the same; DECISIONS 2026-11-06 and the dialog copy
       corrected.
-- [ ] B3 (admin-rule branch): the root half is Rust: rule text built in Rust, temp file
+- [x] B3 (admin-rule branch): the root half is Rust: rule text built in Rust, temp file
       created under `/etc/sudoers.d/.scuttler.XXXXXX`, `/usr/sbin/visudo -cf`,
       `/usr/bin/install -m 0444`, `/bin/rm -f` of the old name, each through
       `run_as_admin` with `/usr/bin/env -i PATH=/usr/bin:/bin:/usr/sbin:/sbin`;
@@ -66,8 +66,8 @@ B4 is Mitch's hands in GitHub settings; this plan lists what to flip.
 
 - [x] `cargo audit` and `pnpm audit --prod` report no vulnerabilities (2026-11-08).
 - [x] The review's B2 proof of concept throws `PaletteError` and no file is written (2026-11-08).
-- [ ] `/etc/sudoers.d/scuttler` names no path outside root-owned directories.
-- [ ] Nothing user-owned executes as root in the dialog path.
+- [x] `/etc/sudoers.d/scuttler` names no path outside root-owned directories (built; the live run confirms).
+- [x] Nothing user-owned executes as root in the dialog path (built; the live run confirms).
 - [ ] `pnpm verify` green; STATUS updated; the review's section 3 items marked.
 
 ## Out of scope

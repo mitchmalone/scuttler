@@ -94,10 +94,11 @@ pub enum ApprovalState {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum AdminAccess {
-    /// `scuttler sudoers on` has run with this binary present: the panel runs
+    /// The rule names this binary: the panel runs
     /// it under `sudo -n` after the approval sheet.
     Ready,
-    /// No rule names it: the row says to run `scuttler sudoers on` once.
+    /// No rule names it: the row offers the admin dialog once (`admin_rule`).
+    /// From a terminal, `scuttler sudoers on` does the same.
     NeedsRule,
 }
 
@@ -368,7 +369,7 @@ pub fn upgrade(source: &str, item: Option<&str>) -> Result<(), String> {
         crate::logbook::breadcrumb(
             "updates",
             &format!(
-                "skipped {}: no sudoers rule (scuttler sudoers on)",
+                "skipped {}: no sudoers rule (allow admin on the row)",
                 job.source
             ),
         );
@@ -433,7 +434,7 @@ fn request_approval(jobs: Vec<UpgradeJob>) {
                 .into_iter()
                 .filter_map(|mut job| {
                     let def = SOURCES.iter().find(|def| def.id == job.source)?;
-                    let path = locate(def.binary)?;
+                    let path = root_path(def)?;
                     job.command = root_command(&job.command, def.binary, &path);
                     Some(job)
                 })
@@ -479,10 +480,21 @@ fn approval_reason(jobs: &[UpgradeJob]) -> String {
     }
 }
 
+/// The path a root source runs under `sudo -n`: the one the sudoers rule
+/// names. For mas that is scuttler's root-owned copy (`sudoers::MAS_COPY`),
+/// never the Homebrew binary the user can overwrite (DECISIONS 2026-11-08).
+fn root_path(def: &SourceDef) -> Option<PathBuf> {
+    if def.id == "mas" {
+        Some(PathBuf::from(crate::sudoers::MAS_COPY))
+    } else {
+        locate(def.binary)
+    }
+}
+
 /// `mas upgrade 1 && mas upgrade 2` → each segment that starts with the bare
 /// binary runs as `/usr/bin/sudo -n <path> …`: the string the sudoers rule
-/// names (`scuttler sudoers on` resolves the same binary), matched byte for
-/// byte. Segments that are not the binary are left alone.
+/// names, matched byte for byte. Segments that are not the binary are left
+/// alone.
 fn root_command(command: &str, binary: &str, path: &Path) -> String {
     let prefix = format!("{binary} ");
     command
@@ -501,14 +513,17 @@ fn root_command(command: &str, binary: &str, path: &Path) -> String {
         .join(" && ")
 }
 
-/// Does the installed sudoers rule name `bin`? Read, not probed: the file is
-/// root-owned 0444 for exactly this (`sudoers.zsh`); `sudo -l` would say yes
-/// for an admin's password-gated `ALL` too.
+/// Does the installed sudoers rule name the path this source runs, and is
+/// that path there? Read, not probed: the file is root-owned 0444 for exactly
+/// this (`sudoers.zsh`); `sudo -l` would say yes for an admin's
+/// password-gated `ALL` too. A rule naming any other path (the pre-2026-11-08
+/// Homebrew one) is not access: the row asks for admin again, which rewrites
+/// it.
 fn admin_access(bin: &Path) -> AdminAccess {
-    let ruled = ["/etc/sudoers.d/scuttler", "/etc/sudoers.d/scuttlarr"]
-        .iter()
-        .filter_map(|f| std::fs::read_to_string(f).ok())
-        .any(|rule| rule_names(&rule, bin));
+    let ruled = bin.is_file()
+        && std::fs::read_to_string("/etc/sudoers.d/scuttler")
+            .map(|rule| rule_names(&rule, bin))
+            .unwrap_or(false);
     if ruled {
         AdminAccess::Ready
     } else {
@@ -1213,9 +1228,80 @@ fn check_source(def: &'static SourceDef, bin: &Path) -> UpdateSource {
         error,
         items,
         dismissed: Vec::new(),
-        admin: def.root.then(|| admin_access(bin)),
+        admin: def
+            .root
+            .then(|| root_path(def).map_or(AdminAccess::NeedsRule, |p| admin_access(&p))),
     }
 }
+
+/// The mas on this Mac, the source of the root-owned copy the rule names and
+/// the panel runs (`sudoers.rs`).
+pub fn locate_mas() -> Option<PathBuf> {
+    locate("mas")
+}
+
+/// The updates panel's `{"sudoers":"on"|"off"}`: the admin dialog on a
+/// worker thread, the rule written or removed, the report refreshed. A
+/// refusal shows in the approval block like a declined sheet, with its own
+/// words; while the dialog is up the block says what it is waiting for.
+pub fn admin_rule(on: bool) -> Result<(), String> {
+    let base = crate::setup::remembered_base().ok_or("setup cli not bundled")?;
+    let sources: Vec<String> = SOURCES
+        .iter()
+        .filter(|d| d.root)
+        .map(|d| d.id.to_string())
+        .collect();
+    {
+        let mut approval = APPROVAL.lock().unwrap();
+        if matches!(approval.as_ref(), Some(a) if a.state == ApprovalState::Pending) {
+            return Err("already waiting on an approval".into());
+        }
+        *approval = Some(Approval {
+            state: ApprovalState::Pending,
+            sources: sources.clone(),
+            detail: ADMIN_DIALOG_WAIT.into(),
+            at: now_secs(),
+        });
+    }
+    std::thread::spawn(move || {
+        let verdict = crate::sudoers::set(&base, on);
+        let mut approval = APPROVAL.lock().unwrap();
+        match verdict {
+            Ok(out) if out.ok => {
+                crate::logbook::breadcrumb(
+                    "updates",
+                    &format!("admin rule {}", if on { "installed" } else { "removed" }),
+                );
+                *approval = None;
+            }
+            Ok(out) => {
+                let why =
+                    last_nonempty_line(&out.output).unwrap_or_else(|| "rule not written".into());
+                crate::logbook::breadcrumb("updates", &format!("admin rule: {why}"));
+                *approval = Some(Approval {
+                    state: ApprovalState::Declined,
+                    sources,
+                    detail: format!("admin rule not written: {why}"),
+                    at: now_secs(),
+                });
+            }
+            Err(declined) => {
+                crate::logbook::breadcrumb("updates", &format!("admin rule: {declined}"));
+                *approval = Some(Approval {
+                    state: ApprovalState::Declined,
+                    sources,
+                    detail: format!("admin rule not written: {declined}"),
+                    at: now_secs(),
+                });
+            }
+        }
+    });
+    Ok(())
+}
+
+/// The approval block's words while the admin dialog is up (the sheet's
+/// pending line has none; the model reads this one).
+pub const ADMIN_DIALOG_WAIT: &str = "type your Mac password in the dialog";
 
 /// Find `bin` on PATH or under Homebrew (deps.rs, shared with the desktop
 /// deps rows), plus the homes deps.rs doesn't check (`extra_dirs`).

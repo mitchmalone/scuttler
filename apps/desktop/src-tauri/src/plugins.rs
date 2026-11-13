@@ -1114,6 +1114,8 @@ fn record_error(id: &str, generation: u64, err: &str) {
 /// A native provider's own message handling — currently just `updates`,
 /// whose panel refreshes on `{"refresh":true}`, queues an upgrade on
 /// `{"upgrade":"<sourceId>|all"}` (one package with `"item":"<name>"`),
+/// writes or removes the sudoers rule behind the admin dialog on
+/// `{"sudoers":"on"|"off"}`,
 /// puts a package aside on `{"dismiss":"<sourceId>","item":…,"hours":24}`
 /// and brings it back on `{"restore":"<sourceId>","item":…}` instead of
 /// talking to a service's stdin. `None` = this native id has no handler for `message`.
@@ -1143,6 +1145,16 @@ fn native_send(
             let source = message.get("upgradeInTerminal").unwrap().as_str().unwrap();
             let item = message.get("item").and_then(|i| i.as_str());
             Some(upgrade_in_terminal(source, item, config))
+        }
+        "updates"
+            if matches!(
+                message.get("sudoers").and_then(|s| s.as_str()),
+                Some("on" | "off")
+            ) =>
+        {
+            // infallible: guarded by the match above
+            let on = message.get("sudoers").unwrap().as_str().unwrap() == "on";
+            Some(crate::updates::admin_rule(on))
         }
         "updates" if message.get("cancelUpgrade").and_then(|c| c.as_bool()) == Some(true) => {
             crate::updates::cancel_upgrade();
