@@ -125,10 +125,14 @@ else
 fi
 # A dmg run that died leaves its scratch image (rw.<pid>.*.dmg) behind.
 rm -f "$DESKTOP"/src-tauri/target/release/bundle/macos/rw.*.dmg
+# An earlier build or a by-hand `tauri bundle` leaves its own dmg here, unsigned and
+# maybe another version; only this run's image may ship (JOURNAL 2026-11-16).
+DMG_DIR="$DESKTOP/src-tauri/target/release/bundle/dmg"
+[[ -d "$DMG_DIR" ]] && find "$DMG_DIR" -maxdepth 1 -name "*.dmg" -delete
 pnpm --filter @scuttler/desktop tauri build
 APP_BUNDLE="$DESKTOP/src-tauri/target/release/bundle/macos/scuttler.app"
-DMG_SRC=$(find "$DESKTOP"/src-tauri/target/release/bundle/dmg -maxdepth 1 -name "*.dmg" | head -1)
-[[ -n "$DMG_SRC" ]] || die "no dmg in the bundle output"
+DMG_SRC=$(find "$DMG_DIR" -maxdepth 1 -name "scuttler_${VERSION}_*.dmg" | head -1)
+[[ -n "$DMG_SRC" ]] || die "no scuttler_${VERSION} dmg in the bundle output"
 
 step "5/8 verify, notarize, package"
 # The tauri bundler only auto-notarizes via raw APPLE_ID/APPLE_PASSWORD env vars; we

@@ -6,6 +6,35 @@
 
 ---
 
+### 2026-11-16 · The tap push failed on v0.8.7: the fan-out's token no longer works
+
+The release workflow's homebrew job cloned the tap, committed `scuttler v0.8.7` and was
+refused at `git push`: "Invalid username or token. Password authentication is not
+supported". The clone passing proves nothing, the tap is public. `HOMEBREW_TAP_TOKEN`
+was set 2026-08-11 and last worked for v0.8.6 on 2026-11-06; a fine-grained PAT with a
+90-day life would have expired 2026-11-09, which fits but was not confirmed. The other
+three jobs passed, so the release, the site and Notion say 0.8.7 while the tap says
+0.8.6. Fix is a new token in the secret and `gh run rerun <id> --failed`; the job
+regenerates the cask whole, so a rerun is safe. Nothing warns before a release that
+this token is dead: a preflight cannot read a secret, so the date belongs in STATUS.
+
+### 2026-11-16 · The dmg step failed once in nine seconds and never again
+
+v0.8.7's first `release.sh` run died at `bundle_dmg.sh` about nine seconds after the
+script was written (the scratch image's birth and last write are 08:28:32 and 08:28:39),
+so not the 120 s Finder-consent timeout of 2026-10-20, and the preflight Finder check
+had passed in that terminal. The error itself was not captured: tauri hides the script's
+output without `--verbose`. `tauri bundle --bundles dmg --verbose` then passed twice,
+from the agent's shell and from Mitch's terminal, and the second `release.sh` run went
+through. Most likely the intermittent "Can't get disk (-1728)" the script already sleeps
+two seconds to dodge; that is a guess. A failed run leaves the version bump uncommitted
+and preflight refuses a dirty tree: `git checkout` the four bumped files, then re-run.
+Found on the way: a by-hand `tauri bundle` leaves an unsigned dmg in `bundle/dmg/`, and
+`release.sh` took the first `*.dmg` there, so a stale one could have shipped. It now
+clears the directory before the build and takes only `scuttler_<version>_*.dmg`. The
+notary profile was back in the keychain (stored by hand since 2026-11-13); the ssh key
+still needed `ssh-add`, with its passphrase, in a real terminal.
+
 ### 2026-11-13 · After a restart the keychain had neither the notary profile nor the ssh key
 
 Cutting v0.8.7 about twenty minutes after a restart (macOS 27.2.1), `release.sh`

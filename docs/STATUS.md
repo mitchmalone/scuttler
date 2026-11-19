@@ -4,18 +4,19 @@
 > history lives in git, `plans/done/`, `releases/` and `JOURNAL.md`; the backlog with its
 > triggers lives in `ROADMAP.md`.
 >
-> Last updated: 2026-11-13 (v0.8.7 is ready on main and not released: the notary
-> credential is missing from the keychain; the admin-rule and fullscreen-bar branches
-> are merged, their live runs still open; B4's GitHub settings remain)
+> Last updated: 2026-11-16 (v0.8.7 released; the tap is still on 0.8.6 because the
+> fan-out's tap token is dead; the admin-rule and fullscreen-bar live runs are still
+> open; B4's GitHub settings remain)
 
 ## Where we are
 
-- **v0.8.7 is cut but not released** (2026-11-13). Everything is on main and pushed,
-  `pnpm verify` green, notes written (`releases/v0.8.7.md`), receipt 113.5 MB, cold
-  start 194 ms. `scripts/release.sh 0.8.7` stopped at preflight, before changing
-  anything: the keychain no longer holds the `launcharr-notary` profile (JOURNAL
-  2026-11-13). It carries the fix for B1, which v0.8.6 shipped, so it should not wait
-  long. See "Needs Mitch" for the two commands.
+- **Released: v0.8.7** (2026-11-16, `releases/v0.8.7.md`): receipt 113.5 MB, cold
+  start 194 ms. Signed, notarized, on GitHub with dmg, zip and `SHA256SUMS`; the site
+  deployed from the release commit; CI green on it. Fan-out: check, notion and
+  deploy-mmcom green, **homebrew failed**: the push to the tap was refused ("Invalid
+  username or token"), so `Casks/scuttler.rb` still says 0.8.6 and `brew upgrade`
+  offers nothing (JOURNAL 2026-11-16). The first `release.sh` run died at the dmg step
+  and the second passed (same entry). It carries the fix for B1, which v0.8.6 shipped.
 - **Fixed 2026-11-13: a profile with no theme policy stays on its theme.** The policy
   gate now tests the policy's own keys (`mode`, `schedule`, `pair`, `focus`), not the
   `appearance` object Rust always sends, so a fresh profile on a light Mac keeps
@@ -106,19 +107,20 @@
 - **Workbench story titles are stable** (an external screenshot script keys on them):
   rename a story only with Mitch.
 
-## Needs Mitch (the 0.8.7 release)
+## Needs Mitch (after the 0.8.7 release)
 
-- `xcrun notarytool store-credentials launcharr-notary` (Apple ID, team `HXRC74AQZR`,
-  an app-specific password), then `scripts/release.sh 0.8.7`. The ssh key is not in
-  the agent either (`ssh-add ~/.ssh/mitch`), and `release.sh` pushes over ssh.
+- **The tap.** Replace the `HOMEBREW_TAP_TOKEN` secret (fine-grained PAT, contents:write
+  on `mitchmalone/homebrew-tap`; the old one dates from 2026-08-11), then
+  `gh run rerun 43793882544 --failed`. Until then Homebrew installs stay on 0.8.6, the
+  release with B1.
 - The two live runs the release notes say were not done: the admin dialog (plan
   2026-11-07: "allow admin" rewrites this Mac's rule, then off, then cancel) and the
-  bar over a fullscreen game (plan 2026-11-13). Before or after the release; if after
-  and one fails, that is 0.8.8.
-- Fourteen Dependabot pull requests and PR 8, none merged (merging is Mitch's). The
-  four red ones were red for our reasons, fixed on main; `@dependabot rebase` re-runs
-  them. Majors to read before merging: TypeScript 6, rusqlite 0.41, dirs 7, the three
-  Actions bumps (`release.yml` is not exercised by a pull request).
+  bar over a fullscreen game (plan 2026-11-13). If one fails, that is 0.8.8.
+- Fourteen Dependabot pull requests and PR 8, none merged (merging is Mitch's). PR 8's
+  change is on main: close it. Ten are green; 15, 16, 17 and 22 are red from before the
+  CI fix and need `@dependabot rebase`. Majors to read before merging: TypeScript 6,
+  rusqlite 0.41, dirs 7, the three Actions bumps (`release.yml` is not exercised by a
+  pull request).
 
 ## Needs Mitch (decisions)
 
@@ -199,7 +201,7 @@ hero.
 
 Main is pushed. In order:
 
-1. **Release v0.8.7** (above), then the two live runs and B4, which close the
+1. **The tap token** (above), then the two live runs and B4, which close the
    remediation plan. Then the review's section 4
    (`plans/active/2026-11-13-readiness-section-4.md`, planned), by value.
 2. **Make summon measurably fast** (ROADMAP, Product): a Tauri replacement was asked
