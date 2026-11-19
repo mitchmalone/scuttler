@@ -179,22 +179,47 @@ describe('bordersArgs', () => {
   })
   it('honours width and style', () => {
     const args = bordersArgs(
-      desktop({ borders: { enabled: true, width: 2.5, style: 'square' } }),
+      desktop({
+        borders: { enabled: true, width: 2.5, style: 'square', exclude: [] },
+      }),
       COLORS,
     )
     expect(args).toContain('width=2.5')
     expect(args).toContain('style=square')
   })
+  it('lists excluded apps as the blacklist, dropping names JankyBorders cannot take', () => {
+    const args = bordersArgs(
+      desktop({
+        borders: {
+          enabled: true,
+          width: 5,
+          style: 'round',
+          exclude: [' World of Warcraft ', '', 'a,b', 'kitty'],
+        },
+      }),
+      COLORS,
+    )
+    expect(args).toContain('blacklist=World of Warcraft,kitty')
+  })
+  it('omits the blacklist when nothing is excluded', () => {
+    expect(
+      bordersArgs(desktop(), COLORS).some((a) => a.startsWith('blacklist=')),
+    ).toBe(false)
+  })
   it('clamps width to a sane range', () => {
     expect(
       bordersArgs(
-        desktop({ borders: { enabled: true, width: 99, style: 'round' } }),
+        desktop({
+          borders: { enabled: true, width: 99, style: 'round', exclude: [] },
+        }),
         COLORS,
       ),
     ).toContain('width=20')
     expect(
       bordersArgs(
-        desktop({ borders: { enabled: true, width: -1, style: 'round' } }),
+        desktop({
+          borders: { enabled: true, width: -1, style: 'round', exclude: [] },
+        }),
         COLORS,
       ),
     ).toContain('width=1')
@@ -271,7 +296,7 @@ describe('gapPlan — `gaps` is the gap you see', () => {
   const withBorders = (width: number, gaps = 8) =>
     desktop({
       tiling: { ...DEFAULT_DESKTOP.tiling, gaps },
-      borders: { enabled: true, width, style: 'square' },
+      borders: { enabled: true, width, style: 'square', exclude: [] },
     })
 
   it('borders off: raw gaps, bar added on externals only when the native bar hides', () => {
