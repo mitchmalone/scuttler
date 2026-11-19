@@ -60,6 +60,7 @@ What `Config::default()` (`apps/desktop/src-tauri/src/config.rs`) and `DEFAULT_D
 | Bar: hide over fullscreen apps                         | `bar.hideOverFullscreen`              | on                 |
 | Desktop: AeroSpace tiling (managed `aerospace.toml`)   | `desktop.tiling.enabled` / `.managed` | off / on           |
 | Desktop: JankyBorders                                  | `desktop.borders.enabled`             | off                |
+| Desktop: apps that get no border (process names)       | `desktop.borders.exclude`             | none               |
 | Theme rung (Ghostty, tmux, prompt, delta, Claude Code) | `appearance.everywhere`               | off                |
 | Theme: flip macOS light/dark with the theme            | `appearance.macos`                    | on                 |
 | Theme: hot editors                                     | `appearance.editors`                  | off                |

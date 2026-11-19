@@ -43,6 +43,9 @@ export interface BordersConfig {
   /** Border width in px (JankyBorders `width=`). */
   width: number
   style: BorderStyle
+  /** Process names that get no border (JankyBorders `blacklist=`), e.g. a borderless
+   * fullscreen game: `World of Warcraft`. The name is what `ps -c` shows, not the bundle id. */
+  exclude: string[]
 }
 
 export interface DesktopConfig {
@@ -63,7 +66,7 @@ export const DEFAULT_DESKTOP: DesktopConfig = {
     workspaces: 6,
     float: ['com.apple.systempreferences', 'com.raycast.macos'],
   },
-  borders: { enabled: false, width: 5, style: 'round' },
+  borders: { enabled: false, width: 5, style: 'round', exclude: [] },
   cornerRadius: null,
 }
 
@@ -90,6 +93,9 @@ export function normalizeDesktop(raw: unknown): DesktopConfig {
       enabled: bool(b.enabled, d.borders.enabled),
       width: num(b.width, d.borders.width),
       style: b.style === 'square' ? 'square' : 'round',
+      exclude: Array.isArray(b.exclude)
+        ? b.exclude.filter((x): x is string => typeof x === 'string')
+        : d.borders.exclude,
     },
     cornerRadius:
       typeof r.cornerRadius === 'number' && Number.isFinite(r.cornerRadius)
@@ -334,6 +340,10 @@ export function bordersArgs(
     BORDER_WIDTH_MIN,
     BORDER_WIDTH_MAX,
   )
+  // JankyBorders splits the list on commas and has no escape: a name with one can't be listed.
+  const exclude = desktop.borders.exclude
+    .map((name) => name.trim())
+    .filter((name) => name !== '' && !name.includes(','))
   return [
     `active_color=${cssToBordersColor(colors.accent)}`,
     `inactive_color=${cssToBordersColor(inactiveBorderColor(colors))}`,
@@ -341,6 +351,7 @@ export function bordersArgs(
     `width=${trimNumber(width)}`,
     'hidpi=on',
     `style=${desktop.borders.style === 'square' ? 'square' : 'round'}`,
+    ...(exclude.length > 0 ? [`blacklist=${exclude.join(',')}`] : []),
   ]
 }
 
