@@ -6,6 +6,21 @@
 
 ---
 
+### 2026-11-19 · A receipt on a fresh profile catches the icon extraction child
+
+Cutting v0.8.8, `mem.sh --receipt` a minute after a fresh-profile launch read 3230 MB,
+then 131.6 MB. Not the app: `mem.sh` sums the app's children, and a fresh profile's
+first launch spawns `scuttler --extract-icons`, which held about 4 GB resident (4276 MB
+at 20 s, 3988 MB at 40 s) and was gone by 60 s on a quiet machine, later when three
+launches run back to back. The bar's wifi cell also runs `system_profiler
+SPAirPortDataType` for a second or so at intervals (two children, about 16 MB). The app
+itself sat at 114.4 MB from 20 s to 2 min. v0.8.7's 127.0 MB "outlier" was probably the
+same thing, not the reboot it was blamed on. For a receipt, read once no child is
+running, and say so in the notes. Not looked at: why the extractor needs 4 GB for one
+pass over the installed apps; it is transient and first-launch only, but it is a lot.
+The measuring script stopped the installed app and restored it from an EXIT trap, as
+2026-11-13 asks.
+
 ### 2026-11-16 · The tap push failed on v0.8.7: the fan-out's token no longer works
 
 The release workflow's homebrew job cloned the tap, committed `scuttler v0.8.7` and was

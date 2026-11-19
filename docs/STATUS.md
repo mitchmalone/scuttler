@@ -4,12 +4,16 @@
 > history lives in git, `plans/done/`, `releases/` and `JOURNAL.md`; the backlog with its
 > triggers lives in `ROADMAP.md`.
 >
-> Last updated: 2026-11-16 (v0.8.7 released; the tap is still on 0.8.6 because the
-> fan-out's tap token is dead; the admin-rule and fullscreen-bar live runs are still
-> open; B4's GitHub settings remain)
+> Last updated: 2026-11-19 (v0.8.8 cut on main, release in progress; the tap is still
+> on 0.8.6 because the fan-out's tap token is dead; the admin-rule and fullscreen-bar
+> live runs are still open; B4's GitHub settings remain)
 
 ## Where we are
 
+- **v0.8.8 is cut** (2026-11-19, `releases/v0.8.8.md`): receipt 114.4 MB, cold start
+  223 ms, `pnpm verify` green. It carries `desktop.borders.exclude` (process names
+  JankyBorders skips, config only, no Settings control yet) and the `release.sh` dmg
+  fix. Its homebrew job will fail like 0.8.7's until the tap token is replaced.
 - **Released: v0.8.7** (2026-11-16, `releases/v0.8.7.md`): receipt 113.5 MB, cold
   start 194 ms. Signed, notarized, on GitHub with dmg, zip and `SHA256SUMS`; the site
   deployed from the release commit; CI green on it. Fan-out: check, notion and
@@ -107,12 +111,13 @@
 - **Workbench story titles are stable** (an external screenshot script keys on them):
   rename a story only with Mitch.
 
-## Needs Mitch (after the 0.8.7 release)
+## Needs Mitch (after the 0.8.8 release)
 
 - **The tap.** Replace the `HOMEBREW_TAP_TOKEN` secret (fine-grained PAT, contents:write
   on `mitchmalone/homebrew-tap`; the old one dates from 2026-08-11), then
-  `gh run rerun 43793882544 --failed`. Until then Homebrew installs stay on 0.8.6, the
-  release with B1.
+  re-run the failed homebrew job of the newest release's fan-out run
+  (`gh run rerun <id> --failed`; the job writes the cask whole, so only the newest
+  matters). Until then Homebrew installs stay on 0.8.6, the release with B1.
 - The two live runs the release notes say were not done: the admin dialog (plan
   2026-11-07: "allow admin" rewrites this Mac's rule, then off, then cancel) and the
   bar over a fullscreen game (plan 2026-11-13). If one fails, that is 0.8.8.
