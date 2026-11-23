@@ -86,7 +86,6 @@ export function PluginsPage({ config, set }: PageProps) {
                 <span className="entry-id">
                   {pluginModuleId(p.id)}
                   {p.version ? ` · v${p.version}` : ''}
-                  {p.firstParty ? ' · bundled' : ''}
                 </span>
                 <span
                   className={`entry-status${
