@@ -2,7 +2,7 @@
 //
 // The reference widget for the **stored-token** half of widget settings:
 // `VERCEL_TOKEN` (a personal token from vercel.com/account/tokens, pasted into
-// Settings → Menubar → Custom widgets, kept in the Keychain) arrives as env on
+// Settings → Widgets, kept in the Keychain) arrives as env on
 // every tick; the team is the Vercel CLI's current one (or VERCEL_TEAM_ID in
 // the environment). Without a token the widget falls back to what the CLI
 // stores (`vercel login`) — note CLI 58+ keeps a short-lived token the widget

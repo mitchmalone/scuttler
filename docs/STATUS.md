@@ -22,6 +22,12 @@
   Sidebar + twelve pages + search, built and `pnpm verify` green; checked in a browser
   against mocked IPC, dark and light themes. The native checklist (drag region, hotkey
   recorder, zone-board drag, Desktop deep link) needs an installed build. Not merged.
+- **Built 2026-11-23, live run open: the `arr` reference widget** (Media stack:
+  Radarr, Sonarr, Prowlarr, Bazarr health, downloads and warnings; merged into
+  `feat/settings-redesign` for 0.9, `plans/active/2026-11-23-arr-widget.md`). A single-file widget
+  like `vercel.ts`, no Rust and no new command. `pnpm verify` green and the fetch
+  shell proven against a fake stack; the acceptance run on the live stack needs
+  Mitch's API keys.
 - **Released: v0.8.8** (2026-11-19, `releases/v0.8.8.md`): receipt 114.4 MB, cold
   start 223 ms. Signed, notarized, on GitHub with dmg, zip and `SHA256SUMS`; CI green
   on the release commit. It carries `desktop.borders.exclude` (process names

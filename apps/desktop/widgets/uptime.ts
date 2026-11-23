@@ -5,8 +5,8 @@
 // lists every site with a dot; a row opens the site, the cell opens the status
 // page. Point UPTIME_SUMMARY_URL / UPTIME_STATUS_URL at your own.
 //
-// Install: copy into ~/.config/scuttler/widgets/ (or Settings → Menubar →
-// Custom widgets → add file). Runs under Bun; the type import is erased.
+// Install: copy into ~/.config/scuttler/widgets/ (or Settings → Widgets →
+// add file). Runs under Bun; the type import is erased.
 import type { WidgetView } from '@scuttler/tui/bar/types'
 
 const SUMMARY_URL =
