@@ -14,7 +14,8 @@ Widgets are the bar's scripts: drop a **TypeScript file** into
 short label, a tone, a click, and a hover card of rows. No build, no shebang, no chmod,
 no restart: `.ts` runs under **Bun** (or Node when Bun is absent — DECISIONS 2026-08-19).
 Any other executable in any language works too. The reference widgets in
-`apps/desktop/widgets/` (`uptime.ts`, `github-actions.ts`, `vercel.ts`, `trmnl.ts`) are
+`apps/desktop/widgets/` (`uptime.ts`, `github-actions.ts`, `vercel.ts`, `trmnl.ts`,
+`arr.ts`) are
 yours to copy and edit; the shape is deliberately the same as `docs/SCRIPTS.md`.
 
 ```ts
@@ -153,12 +154,13 @@ missing. `vercel.ts` reads `VERCEL_TOKEN`, else the Vercel CLI's store;
 
 ## Reference widgets
 
-| Widget              | Source                          | Cadence | Notes                                                                                                                                                                                         |
-| ------------------- | ------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `uptime.ts`         | Upptime `summary.json`          | 5 min   | Arrow up/down, down-count label, a row per site (opens it). Set `UPTIME_SUMMARY_URL`.                                                                                                         |
-| `github-actions.ts` | GitHub API, latest run per repo | 2 min   | `gh auth token` (the CLI keeps it fresh) or a pasted token; your 10 most recently pushed repos (pin a list in the file); failing count, opens the run; dim + `gh auth login` when signed out. |
-| `vercel.ts`         | Vercel API `/v9/projects`       | 2 min   | The Vercel CLI's own login or a pasted `VERCEL_TOKEN` (Keychain); latest production deployment per project; dim + the fix when signed out or stale.                                           |
-| `trmnl.ts`          | TRMNL `/api/devices`            | 5 min   | Key via `TRMNL_API_KEY` or `secret shared/trmnl/api_key`; hidden without one.                                                                                                                 |
+| Widget              | Source                           | Cadence | Notes                                                                                                                                                                                                                                                                                     |
+| ------------------- | -------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `uptime.ts`         | Upptime `summary.json`           | 5 min   | Arrow up/down, down-count label, a row per site (opens it). Set `UPTIME_SUMMARY_URL`.                                                                                                                                                                                                     |
+| `github-actions.ts` | GitHub API, latest run per repo  | 2 min   | `gh auth token` (the CLI keeps it fresh) or a pasted token; your 10 most recently pushed repos (pin a list in the file); failing count, opens the run; dim + `gh auth login` when signed out.                                                                                             |
+| `vercel.ts`         | Vercel API `/v9/projects`        | 2 min   | The Vercel CLI's own login or a pasted `VERCEL_TOKEN` (Keychain); latest production deployment per project; dim + the fix when signed out or stale.                                                                                                                                       |
+| `trmnl.ts`          | TRMNL `/api/devices`             | 5 min   | Key via `TRMNL_API_KEY` or `secret shared/trmnl/api_key`; hidden without one.                                                                                                                                                                                                             |
+| `arr.ts`            | Radarr, Sonarr, Prowlarr, Bazarr | 1 min   | A URL and an API key per app, each app optional (keys in the Keychain); health issues, low disks, disabled indexers, then downloads, then a row per app. Optional `PIPELINE_STATUS_URL` for a post-processing status file. Dim with the fix when nothing is set or every key is rejected. |
 
 Install one: `cp apps/desktop/widgets/uptime.ts ~/.config/scuttler/widgets/` (or
 Settings → Menubar → Custom widgets → add file) — then it's yours to edit in place.

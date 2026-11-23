@@ -10,6 +10,12 @@
 
 ## Where we are
 
+- **Built 2026-11-23, live run open: the `arr` reference widget** (Media stack:
+  Radarr, Sonarr, Prowlarr, Bazarr health, downloads and warnings; branch
+  `feat/arr-widget`, `plans/active/2026-11-23-arr-widget.md`). A single-file widget
+  like `vercel.ts`, no Rust and no new command. `pnpm verify` green and the fetch
+  shell proven against a fake stack; the acceptance run on the live stack needs
+  Mitch's API keys.
 - **Released: v0.8.8** (2026-11-19, `releases/v0.8.8.md`): receipt 114.4 MB, cold
   start 223 ms. Signed, notarized, on GitHub with dmg, zip and `SHA256SUMS`; CI green
   on the release commit. It carries `desktop.borders.exclude` (process names
