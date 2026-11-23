@@ -6,6 +6,18 @@
 
 ---
 
+### 2026-11-24 · An ad-hoc build is a new app to macOS every time
+
+`tauri build` without `APPLE_SIGNING_IDENTITY` signs ad-hoc, and an ad-hoc signature's
+designated requirement is the binary's cdhash. TCC (Bluetooth, Screen Recording) and Keychain
+item ACLs are keyed to that requirement, so every `dev-install.sh --build` asked for Bluetooth
+again and prompted for every widget secret on each read; "Always Allow" was granted to a
+binary the next build replaced. Keychain items written from the shell (`security
+add-generic-password`) are owned by `security` itself, so scuttler prompted for those even
+within one build. `dev-install.sh --build` now signs with the Developer ID release uses: the
+requirement becomes bundle id + team, the same for every local build and every release, so a
+grant given once holds. Secrets go in through Settings so the app owns its items.
+
 ### 2026-11-23 · The Focus database needs Full Disk Access, and a scheduled Focus is in no file
 
 Two things the 0.5 Focus → theme mapping assumed were wrong. (1) `~/Library/DoNotDisturb/DB/`
