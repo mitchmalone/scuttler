@@ -1,19 +1,19 @@
-import type { AppearanceMode } from '@scuttler/core/appearance'
+import {
+  type AppearanceMode,
+  resolveAppearance,
+} from '@scuttler/core/appearance'
 import {
   type ThemeTokens,
   isLightColor,
   resolveTheme,
 } from '@scuttler/tui/themes'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import {
-  FOCUS_OWN_PAIR,
-  FOCUS_USE_PAIR,
-  focusChoice,
-  isClock,
+  pickHalf,
   pickTheme,
-  withFocusChoice,
-  withFocusHalf,
+  policyInputs,
+  setMode,
 } from '../../lib/appearance-ui'
 import type { AppearanceConfig } from '../../lib/config'
 import {
@@ -23,48 +23,45 @@ import {
 } from '../../lib/theme'
 import { BUILTIN_THEMES, themeNames } from '../../lib/themes'
 import {
-  type AppearanceInputs,
-  appearanceInputs,
-} from '../../lib/use-appearance-policy'
-import {
   installTheme,
   removeTheme,
   updateThemes,
   useMergedThemes,
   useUserThemes,
 } from '../../lib/user-themes'
+import { wallpaperOf } from '../../lib/wallpaper'
 import { pageDef, rungState } from '../pages'
 import type { PageProps } from '../types'
 import { Block, Note, Page, Row, Section, Segmented, Toggle } from '../ui'
 import { PAGE_ICONS } from './icons'
+import { useAppearanceInputs } from './use-inputs'
 
 const MODES: { id: AppearanceMode; label: string; hint: string }[] = [
   {
     id: 'system',
-    label: 'system',
-    hint: 'Follows macOS, including its sunrise/sunset schedule.',
+    label: 'Match System',
+    hint: 'A light theme and a dark theme that swap with macOS, including its sunrise and sunset schedule.',
   },
-  { id: 'light', label: 'light', hint: 'Always the light half of the pair.' },
-  { id: 'dark', label: 'dark', hint: 'Always the dark half of the pair.' },
-  { id: 'schedule', label: 'schedule', hint: 'Our own clock.' },
+  { id: 'light', label: 'Light', hint: 'One theme, always light.' },
+  { id: 'dark', label: 'Dark', hint: 'One theme, always dark.' },
 ]
 
 /**
- * Settings → Theme (the Theme rung, DECISIONS 2026-09-11): the pick as a
- * gallery drawn from each theme's own tokens, the policy that decides which
- * theme is active when (`@scuttler/core/appearance`), Focus overrides, and the
- * rung itself — rendering the theme beyond the app.
+ * Settings → Theme (the Theme rung, DECISIONS 2026-09-11, reshaped 2026-11-23):
+ * Match System, Light or Dark. A single mode is one gallery and one pick; Match
+ * System is a light column and a dark column, one pick in each. Then the rung
+ * itself — rendering the theme beyond the app.
  */
 export function ThemePage({ config, set, patch }: PageProps) {
   const def = pageDef('theme')
   const appearance = appearanceOf(config)
   const merged = useMergedThemes(config)
   const names = themeNames(merged)
+  const tokens = (name: string) => resolveTheme(name, merged)
+  const light = names.filter((n) => isLightColor(tokens(n).bg))
+  const dark = names.filter((n) => !isLightColor(tokens(n).bg))
   const user = useUserThemes()
-  const [inputs, setInputs] = useState<AppearanceInputs | null>(null)
-  useEffect(() => {
-    appearanceInputs().then(setInputs).catch(console.error)
-  }, [])
+  const { inputs } = useAppearanceInputs()
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState<ThemeResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -73,15 +70,46 @@ export function ThemePage({ config, set, patch }: PageProps) {
   const applyNow = () => {
     setBusy(true)
     setError(null)
-    applyThemeEverywhere(config)
+    // Settings can't see the active Focus; the static rule is enough here.
+    const w = wallpaperOf(config)
+    const half = isLightColor(tokens(config.theme).bg) ? 'light' : 'dark'
+    applyThemeEverywhere(config, !(w.enabled && w[half]))
       .then(setResult)
       .catch((e) => setError(String(e)))
       .finally(() => setBusy(false))
   }
-  const modeHint = MODES.find((m) => m.id === appearance.mode)?.hint
-  const activeFocus = inputs?.modes.find((m) => m.id === inputs.focusMode)
+  const mode = appearance.mode
+  const showingDark = resolveAppearance(appearance, policyInputs(inputs)).dark
   const builtins = names.filter((n) => BUILTIN_THEMES[n]).length
   const rung = rungState('theme', config)
+  const gallery = (list: string[], half: 'light' | 'dark' | null) => (
+    <div className="gallery">
+      {list.map((name) => {
+        const chosen = half
+          ? appearance.pair[half] === name
+          : name === config.theme
+        const now = half !== null && chosen && showingDark === (half === 'dark')
+        return (
+          <ThemeCard
+            key={name}
+            name={name}
+            tokens={tokens(name)}
+            current={chosen}
+            tag={
+              chosen ? (half ? (now ? `${half} · now` : half) : 'in use') : null
+            }
+            onPick={() =>
+              patch(
+                half
+                  ? pickHalf(config, inputs, name, half)
+                  : pickTheme(config, inputs, name),
+              )
+            }
+          />
+        )
+      })}
+    </div>
+  )
 
   return (
     <Page
@@ -91,185 +119,56 @@ export function ThemePage({ config, set, patch }: PageProps) {
       configKey={def.configKey}
       aside={<span className={`pill ${rung}`}>rung {rung}</span>}
     >
-      <Section
-        title="Theme"
-        aside={`${builtins} built in · ${user.length} yours`}
-      >
-        <Block anchor="Themes">
-          <div className="gallery">
-            {names.map((name) => (
-              <ThemeCard
-                key={name}
-                name={name}
-                tokens={resolveTheme(name, merged)}
-                current={name === config.theme}
-                onPick={() => patch(pickTheme(config, inputs, name))}
-              />
-            ))}
-          </div>
-          <p className="blk-hint">
-            A pick sticks in the slot the policy below is reading
-            {activeFocus ? ` (Focus: ${activeFocus.name})` : ''}. Add your own
-            under <code>&quot;themes&quot;</code> in config.json; partial
-            overrides welcome.
-          </p>
-        </Block>
-        <UserThemes />
-      </Section>
-
-      <Section title="Policy">
+      <Section>
         <Row
-          label="Mode"
+          label="Appearance"
           cfg="appearance.mode"
-          hint={modeHint}
-          below={
-            appearance.mode === 'schedule' && (
-              <>
-                <div className="btnrow">
-                  <span className="dimtext">light from</span>
-                  <input
-                    className="tiny center"
-                    aria-label="light from"
-                    value={appearance.schedule.light}
-                    placeholder="07:00"
-                    onChange={(e) =>
-                      setAppearance({
-                        schedule: {
-                          ...appearance.schedule,
-                          light: e.target.value,
-                        },
-                      })
-                    }
-                  />
-                  <span className="dimtext">dark from</span>
-                  <input
-                    className="tiny center"
-                    aria-label="dark from"
-                    value={appearance.schedule.dark}
-                    placeholder="19:00"
-                    onChange={(e) =>
-                      setAppearance({
-                        schedule: {
-                          ...appearance.schedule,
-                          dark: e.target.value,
-                        },
-                      })
-                    }
-                  />
-                </div>
-                {(!isClock(appearance.schedule.light) ||
-                  !isClock(appearance.schedule.dark)) && (
-                  <Note tone="error">
-                    Times are HH:MM, 24h; until both parse, 07:00 / 19:00 apply.
-                  </Note>
-                )}
-              </>
-            )
-          }
+          hint={MODES.find((m) => m.id === mode)?.hint}
         >
           <Segmented
             options={MODES}
-            value={appearance.mode}
-            onChange={(mode) => setAppearance({ mode })}
-          />
-        </Row>
-        <Row
-          label="Pair"
-          cfg="appearance.pair"
-          hint="The mode picks one half; a Focus can override."
-        >
-          <span className="dimtext">light</span>
-          <ThemeSelect
-            value={appearance.pair.light}
-            names={names}
-            onChange={(light) =>
-              setAppearance({ pair: { ...appearance.pair, light } })
-            }
-          />
-          <span className="dimtext">dark</span>
-          <ThemeSelect
-            value={appearance.pair.dark}
-            names={names}
-            onChange={(dark) =>
-              setAppearance({ pair: { ...appearance.pair, dark } })
-            }
+            value={mode}
+            onChange={(m) => patch(setMode(config, inputs, m))}
           />
         </Row>
       </Section>
 
-      <Section title="Focus">
-        {inputs === null ? (
-          <Block anchor="Focus modes">
-            <p className="blk-hint">reading Focus modes…</p>
+      {mode === 'system' ? (
+        <Section
+          title="Themes"
+          aside={`${builtins} built in · ${user.length} yours`}
+        >
+          <Block anchor="Themes">
+            <div className="halves">
+              <div>
+                <div className="halfhead">
+                  <i className="modedot light" />
+                  Light<span className="dimtext">{light.length}</span>
+                </div>
+                {gallery(light, 'light')}
+              </div>
+              <div>
+                <div className="halfhead">
+                  <i className="modedot dark" />
+                  Dark<span className="dimtext">{dark.length}</span>
+                </div>
+                {gallery(dark, 'dark')}
+              </div>
+            </div>
           </Block>
-        ) : inputs.modes.length === 0 ? (
-          <Block anchor="Focus modes">
-            <p className="blk-hint">
-              No Focus modes found. Set them up in System Settings → Focus.
-            </p>
+          <UserThemes />
+        </Section>
+      ) : (
+        <Section
+          title={mode === 'light' ? 'Light themes' : 'Dark themes'}
+          aside={`${(mode === 'light' ? light : dark).length}`}
+        >
+          <Block anchor="Themes">
+            {gallery(mode === 'light' ? light : dark, null)}
           </Block>
-        ) : (
-          <>
-            <span data-row="focus-modes" />
-            {inputs.modes.map((m) => {
-              const mapping = appearance.focus[m.id]
-              const choice = focusChoice(mapping)
-              return (
-                <Row
-                  key={m.id}
-                  label={m.name}
-                  hint={
-                    <>
-                      <code>{m.id}</code>
-                      {inputs.focusMode === m.id ? ' · active now' : ''}
-                    </>
-                  }
-                >
-                  {choice === FOCUS_OWN_PAIR && typeof mapping === 'object' && (
-                    <>
-                      <span className="dimtext">light</span>
-                      <ThemeSelect
-                        value={mapping.light}
-                        names={names}
-                        narrow
-                        onChange={(t) =>
-                          setAppearance(
-                            withFocusHalf(appearance, m.id, 'light', t),
-                          )
-                        }
-                      />
-                      <span className="dimtext">dark</span>
-                      <ThemeSelect
-                        value={mapping.dark}
-                        names={names}
-                        narrow
-                        onChange={(t) =>
-                          setAppearance(
-                            withFocusHalf(appearance, m.id, 'dark', t),
-                          )
-                        }
-                      />
-                    </>
-                  )}
-                  <ThemeSelect
-                    value={choice}
-                    names={names}
-                    onChange={(c) =>
-                      setAppearance(withFocusChoice(appearance, m.id, c))
-                    }
-                    extra={
-                      <>
-                        <option value={FOCUS_USE_PAIR}>— (use the pair)</option>
-                        <option value={FOCUS_OWN_PAIR}>its own pair…</option>
-                      </>
-                    }
-                  />
-                </Row>
-              )
-            })}
-          </>
-        )}
-      </Section>
+          <UserThemes />
+        </Section>
+      )}
 
       <Section title="Everywhere">
         <Row
@@ -308,7 +207,7 @@ export function ThemePage({ config, set, patch }: PageProps) {
         <Row
           label="Follow it with macOS light/dark"
           cfg="appearance.macos"
-          hint="Only when the mode is light, dark or schedule: in system mode macOS is the source and scuttler follows it, not the other way round."
+          hint="Only in Light or Dark: under Match System macOS is the source and scuttler follows it, not the other way round."
         >
           <Toggle
             label="Follow it with macOS light/dark"
@@ -371,11 +270,14 @@ function ThemeCard({
   name,
   tokens: t,
   current,
+  tag,
   onPick,
 }: {
   name: string
   tokens: ThemeTokens
   current: boolean
+  /** What the selection means: "in use", "light", "dark · now". */
+  tag: string | null
   onPick: () => void
 }) {
   return (
@@ -384,7 +286,7 @@ function ThemeCard({
       className={`tcard${current ? ' cur' : ''}`}
       aria-pressed={current}
       onClick={onPick}
-      title={current ? `${name} (current)` : `Use ${name}`}
+      title={current ? `${name} (${tag ?? 'chosen'})` : `Use ${name}`}
     >
       <span className="tcard-pv" style={{ background: t.bg }}>
         <span className="tcard-bar" style={{ background: t.surface }}>
@@ -413,40 +315,9 @@ function ThemeCard({
       </span>
       <span className="tcard-cap">
         <span className="tcard-name">{name}</span>
-        <span className={current ? 'tcard-cur' : 'tcard-mode'}>
-          {current ? 'current' : isLightColor(t.bg) ? 'light' : 'dark'}
-        </span>
+        {tag && <span className="tcard-cur">{tag}</span>}
       </span>
     </button>
-  )
-}
-
-function ThemeSelect({
-  value,
-  names,
-  onChange,
-  extra,
-  narrow = false,
-}: {
-  value: string
-  names: string[]
-  onChange: (name: string) => void
-  extra?: React.ReactNode
-  narrow?: boolean
-}) {
-  return (
-    <select
-      className={narrow ? 'narrow' : undefined}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-    >
-      {extra}
-      {names.map((name) => (
-        <option key={name} value={name}>
-          {name}
-        </option>
-      ))}
-    </select>
   )
 }
 

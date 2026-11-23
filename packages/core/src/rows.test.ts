@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 
 import {
   awakeRows,
+  clipRows,
   draftRows,
+  emojiRows,
   findQuicklink,
   launchRows,
   loremEntryRow,
@@ -10,6 +12,7 @@ import {
   panelRows,
   quicklinkRows,
   quicklinkWords,
+  scriptRows,
   searchEngineLabel,
 } from './rows'
 import type { IndexItem, Link } from './types'
@@ -329,5 +332,45 @@ describe('awakeRows', () => {
       kind: 'open-panel',
       panel: 'awake',
     })
+  })
+})
+
+describe('scriptRows', () => {
+  it('numbers rows by position and offers the alt action only when declared', () => {
+    const action = { type: 'copy' as const, value: 'x' }
+    const rows = scriptRows([
+      { title: 'one', subtitle: '', action },
+      { title: 'two', subtitle: 'sub', action, altAction: action },
+    ])
+    expect(rows.map((r) => [r.key, r.hint])).toEqual([
+      ['script-0', 'script'],
+      ['script-1', 'sub'],
+    ])
+    expect(rows[0]?.alt).toBeUndefined()
+    expect(rows[1]?.alt?.enter).toEqual({ kind: 'script-alt-action', index: 1 })
+  })
+})
+
+describe('emojiRows', () => {
+  it('copies the emoji it found', () => {
+    const [first] = emojiRows('fire')
+    expect(first?.enter).toEqual({ kind: 'copy', text: first?.glyph })
+    expect(first?.hint).toBe('copy')
+  })
+})
+
+describe('clipRows', () => {
+  const clips = [
+    { id: 1, content: 'git status', ts: 1 },
+    { id: 2, content: 'hello world', ts: 2 },
+  ]
+  it('lists everything for an empty query, filters fuzzily otherwise', () => {
+    expect(clipRows('', clips).map((r) => r.key)).toEqual(['clip-1', 'clip-2'])
+    expect(clipRows('hw', clips).map((r) => r.key)).toEqual(['clip-2'])
+  })
+  it('offers the wipe for `clear`', () => {
+    expect(clipRows('clear', clips)).toMatchObject([
+      { key: 'clip-clear', hint: '2 items', enter: { kind: 'clear-clips' } },
+    ])
   })
 })

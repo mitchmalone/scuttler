@@ -54,7 +54,9 @@ import { markInput, reportResultsPainted } from './lib/perf'
 import { appearanceOf, applyThemeEverywhere } from './lib/theme'
 import { applyTheme } from './lib/themes'
 import { useAppearancePolicy } from './lib/use-appearance-policy'
+import { useWallpaper } from './lib/use-wallpaper'
 import { useMergedThemes } from './lib/user-themes'
+import { themeOwnsWallpaper } from './lib/wallpaper'
 import { OnboardingPanelContainer } from './onboarding/OnboardingPanelContainer'
 import { AerospacePanelContainer } from './panels/AerospacePanelContainer'
 import { AgentsPanelContainer } from './panels/AgentsPanelContainer'
@@ -166,6 +168,8 @@ const DEFAULT_CONFIG: Config = {
   widgets: {},
   plugins: { disabled: [] },
   updates: undefined,
+  wallpaper: undefined,
+  focusWallpaper: undefined,
 }
 
 /** Panel rows draw their lucide icon; everything else keeps its text glyph. */
@@ -246,9 +250,14 @@ export default function App() {
   useEffect(() => {
     if (configLoaded && config.setupPending) setPanelMode(SETUP_PANEL)
   }, [configLoaded, config.setupPending])
-  // Which theme is active now (Focus, macOS light/dark, schedule) — resolves and
-  // writes `config.theme`; the effects around here follow the change.
+  // Which theme is active now (Match System, or a fixed light or dark) — resolves
+  // and writes `config.theme`; the effects around here follow the change.
   useAppearancePolicy(config, configLoaded)
+  // Which wallpaper (Settings → Wallpaper, Focus mode wallpaper): sets it when
+  // the plan changes; the theme rung leaves its backgrounds out while an image
+  // owns the desktop.
+  const wallpaper = useWallpaper(config, configLoaded, themes)
+  const themeBackgrounds = themeOwnsWallpaper(wallpaper)
   // The theme rung (DECISIONS 2026-09-11): a *change* of theme name, with
   // "everywhere" on, re-renders Ghostty/tmux/prompt/delta/Claude Code and reloads.
   // Not on first load — the files on disk are already the last apply.
@@ -259,10 +268,10 @@ export default function App() {
     lastThemeName.current = config.theme
     if (previous === null || previous === config.theme) return
     if (!appearanceOf(config).everywhere) return
-    applyThemeEverywhere(config).catch((e) =>
+    applyThemeEverywhere(config, themeBackgrounds).catch((e) =>
       console.error('[scuttler theme] apply everywhere failed:', e),
     )
-  }, [configLoaded, config])
+  }, [configLoaded, config, themeBackgrounds])
   // Desktop layer (v0.4): this webview lives for the whole session, so it is the
   // one place that keeps aerospace.toml / borders / theme in step. A foreign toml
   // (someone's hand-written AeroSpace config) is never overwritten — the settings

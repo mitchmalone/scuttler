@@ -85,6 +85,12 @@ it in `docs/DECISIONS.md`.
    `colorpicker` ask for **Screen Recording** once (2× magnifier, DECISIONS 2026-08-17);
    off — and until granted — it's Apple's `NSColorSampler`, which needs nothing. Nothing
    ever prompts unless that toggle is flipped.
+   One more, off by default: Settings → Focus mode wallpaper asks "Would you like
+   scuttler to manage your wallpaper based on your Focus mode?"; yes opens System
+   Settings so the user grants **Full Disk Access**, because macOS keeps the Focus
+   database behind it, and scuttler reads that folder and nothing else; off reads and
+   watches nothing (DECISIONS 2026-11-23). Wallpapers themselves are set with
+   `NSWorkspace`, which asks nothing.
    Root, once, by the user's own hand: one rule allowing exactly `pmset -a
 disablesleep 0|1`, so `awake` can switch macOS sleep off while a hold is armed, and
    `upgrade|update` on scuttler's root-owned copy of mas
@@ -107,7 +113,7 @@ on` in a terminal; the text is identical either way. The app only runs `sudo -n`
 3. **A deliberate IPC surface.** Every Tauri command is thin, typed, and recorded in
    DECISIONS when added; the count is a liability to be justified, not a handful — a
    command that could be an event, a field on an existing snapshot, or a plugin
-   `host.send` message should be that instead (82 registered, DECISIONS 2026-10-19).
+   `host.send` message should be that instead (84 registered, DECISIONS 2026-11-23).
 4. **Prefix dispatch is general.** `!` is mode dispatch via first-char lookup, not a special
    case — scripts join the same grammar.
 5. **The matcher stays pure.** Fuzzy matching/ranking are I/O-free functions in
@@ -161,7 +167,7 @@ on` in a terminal; the text is identical either way. The app only runs `sudo -n`
     `window.alert`/`confirm`/`prompt`, or a system popover. A question is a row with a
     labelled Enter, a report is a panel line or a bar cell; both keep the prompt's focus
     discipline (invariant 6), a modal breaks it. Three OS sheets are the exceptions, each
-    asked for by a click: the file picker in `desktop.rs`, the LocalAuthentication
+    asked for by a click: the file picker (`desktop.rs`, `wallpaper.rs`), the LocalAuthentication
     approval sheet before a root upgrade runs (`localauth.rs`, DECISIONS 2026-11-06), and
     the admin-rights dialog that writes the sudoers rule once (`authorization.rs`,
     DECISIONS 2026-11-07).

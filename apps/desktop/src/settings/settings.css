@@ -91,7 +91,7 @@ kbd {
 
 .settings {
   display: grid;
-  grid-template-columns: 232px minmax(0, 1fr);
+  grid-template-columns: 256px minmax(0, 1fr);
   height: 100vh;
   position: relative;
 }
@@ -197,6 +197,13 @@ kbd {
 .navitem svg {
   color: var(--dim);
   flex: none;
+}
+
+.navitem > span:first-of-type {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .navitem:hover {
@@ -1240,4 +1247,200 @@ input[type='range'] {
   margin-top: 18px;
   font-size: 11px;
   color: var(--dim);
+}
+
+/* --- Theme: Match System's two columns. --- */
+
+.halves {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.halves .gallery {
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+}
+
+.halfhead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--hi);
+  font-size: 11.5px;
+}
+
+.halfhead .dimtext {
+  margin-left: auto;
+}
+
+.modedot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid var(--dim);
+}
+
+.modedot.light {
+  background: #f2ead3;
+}
+
+.modedot.dark {
+  background: #15161f;
+}
+
+/* --- Wallpaper: image wells and thumbnails. --- */
+
+.wells {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.wells.muted {
+  opacity: 0.55;
+}
+
+.well {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.well-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  color: var(--hi);
+}
+
+.thumb {
+  position: relative;
+  height: 150px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  background: repeating-linear-gradient(
+    135deg,
+    var(--box) 0 7px,
+    color-mix(in srgb, var(--box) 80%, var(--border)) 7px 14px
+  );
+}
+
+.thumb.none {
+  border-style: dashed;
+  background: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.thumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumb-label {
+  position: relative;
+  margin: 6px 8px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 10.5px;
+  color: var(--dim);
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  max-width: calc(100% - 16px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.thumb.small {
+  width: 110px;
+  height: 52px;
+}
+
+.thumb.small .thumb-label {
+  margin: 3px 4px;
+}
+
+.goodtext {
+  color: var(--good);
+}
+
+.rungoff-q {
+  color: var(--hi);
+  font-size: 14px;
+}
+
+/* --- Focus mode wallpaper: today's schedule. --- */
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lane {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  font-size: 11px;
+}
+
+.lane-name {
+  color: var(--dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.track {
+  position: relative;
+  height: 24px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--side);
+  overflow: hidden;
+}
+
+.band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  color: var(--dim);
+  background: color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+.band.img {
+  color: var(--hi);
+  background: color-mix(in srgb, var(--good) 28%, transparent);
+}
+
+.nowline {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--accent);
+}
+
+.lane.axis {
+  font-size: 9.5px;
+  color: var(--dim);
+}
+
+.lane.axis > div {
+  display: flex;
+  justify-content: space-between;
 }

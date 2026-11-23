@@ -171,6 +171,150 @@ bright_cyan = "#94e2d5"
 bright_blue = "#89b4fa"
 bright_magenta = "#f5c2e7"
 `,
+  'catppuccin-latte': `# Catppuccin Latte — the light flavour, from github.com/catppuccin/catppuccin (MIT).
+mode = "light"
+
+accent = "#8839ef"
+selection = "#ccd0da"
+muted = "#9ca0b0"
+
+background = "#eff1f5"
+dark_background = "#e6e9ef"
+darker_background = "#dce0e8"
+lighter_background = "#e6e9ef"
+
+foreground = "#4c4f69"
+dark_foreground = "#6c6f85"
+light_foreground = "#5c5f77"
+bright_foreground = "#4c4f69"
+
+red = "#d20f39"
+yellow = "#df8e1d"
+orange = "#fe640b"
+green = "#40a02b"
+cyan = "#179299"
+blue = "#1e66f5"
+magenta = "#ea76cb"
+brown = "#dc8a78"
+
+bright_red = "#e64553"
+bright_yellow = "#df8e1d"
+bright_green = "#40a02b"
+bright_cyan = "#04a5e5"
+bright_blue = "#7287fd"
+bright_magenta = "#8839ef"
+
+[launcher]
+border = "#bcc0cc"
+selected = "rgba(136, 57, 239, 0.10)"
+`,
+  everforest: `# Everforest Dark (medium) — from github.com/sainnhe/everforest (MIT).
+mode = "dark"
+
+accent = "#a7c080"
+selection = "#475258"
+muted = "#7a8478"
+
+background = "#2d353b"
+dark_background = "#232a2e"
+darker_background = "#1e2326"
+lighter_background = "#343f44"
+
+foreground = "#d3c6aa"
+dark_foreground = "#859289"
+light_foreground = "#d3c6aa"
+bright_foreground = "#e3d8bf"
+
+red = "#e67e80"
+yellow = "#dbbc7f"
+orange = "#e69875"
+green = "#a7c080"
+cyan = "#83c092"
+blue = "#7fbbb3"
+magenta = "#d699b6"
+
+bright_red = "#e67e80"
+bright_yellow = "#dbbc7f"
+bright_green = "#a7c080"
+bright_cyan = "#83c092"
+bright_blue = "#7fbbb3"
+bright_magenta = "#d699b6"
+
+[launcher]
+selected = "rgba(211, 198, 170, 0.12)"
+`,
+  'everforest-light': `# Everforest Light (medium) — from github.com/sainnhe/everforest (MIT).
+mode = "light"
+
+accent = "#8da101"
+selection = "#e6e2cc"
+muted = "#a6b0a0"
+
+background = "#fdf6e3"
+dark_background = "#f4f0d9"
+darker_background = "#efebd4"
+lighter_background = "#f4f0d9"
+
+foreground = "#5c6a72"
+dark_foreground = "#829181"
+light_foreground = "#5c6a72"
+bright_foreground = "#4a565c"
+
+red = "#f85552"
+yellow = "#dfa000"
+orange = "#f57d26"
+green = "#8da101"
+cyan = "#35a77c"
+blue = "#3a94c5"
+magenta = "#df69ba"
+
+bright_red = "#f85552"
+bright_yellow = "#dfa000"
+bright_green = "#8da101"
+bright_cyan = "#35a77c"
+bright_blue = "#3a94c5"
+bright_magenta = "#df69ba"
+
+[launcher]
+border = "#d8d3ba"
+selected = "rgba(141, 161, 1, 0.10)"
+`,
+  'flexoki-light': `# Flexoki Light — from stephango.com/flexoki (MIT).
+mode = "light"
+
+accent = "#bc5215"
+selection = "#e6e4d9"
+muted = "#b7b5ac"
+
+background = "#fffcf0"
+dark_background = "#f2f0e5"
+darker_background = "#e6e4d9"
+lighter_background = "#f2f0e5"
+
+foreground = "#100f0f"
+dark_foreground = "#6f6e69"
+light_foreground = "#403e3c"
+bright_foreground = "#100f0f"
+
+red = "#af3029"
+yellow = "#ad8301"
+orange = "#bc5215"
+green = "#66800b"
+cyan = "#24837b"
+blue = "#205ea6"
+magenta = "#a02f6f"
+
+bright_red = "#d14d41"
+bright_yellow = "#d0a215"
+bright_green = "#879a39"
+bright_cyan = "#3aa99f"
+bright_blue = "#4385be"
+bright_magenta = "#ce5d97"
+
+[launcher]
+border = "#cecdc3"
+selected = "rgba(188, 82, 21, 0.10)"
+`,
   gruvbox: `# Gruvbox Dark (medium) — classic palette from github.com/morhetz/gruvbox (MIT).
 # Omarchy ships the gruvbox-material variant instead; this file keeps its layout.
 mode = "dark"
@@ -204,6 +348,42 @@ bright_green = "#b8bb26"
 bright_cyan = "#8ec07c"
 bright_blue = "#83a598"
 bright_magenta = "#d3869b"
+`,
+  'gruvbox-light': `# Gruvbox Light — from github.com/morhetz/gruvbox (MIT).
+mode = "light"
+
+accent = "#af3a03"
+selection = "#d5c4a1"
+muted = "#928374"
+
+background = "#fbf1c7"
+dark_background = "#f2e5bc"
+darker_background = "#ebdbb2"
+lighter_background = "#ebdbb2"
+
+foreground = "#3c3836"
+dark_foreground = "#7c6f64"
+light_foreground = "#504945"
+bright_foreground = "#282828"
+
+red = "#9d0006"
+yellow = "#b57614"
+orange = "#af3a03"
+green = "#79740e"
+cyan = "#427b58"
+blue = "#076678"
+magenta = "#8f3f71"
+
+bright_red = "#cc241d"
+bright_yellow = "#d79921"
+bright_green = "#98971a"
+bright_cyan = "#689d6a"
+bright_blue = "#458588"
+bright_magenta = "#b16286"
+
+[launcher]
+border = "#bdae93"
+selected = "rgba(175, 58, 3, 0.10)"
 `,
   monokai: `# Monokai — classic palette (monokai.pro/classic; MIT terminal ports).
 mode = "dark"
@@ -355,6 +535,42 @@ bright_magenta = "#c4a7e7"
 sigil = "#9ccfd8"
 selected = "rgba(235, 188, 186, 0.12)"
 `,
+  'rose-pine-dawn': `# Rosé Pine Dawn — the light variant, from rosepinetheme.com (MIT).
+mode = "light"
+
+accent = "#d7827e"
+selection = "#dfdad9"
+muted = "#9893a5"
+
+background = "#faf4ed"
+dark_background = "#f4ede8"
+darker_background = "#f2e9e1"
+lighter_background = "#f2e9e1"
+
+foreground = "#575279"
+dark_foreground = "#797593"
+light_foreground = "#575279"
+bright_foreground = "#464261"
+
+red = "#b4637a"
+yellow = "#ea9d34"
+orange = "#d7827e"
+green = "#286983"
+cyan = "#56949f"
+blue = "#286983"
+magenta = "#907aa9"
+
+bright_red = "#b4637a"
+bright_yellow = "#ea9d34"
+bright_green = "#286983"
+bright_cyan = "#56949f"
+bright_blue = "#56949f"
+bright_magenta = "#907aa9"
+
+[launcher]
+border = "#cecacd"
+selected = "rgba(215, 130, 126, 0.12)"
+`,
   solarized: `# Solarized Dark — from ethanschoonover.com/solarized (MIT).
 # Bright ANSI slots that Solarized fills with base tones instead mirror the accents.
 mode = "dark"
@@ -500,6 +716,42 @@ bright_magenta = "#bb9af7"
 # The launcher always used the brighter text tone and the gutter as its border.
 fg = "#c0caf5"
 border = "#3b4261"
+`,
+  'tokyo-night-day': `# Tokyo Night Day — the light style, from github.com/folke/tokyonight.nvim (Apache-2.0).
+mode = "light"
+
+accent = "#2e7de9"
+selection = "#b7c1e3"
+muted = "#848cb5"
+
+background = "#e1e2e7"
+dark_background = "#d0d5e3"
+darker_background = "#c4c8da"
+lighter_background = "#d0d5e3"
+
+foreground = "#3760bf"
+dark_foreground = "#6172b0"
+light_foreground = "#3760bf"
+bright_foreground = "#2a4a96"
+
+red = "#f52a65"
+yellow = "#8c6c3e"
+orange = "#b15c00"
+green = "#587539"
+cyan = "#007197"
+blue = "#2e7de9"
+magenta = "#9854f1"
+
+bright_red = "#c64343"
+bright_yellow = "#8c6c3e"
+bright_green = "#387068"
+bright_cyan = "#188092"
+bright_blue = "#2e7de9"
+bright_magenta = "#7847bd"
+
+[launcher]
+border = "#a8aecb"
+selected = "rgba(46, 125, 233, 0.12)"
 `,
 }
 

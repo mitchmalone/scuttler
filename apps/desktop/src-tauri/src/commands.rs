@@ -246,6 +246,25 @@ pub async fn appearance_inputs() -> crate::appearance::AppearanceInputs {
     crate::appearance::inputs()
 }
 
+/// Set the desktop picture on every display (wallpaper.rs). `None` re-applies the
+/// theme's current background, if it ships any. Returns the path now showing.
+/// Which image and when is TypeScript's (lib/wallpaper.ts, DECISIONS 2026-11-23).
+#[tauri::command]
+pub async fn wallpaper_set(path: Option<String>) -> CmdResult<Option<String>> {
+    let res = match path {
+        Some(p) => crate::wallpaper::set(&p).map(|_| Some(p)),
+        None => crate::wallpaper::reapply_theme_background(),
+    };
+    res.map_err(CmdError::Internal)
+}
+
+/// Settings → Wallpaper / Focus mode wallpaper "choose…": the system file dialog,
+/// images only. `None` when cancelled.
+#[tauri::command]
+pub async fn wallpaper_pick() -> CmdResult<Option<String>> {
+    crate::wallpaper::pick_image()
+}
+
 /// Theme rung: install rendered files under the state dir and fan out reloads (theme.rs).
 #[tauri::command]
 pub async fn theme_apply(req: crate::theme::ThemeApply) -> CmdResult<crate::theme::ThemeResult> {
@@ -650,6 +669,11 @@ pub fn open_path(target: String) -> CmdResult<()> {
                 .map(|(_, id)| std::path::PathBuf::from(crate::settings_panes::deep_link(id)))
                 .ok_or_else(|| CmdError::Internal(format!("no {pane} settings pane")))?
         }
+        // Focus mode wallpaper asks the user to grant this (invariant 1, DECISIONS
+        // 2026-11-23); the pane is where they do it.
+        "full-disk-access" => std::path::PathBuf::from(
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles",
+        ),
         other => return Err(CmdError::Internal(format!("unknown open target: {other}"))),
     };
     std::process::Command::new("open").arg(path).spawn()?;

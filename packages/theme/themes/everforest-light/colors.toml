@@ -1,0 +1,35 @@
+# Everforest Light (medium) — from github.com/sainnhe/everforest (MIT).
+mode = "light"
+
+accent = "#8da101"
+selection = "#e6e2cc"
+muted = "#a6b0a0"
+
+background = "#fdf6e3"
+dark_background = "#f4f0d9"
+darker_background = "#efebd4"
+lighter_background = "#f4f0d9"
+
+foreground = "#5c6a72"
+dark_foreground = "#829181"
+light_foreground = "#5c6a72"
+bright_foreground = "#4a565c"
+
+red = "#f85552"
+yellow = "#dfa000"
+orange = "#f57d26"
+green = "#8da101"
+cyan = "#35a77c"
+blue = "#3a94c5"
+magenta = "#df69ba"
+
+bright_red = "#f85552"
+bright_yellow = "#dfa000"
+bright_green = "#8da101"
+bright_cyan = "#35a77c"
+bright_blue = "#3a94c5"
+bright_magenta = "#df69ba"
+
+[launcher]
+border = "#d8d3ba"
+selected = "rgba(141, 161, 1, 0.10)"

@@ -40,9 +40,11 @@ install actually has on is in [Defaults](#defaults) below.
    any Omarchy theme ports by copying one file. It styles the app, then — when you turn
    the rung on — Ghostty, tmux, your prompt, delta, Claude Code, and (one more toggle)
    VS Code, Cursor, Zed, Neovim, Helix and btop, running instances retinting on the
-   spot. A light/dark **pair** follows macOS (sunrise and sunset included) or a
-   schedule of your own; a **macOS Focus** can have its own theme or pair. `theme ⏎` is
-   the switcher; your own themes and wallpapers live in `~/.config/scuttler/themes/`.
+   spot. One theme, always light or always dark, or **Match System**: a light theme and
+   a dark theme that swap with macOS (sunrise and sunset included). `theme ⏎` is the
+   switcher; your own themes and wallpapers live in `~/.config/scuttler/themes/`.
+   **Wallpaper** swaps a light and a dark desktop picture with the theme, and **Focus
+   mode wallpaper** gives each macOS Focus its own, the iPad way.
 5. **Machine** — the setup CLI shipped inside the app: macOS defaults with the shine
    scraped off, a manifest of every file scuttler writes outside its own config, adopt
    never overwrite, migrations, and `scuttler remove` to put it all back. It shows you a
@@ -66,6 +68,9 @@ What `Config::default()` (`apps/desktop/src-tauri/src/config.rs`) and `DEFAULT_D
 | Theme: hot editors                                     | `appearance.editors`                  | off                |
 | Theme: reload Ghostty's config                         | `appearance.ghostty`                  | off                |
 | App theme                                              | `theme`                               | `scuttler`         |
+| Theme: Match System, Light or Dark                     | `appearance.mode`                     | the theme's own    |
+| Wallpaper: light and dark images                       | `wallpaper.enabled`                   | off                |
+| Focus mode wallpaper (asks for Full Disk Access)       | `focusWallpaper.enabled`              | off                |
 | Machine                                                | `machine.enabled`                     | off                |
 | `?` ask mode                                           | `agents.askMode`                      | off                |
 | Agent monitoring / usage monitor                       | `agents.monitor` / `agents.usage`     | off / off          |
@@ -97,11 +102,11 @@ wallpaper) can't be bound yet.
 
 ## Principles
 
-- **Zero granted permissions.** No Accessibility, no Full Disk Access. A prompt only
-  ever follows a toggle you flipped, and Settings names it: Automation for the iTerm2
-  fallback or the Ghostty reload, Screen Recording for the colour loupe, a privacy class
-  a plugin declares. Focus detection and appearance tracking read files macOS already
-  lets you read.
+- **Zero granted permissions.** No Accessibility. A prompt only ever follows a toggle
+  you flipped, and Settings names it: Automation for the iTerm2 fallback or the Ghostty
+  reload, Screen Recording for the colour loupe, Full Disk Access for Focus mode
+  wallpaper (macOS keeps the Focus database behind it), a privacy class a plugin
+  declares. Light/dark tracking reads a file macOS already lets you read.
 - **No telemetry.** scuttler talks to the network only to do what you asked — fetch a
   favicon, read your usage limits, check for app updates — its own included: `updates ⏎`
   offers the newest release and installs it after verifying it is code we signed. Nothing

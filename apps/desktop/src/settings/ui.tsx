@@ -203,6 +203,7 @@ export function Segmented<T extends string>({
  */
 export function RungOff({
   anchor,
+  question,
   lines,
   action,
   onTurnOn,
@@ -210,6 +211,8 @@ export function RungOff({
   children,
 }: {
   anchor: string
+  /** Asked above the consequences, when the feature is a yes/no. */
+  question?: string
   /** `+` lines change something; `·` lines reassure. */
   lines: readonly { mark: '+' | '·'; text: ReactNode }[]
   action: string
@@ -219,6 +222,7 @@ export function RungOff({
 }) {
   return (
     <div className="rungoff" data-row={rowAnchor(anchor)}>
+      {question && <p className="rungoff-q">{question}</p>}
       <ul className="rungoff-lines">
         {lines.map((l, i) => (
           <li key={i} className={l.mark === '+' ? 'plus' : 'dot'}>

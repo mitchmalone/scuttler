@@ -29,12 +29,14 @@ import { AgentsPage } from './views/AgentsPage'
 import { BarPage } from './views/BarPage'
 import { ColorPickerPage } from './views/ColorPickerPage'
 import { DesktopPage } from './views/DesktopPage'
+import { FocusWallpaperPage } from './views/FocusWallpaperPage'
 import { LauncherPage } from './views/LauncherPage'
 import { MachinePage } from './views/MachinePage'
 import { PluginsPage } from './views/PluginsPage'
 import { QuicklinksPage } from './views/QuicklinksPage'
 import { ThemePage } from './views/ThemePage'
 import { UpdatesPage } from './views/UpdatesPage'
+import { WallpaperPage } from './views/WallpaperPage'
 import { WidgetsPage } from './views/WidgetsPage'
 import { PAGE_ICONS } from './views/icons'
 
@@ -58,6 +60,8 @@ const PAGE_VIEWS: Record<PageId, ComponentType<PageProps>> = {
   quicklinks: QuicklinksPage,
   colorpicker: ColorPickerPage,
   theme: ThemePage,
+  wallpaper: WallpaperPage,
+  focuswallpaper: FocusWallpaperPage,
   desktop: DesktopPage,
   machine: MachinePage,
   agents: AgentsPage,

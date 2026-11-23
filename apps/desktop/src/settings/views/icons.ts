@@ -1,6 +1,8 @@
 import {
   Blocks,
   Bot,
+  Focus,
+  Image,
   Info,
   LayoutGrid,
   Link2,
@@ -23,6 +25,8 @@ export const PAGE_ICONS: Record<PageId, LucideIcon> = {
   quicklinks: Link2,
   colorpicker: Pipette,
   theme: Palette,
+  wallpaper: Image,
+  focuswallpaper: Focus,
   desktop: LayoutGrid,
   machine: Wrench,
   agents: Bot,

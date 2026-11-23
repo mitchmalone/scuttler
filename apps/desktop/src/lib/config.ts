@@ -60,6 +60,36 @@ export type Config = {
   plugins: { disabled: string[] }
   /** scuttler's own updates: check GitHub Releases and offer the newest in `updates ⏎`. */
   updates: UpdatesConfig | undefined
+  /** The desktop picture (Settings → Wallpaper); mirrors `WallpaperConfig` in config.rs. */
+  wallpaper: WallpaperConfig | undefined
+  /** Focus mode wallpaper; mirrors `FocusWallpaperConfig` in config.rs. */
+  focusWallpaper: FocusWallpaperConfig | undefined
+}
+
+/** A light and a dark image swapped with the theme; `null` = the theme's own
+ * backgrounds. Off sets nothing. */
+export type WallpaperConfig = {
+  enabled: boolean
+  light: string | null
+  dark: string | null
+}
+
+/** One image per Focus mode id, overriding the default while that Focus is on.
+ * On is consent to read the Focus database (Full Disk Access). */
+export type FocusWallpaperConfig = {
+  enabled: boolean
+  modes: Record<string, string>
+}
+
+export const DEFAULT_WALLPAPER: WallpaperConfig = {
+  enabled: false,
+  light: null,
+  dark: null,
+}
+
+export const DEFAULT_FOCUS_WALLPAPER: FocusWallpaperConfig = {
+  enabled: false,
+  modes: {},
 }
 
 export type UpdatesConfig = { checkSelf: boolean }

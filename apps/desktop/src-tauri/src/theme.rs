@@ -378,14 +378,10 @@ pub fn wallpaper_next_current() -> CmdResult<String> {
     wallpaper_next(&state, &list).map_err(crate::error::CmdError::Internal)
 }
 
+/// NSWorkspace, every display, no permission (wallpaper.rs; it replaced a System
+/// Events script that cost an Automation prompt, DECISIONS 2026-11-23).
 fn set_wallpaper(path: &str) -> Result<(), String> {
-    if !Path::new(path).is_file() {
-        return Err(format!("no such file: {path}"));
-    }
-    let escaped = path.replace('\\', "\\\\").replace('"', "\\\"");
-    osascript(&format!(
-        r#"tell application "System Events" to tell every desktop to set picture to POSIX file "{escaped}""#
-    ))
+    crate::wallpaper::set(path).map(|_| ())
 }
 
 /// `~/.claude/themes/scuttler.json`: Claude Code picks it up as `custom:scuttler`

@@ -5,6 +5,45 @@
 
 ---
 
+### 2026-11-23 · 0.9: one theme or Match System; wallpaper by theme and by Focus; Focus behind an FDA opt-in
+
+- **Context.** Mitch's 0.9: a light theme and a dark theme that swap with macOS (the pair
+  engine existed but hid behind two dropdowns and one light theme), and a wallpaper per
+  Focus like the iPad. Research (JOURNAL 2026-11-23): the Focus database needs Full Disk
+  Access, scheduled Focus is in no file, Focus Filters don't fire reliably on macOS,
+  `INFocusStatusCenter` only says "focused or not", wallpapers reach the current Space
+  only. Designs: Claude Design files 03 and 04 (round 2 is what Mitch approved).
+- **Decision.**
+  - **Theme**: three modes, Match System, Light, Dark; a fresh profile is a single mode
+    (the current theme's own). The `schedule` mode and per-Focus themes are retired; old
+    configs normalise (`schedule` → `system`, `focus` dropped on the next write). Seven
+    built-in themes added: catppuccin-latte, rose-pine-dawn, tokyo-night-day,
+    gruvbox-light, flexoki-light, everforest-light (light) and everforest (dark).
+  - **Wallpaper** (`config.wallpaper`, off): a light and a dark image swapped with the
+    theme in use; a half with none leaves it to the theme's backgrounds.
+  - **Focus mode wallpaper** (`config.focusWallpaper`, off): one image per Focus, no
+    light/dark, overriding the default while that Focus is on. Turning it on asks
+    "Would you like scuttler to manage your wallpaper based on your Focus mode?" and opens
+    System Settings to grant **Full Disk Access** — a new named opt-in in invariant 1
+    (Mitch's call: option A). Off reads and watches nothing (invariant 12). Rust reports
+    raw facts (access, asserted Focus, last "turn off", schedules); TypeScript decides the
+    active Focus, evaluating schedules itself.
+  - Wallpapers are set with `NSWorkspace` on every display (`wallpaper.rs`), replacing
+    the System Events script and its Automation prompt.
+  - Two commands (84 registered): `wallpaper_set` (a path, or none to restore the theme's
+    background) and `wallpaper_pick` (the image file dialog, invariant 13's picker
+    exception). The Full Disk Access pane is a new `open_path` target; thumbnails reuse
+    `screenshot_thumb`.
+- **Not chosen.** Shortcuts automations opening a `scuttler://` URL (no permission, but a
+  URL scheme and per-Focus setup in another app). Focus Filters (App Intents): Swift in the
+  bundle and unreliable on macOS. Light/dark images per Focus (Mitch: the default carries
+  light/dark, a Focus is one image). HEIC appearance wallpapers: whether one set by an app
+  keeps following appearance is untested; two images are certain.
+- **Consequences.** Users who mapped a Focus to a theme lose that mapping silently on
+  upgrade; the 0.9 release notes say so. Smart Activation can't be seen. The weekday bit
+  order and `enabledSetting` meaning are inferred from one Mac. Plan
+  `plans/active/2026-11-23-0.9-light-dark-and-wallpaper.md`.
+
 ### 2026-11-23 · Settings navigation moves to a grouped sidebar with search; settings stays a window
 
 - **Context.** Seven tabs shared the 760px titlebar with the traffic lights (the CSS

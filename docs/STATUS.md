@@ -10,6 +10,12 @@
 
 ## Where we are
 
+- **In flight: 0.9** (`plans/active/2026-11-23-0.9-light-dark-and-wallpaper.md`,
+  DECISIONS 2026-11-23), on the same branch: Match System / Light / Dark with seven new
+  themes, Wallpaper (light and dark images), Focus mode wallpaper behind a Full Disk
+  Access opt-in. Built, `pnpm verify` green, installed; the live checklist is next. Found
+  on the way: the old Focus → theme mapping never worked without Full Disk Access, and
+  missed scheduled Focus (JOURNAL 2026-11-23).
 - **In flight: the settings redesign** (`plans/active/2026-11-23-settings-redesign.md`,
   DECISIONS 2026-11-23), on `feat/settings-redesign` in the worktree
   `../scuttler-settings-redesign`, kept open for the settings features Mitch adds next.

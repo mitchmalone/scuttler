@@ -292,6 +292,13 @@ pub struct Config {
     pub widgets: std::collections::HashMap<String, std::collections::HashMap<String, String>>,
     /// Plugins: disabled ids (docs/PLUGINS.md).
     pub plugins: PluginsConfig,
+    /// The desktop picture (Settings → Wallpaper): a light and a dark image swapped
+    /// with the theme. Off by default; off sets nothing (invariant 12).
+    pub wallpaper: WallpaperConfig,
+    /// Focus mode wallpaper: one image per macOS Focus, overriding the default
+    /// while that Focus is on. Off by default; on is consent to read the Focus
+    /// database, which needs Full Disk Access (invariant 1, DECISIONS 2026-11-23).
+    pub focus_wallpaper: FocusWallpaperConfig,
     /// scuttler's own updates (selfupdate.rs, DECISIONS 2026-09-16).
     pub updates: UpdatesConfig,
 }
@@ -317,6 +324,24 @@ pub struct MachineConfig {
     pub enabled: bool,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[serde(default, rename_all = "camelCase")]
+pub struct WallpaperConfig {
+    pub enabled: bool,
+    /// Image for the light half; `None` = the theme's own backgrounds.
+    pub light: Option<String>,
+    /// Image for the dark half; `None` = the theme's own backgrounds.
+    pub dark: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[serde(default, rename_all = "camelCase")]
+pub struct FocusWallpaperConfig {
+    pub enabled: bool,
+    /// Focus mode identifier (`com.apple.focus.work`) → image path.
+    pub modes: std::collections::BTreeMap<String, String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(default, rename_all = "camelCase")]
 pub struct AppearanceConfig {
@@ -330,8 +355,9 @@ pub struct AppearanceConfig {
     /// Reload a running Ghostty's config over AppleScript at theme set (one Automation
     /// consent, first time). Off by default — the OSC retint needs no consent.
     pub ghostty: bool,
-    /// The policy — mode (system | light | dark | schedule), schedule, pair, Focus
-    /// mappings. Opaque to Rust: `@scuttler/core/appearance` owns the shape.
+    /// The policy — mode (system | light | dark) and the light/dark pair. Opaque to
+    /// Rust: `@scuttler/core/appearance` owns the shape (and drops the keys 0.9
+    /// retired, `schedule` and `focus`).
     #[serde(flatten)]
     pub policy: serde_json::Map<String, serde_json::Value>,
 }
@@ -376,6 +402,8 @@ impl Default for Config {
             color_loupe_size: 264,
             widgets: std::collections::HashMap::new(),
             plugins: PluginsConfig::default(),
+            wallpaper: WallpaperConfig::default(),
+            focus_wallpaper: FocusWallpaperConfig::default(),
         }
     }
 }
@@ -598,6 +626,7 @@ pub fn watch(app: AppHandle) {
                         crate::indexer::refresh(&app);
                     }
                     crate::agents::configure(&new_config.agents);
+                    crate::appearance::configure(new_config.focus_wallpaper.enabled);
                     crate::usage::configure(&new_config.agents);
                     crate::selfupdate::configure(&new_config.updates);
                     crate::plugins::configure(&app, &new_config.plugins.disabled);

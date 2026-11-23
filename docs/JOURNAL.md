@@ -6,6 +6,28 @@
 
 ---
 
+### 2026-11-23 · The Focus database needs Full Disk Access, and a scheduled Focus is in no file
+
+Two things the 0.5 Focus → theme mapping assumed were wrong. (1) `~/Library/DoNotDisturb/DB/`
+is behind Full Disk Access: a read from a launchd job (which does not inherit a terminal's
+grant) was denied on `Assertions.json` and `ModeConfigurations.json` while a Safari control
+read failed the same way, so for anyone who never granted scuttler FDA the mapping silently
+did nothing. Terminals usually have FDA, which is why it looked fine in testing. (2)
+`Assertions.json` holds only a Focus turned on by hand or synced from another device, plus
+"turn Focus off" requests (`storeInvalidationRequestRecords`, Apple reference-date seconds);
+a Focus a schedule or Smart Activation turned on is in no readable file (it lives in
+`donotdisturbd`; the private services refuse without an entitlement). Work, scheduled
+09:00–17:00 Mon–Fri on this Mac, was absent at 12:40 on a Monday, with a "turn off" request
+at 09:39. So `activeFocus` (lib/wallpaper.ts) evaluates schedules itself and lets a later
+"turn off" win. Inferred, not documented: `enabledSetting` 2 is on (1 off, 0 unset), and
+`timePeriodWeekdays` bit 0 is Monday (a Mon–Fri schedule stores 31, every day 127) —
+change one day in System Settings and diff the file to confirm. Also: the theme rung's
+wallpaper used `tell application "System Events" … set picture`, an Automation prompt;
+`NSWorkspace setDesktopImageURL` asks nothing and, like every API, reaches only the current
+Space (Apple, June 2026: no API for all Spaces).
+
+---
+
 ### 2026-11-19 · A receipt on a fresh profile catches the icon extraction child
 
 Cutting v0.8.8, `mem.sh --receipt` a minute after a fresh-profile launch read 3230 MB,

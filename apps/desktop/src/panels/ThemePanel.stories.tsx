@@ -14,21 +14,19 @@ export const themePanelStories = defineStories('ThemePanel (app)', [
         themes={{}}
         mode="system"
         dark={true}
-        focusName={null}
         onPick={noop}
         onClose={noop}
       />
     ),
   },
   {
-    name: 'in a Focus, with a custom theme',
+    name: 'a fixed dark mode, with a custom theme',
     render: () => (
       <ThemePanel
         current="dracula"
         themes={{ mine: { accent: '#ff79c6', bg: '#101014' } }}
-        mode="schedule"
+        mode="dark"
         dark={false}
-        focusName="Work"
         onPick={noop}
         onClose={noop}
       />

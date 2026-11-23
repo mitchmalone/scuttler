@@ -12,6 +12,8 @@ export type PageId =
   | 'quicklinks'
   | 'colorpicker'
   | 'theme'
+  | 'wallpaper'
+  | 'focuswallpaper'
   | 'desktop'
   | 'machine'
   | 'agents'
@@ -20,12 +22,13 @@ export type PageId =
   | 'updates'
   | 'about'
 
-export type GroupId = 'core' | 'rungs' | 'extend' | 'scuttler'
+export type GroupId = 'core' | 'rungs' | 'look' | 'extend' | 'scuttler'
 
 /** Sidebar groups in order; the first has no heading. */
 export const GROUPS: readonly { id: GroupId; label: string | null }[] = [
   { id: 'core', label: null },
   { id: 'rungs', label: 'Rungs' },
+  { id: 'look', label: 'Look' },
   { id: 'extend', label: 'Extend' },
   { id: 'scuttler', label: 'scuttler' },
 ]
@@ -79,6 +82,22 @@ export const PAGES: readonly PageDef[] = [
     description:
       'One palette rendered into everything: the app, the bar, and (with the rung on) your terminals and editors.',
     configKey: 'theme · appearance',
+  },
+  {
+    id: 'wallpaper',
+    label: 'Wallpaper',
+    group: 'look',
+    description:
+      'Your desktop picture, swapped with the theme: the light image while the theme is light, the dark one while it is dark.',
+    configKey: 'wallpaper',
+  },
+  {
+    id: 'focuswallpaper',
+    label: 'Focus mode wallpaper',
+    group: 'look',
+    description:
+      'A different wallpaper while a macOS Focus is on, like the iPad. Everything else gets your default.',
+    configKey: 'focusWallpaper',
   },
   {
     id: 'desktop',
@@ -162,9 +181,12 @@ export type RungInputs = {
   appearance?: { everywhere?: boolean } | null
   desktop?: { tiling?: { enabled?: boolean } } | null
   machine?: { enabled?: boolean } | null
+  wallpaper?: { enabled?: boolean } | null
+  focusWallpaper?: { enabled?: boolean } | null
 }
 
-/** The rungs' on/off for the sidebar; null for pages that are not rungs. */
+/** On/off for the sidebar: the rungs, and the opt-in features that act on the
+ * machine (the wallpapers); null for everything else. */
 export function rungState(id: PageId, c: RungInputs): 'on' | 'off' | null {
   switch (id) {
     case 'theme':
@@ -173,6 +195,10 @@ export function rungState(id: PageId, c: RungInputs): 'on' | 'off' | null {
       return c.desktop?.tiling?.enabled ? 'on' : 'off'
     case 'machine':
       return c.machine?.enabled ? 'on' : 'off'
+    case 'wallpaper':
+      return c.wallpaper?.enabled ? 'on' : 'off'
+    case 'focuswallpaper':
+      return c.focusWallpaper?.enabled ? 'on' : 'off'
     default:
       return null
   }
@@ -297,21 +323,9 @@ export const SEARCH_INDEX: readonly SearchEntry[] = [
   },
   {
     page: 'theme',
-    section: 'Policy',
-    label: 'Mode',
-    terms: ['light', 'dark', 'system', 'schedule', 'appearance'],
-  },
-  {
-    page: 'theme',
-    section: 'Policy',
-    label: 'Pair',
-    terms: ['light theme', 'dark theme'],
-  },
-  {
-    page: 'theme',
-    section: 'Focus',
-    label: 'Focus modes',
-    terms: ['focus', 'do not disturb', 'work'],
+    section: 'Appearance',
+    label: 'Appearance',
+    terms: ['match system', 'light', 'dark', 'mode', 'dark mode', 'pair'],
   },
   {
     page: 'theme',
@@ -337,6 +351,37 @@ export const SEARCH_INDEX: readonly SearchEntry[] = [
     section: 'Everywhere',
     label: 'Also retint editors',
     terms: ['vs code', 'cursor', 'zed', 'neovim', 'helix', 'btop'],
+  },
+  // Wallpaper
+  {
+    page: 'wallpaper',
+    section: 'Wallpaper',
+    label: 'Let scuttler set the wallpaper',
+    terms: ['desktop picture', 'background', 'wallpaper'],
+  },
+  {
+    page: 'wallpaper',
+    section: 'Images',
+    label: 'Light and dark images',
+    terms: ['light wallpaper', 'dark wallpaper', 'image', 'choose'],
+  },
+  {
+    page: 'focuswallpaper',
+    section: 'Focus mode wallpaper',
+    label: 'Focus mode wallpaper',
+    terms: ['focus', 'work', 'do not disturb', 'wallpaper', 'ipad'],
+  },
+  {
+    page: 'focuswallpaper',
+    section: 'Access',
+    label: 'Full Disk Access',
+    terms: ['permission', 'privacy', 'fda'],
+  },
+  {
+    page: 'focuswallpaper',
+    section: 'Focus modes',
+    label: 'Focus modes',
+    terms: ['work', 'personal', 'sleep', 'schedule'],
   },
   // Desktop
   {
