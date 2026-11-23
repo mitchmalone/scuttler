@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import type { Config } from '../../lib/config'
 import type { SetFn } from '../types'
+import { shownFields } from '../widget-fields'
 
 /**
  * What plugins and widgets share (docs/WIDGETS.md, docs/PLUGINS.md): the live
@@ -114,13 +115,13 @@ export function WidgetSettings({
   const attention = widgetNeedsAttention(widget)
   const isSet = (s: WidgetSetting) =>
     s.secret ? present.includes(s.key) : Boolean(plain[s.key])
-  // Healthy and nothing stored: no field — the widget found its own way (the
-  // CLI). But a field once shown stays for as long as the page is open: saving
-  // one key makes a multi-app widget healthy, and its other empty fields (and
-  // anything typed in them) must not vanish under the user (Mitch, 2026-11-24).
-  const natural = settings
-    .filter((s) => attention || isSet(s) || s.required)
-    .map((s) => s.key)
+  // A field once shown stays while the page is open, so a save never hides its
+  // siblings (rule: widget-fields.ts).
+  const natural = shownFields(settings, {
+    selfServe: (widget.requires?.length ?? 0) > 0,
+    attention,
+    isSet,
+  })
   const naturalKey = natural.join('\n')
   const [kept, setKept] = useState<string[]>([])
   const [showAll, setShowAll] = useState(false)
