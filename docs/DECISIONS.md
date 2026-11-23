@@ -5,6 +5,18 @@
 
 ---
 
+### 2026-11-24 · A `settings` action: a row can open scuttler's Settings at a page
+
+- **Context.** A widget whose fix lives in scuttler (a missing API key) could only name the
+  place in text ("Settings → Widgets"); Mitch wanted a "Configure" row that goes there.
+- **Decision.** The scripts action vocabulary (`ScriptAction`, shared by script rows and
+  widget rows and clicks) gains `{"type": "settings", "value": "<page id>"}`, run by the
+  existing `script_action` through `settings_window::open_tab` — the same path and the same
+  lowercase-id guard as `open_settings { tab }`. No new command (invariant 3: still 84).
+- **Consequences.** Page ids are now a public contract for scripts and widgets; renaming
+  one needs a `LEGACY` entry in `settings/pages.ts`, as the pre-redesign tab ids have. The
+  action lands on the page, not on one widget's block.
+
 ### 2026-11-23 · 0.9: one theme or Match System; wallpaper by theme and by Focus; Focus behind an FDA opt-in
 
 - **Context.** Mitch's 0.9: a light theme and a dark theme that swap with macOS (the pair

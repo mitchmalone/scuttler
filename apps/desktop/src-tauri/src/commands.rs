@@ -509,6 +509,7 @@ pub fn script_action(app: AppHandle, action: crate::scripts::ScriptAction) -> Cm
         ScriptAction::Open(target) => {
             Command::new("open").arg(&target).spawn()?;
         }
+        ScriptAction::Settings(page) => crate::settings_window::open_tab(&app, Some(&page))?,
         ScriptAction::None => {}
     }
     Ok(())

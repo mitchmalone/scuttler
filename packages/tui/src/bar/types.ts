@@ -131,6 +131,8 @@ export interface UsageBarState {
 export type WidgetAction =
   | { type: 'open'; value: string }
   | { type: 'copy'; value: string }
+  /** Open scuttler's Settings at a page id (`widgets`, `bar`, …). */
+  | { type: 'settings'; value: string }
   | { type: 'none' }
 
 /** Cell and dot tones a widget may ask for; anything else renders plain. */

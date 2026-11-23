@@ -538,14 +538,17 @@ describe('arr view', () => {
     expect(v.setup).toBeUndefined()
     expect(v.card?.rows?.map((r) => [r.dot, r.text, r.hint])).toEqual([
       ['error', 'Radarr unreachable', 'Radarr'],
-      ['error', 'Sonarr rejected the API key', 'Sonarr'],
-      ['warn', 'Bazarr: API key missing', 'Settings → Widgets'],
+      ['error', 'Sonarr rejected the API key', 'Configure'],
+      ['warn', 'Bazarr: API key missing', 'Configure'],
       ['error', 'Radarr', 'timeout · ok 5m ago'],
       ['error', 'Sonarr', '401'],
       ['ok', 'Prowlarr', '1.2.3'],
     ])
-    // A half-configured app has no URL to open.
-    expect(v.card?.rows?.[2]?.action).toBeNull()
+    // A half-configured app is fixed in Settings, not in the app.
+    expect(v.card?.rows?.[2]?.action).toEqual({
+      type: 'settings',
+      value: 'widgets',
+    })
   })
 
   it('asks for setup when every configured app rejects its key', () => {

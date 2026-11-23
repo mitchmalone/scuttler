@@ -41,6 +41,8 @@ export type Issue = {
   /** Row hint; the app's name when absent. */
   hint?: string
   link?: string
+  /** Fixed in scuttler's Settings, not in the app: the row opens Settings. */
+  configure?: true
 }
 
 export type Download = {
@@ -90,6 +92,8 @@ const NAMES: Record<AppId, string> = {
   pipeline: 'Pipeline',
 }
 const SETTINGS_PATH = 'Settings → Widgets'
+/** A row that opens Settings at the Widgets page, where the keys go. */
+const CONFIGURE: WidgetAction = { type: 'settings', value: 'widgets' }
 const MAX_ROWS = 14
 const MAX_DOWNLOADS = 5
 const TITLE_CHARS = 48
@@ -571,7 +575,8 @@ export function toView(snaps: AppSnapshot[], now: number): WidgetView {
         app: s.app,
         level: 'warn',
         text: `${name}: ${s.reason}`,
-        hint: SETTINGS_PATH,
+        hint: 'Configure',
+        configure: true,
       })
     } else if (s.state === 'down') {
       issues.push({
@@ -587,6 +592,8 @@ export function toView(snaps: AppSnapshot[], now: number): WidgetView {
         app: s.app,
         level: 'error',
         text: `${name} rejected the API key`,
+        hint: 'Configure',
+        configure: true,
       })
     } else if (s.state === 'up') {
       issues.push(...s.issues)
@@ -638,7 +645,7 @@ export function toView(snaps: AppSnapshot[], now: number): WidgetView {
       dot: i.level,
       text: i.text,
       hint: i.hint ?? NAMES[i.app],
-      action: open(i.link ?? urls.get(i.app)),
+      action: i.configure ? CONFIGURE : open(i.link ?? urls.get(i.app)),
     })),
     ...shownDownloads.map((d) => {
       const base = urls.get(d.app)

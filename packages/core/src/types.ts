@@ -55,6 +55,8 @@ export type ScriptInfo = {
 
 export type ScriptAction =
   | { type: 'copy'; value: string }
+  /** Open scuttler's Settings at a page id (`widgets`, `bar`, …). */
+  | { type: 'settings'; value: string }
   | { type: 'open'; value: string }
   | { type: 'none' }
 

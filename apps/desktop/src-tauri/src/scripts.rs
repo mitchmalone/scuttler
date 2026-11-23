@@ -37,6 +37,9 @@ pub struct ScriptInfo {
 pub enum ScriptAction {
     Copy(String),
     Open(String),
+    /// Open scuttler's Settings at a page id (`widgets`, `bar`, …): a widget's
+    /// "Configure" row (DECISIONS 2026-11-24).
+    Settings(String),
     None,
 }
 
@@ -238,6 +241,13 @@ pub fn start(app: AppHandle) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn settings_action_names_a_page() {
+        let a: ScriptAction =
+            serde_json::from_str(r#"{"type":"settings","value":"widgets"}"#).unwrap();
+        assert_eq!(a, ScriptAction::Settings("widgets".into()));
+    }
 
     #[test]
     fn script_item_parses_with_defaults() {
