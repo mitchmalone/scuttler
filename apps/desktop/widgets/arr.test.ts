@@ -539,11 +539,10 @@ describe('arr view', () => {
     expect(v.card?.rows?.map((r) => [r.dot, r.text, r.hint])).toEqual([
       ['error', 'Radarr unreachable', 'Radarr'],
       ['error', 'Sonarr rejected the API key', 'Sonarr'],
-      ['warn', 'Bazarr: API key missing', 'Bazarr'],
+      ['warn', 'Bazarr: API key missing', 'Settings → Widgets'],
       ['error', 'Radarr', 'timeout · ok 5m ago'],
       ['error', 'Sonarr', '401'],
       ['ok', 'Prowlarr', '1.2.3'],
-      ['muted', 'Bazarr', 'API key missing'],
     ])
     // A half-configured app has no URL to open.
     expect(v.card?.rows?.[2]?.action).toBeNull()

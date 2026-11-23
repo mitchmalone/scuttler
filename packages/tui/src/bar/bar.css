@@ -895,9 +895,8 @@
   margin-bottom: 4px;
 }
 
-.bar-widget-head > div:first-of-type {
+.bar-widget-head > svg {
   flex-shrink: 0;
-  display: flex;
 }
 
 .bar-widget-sub {

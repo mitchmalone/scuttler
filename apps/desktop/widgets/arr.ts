@@ -490,7 +490,8 @@ function appRow(snap: AppSnapshot, now: number): WidgetRow | null {
     case 'unconfigured':
       return null
     case 'misconfigured':
-      return { dot: 'muted', text: name, hint: snap.reason }
+      // Its issue row already says what is missing and where to set it.
+      return null
     case 'auth':
       return {
         dot: 'error',
@@ -566,7 +567,12 @@ export function toView(snaps: AppSnapshot[], now: number): WidgetView {
       urls.set(s.app, s.url)
     }
     if (s.state === 'misconfigured') {
-      issues.push({ app: s.app, level: 'warn', text: `${name}: ${s.reason}` })
+      issues.push({
+        app: s.app,
+        level: 'warn',
+        text: `${name}: ${s.reason}`,
+        hint: SETTINGS_PATH,
+      })
     } else if (s.state === 'down') {
       issues.push({
         app: s.app,
