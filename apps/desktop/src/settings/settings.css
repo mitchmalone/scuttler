@@ -796,6 +796,10 @@ input[type='range'] {
   gap: 6px;
 }
 
+.widgetsetting-more {
+  align-self: flex-start;
+}
+
 .linkrow {
   display: flex;
   align-items: center;

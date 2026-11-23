@@ -112,7 +112,30 @@ export function WidgetSettings({
   }, [widget.id, widget.auth, refreshPresent])
 
   const attention = widgetNeedsAttention(widget)
+  const isSet = (s: WidgetSetting) =>
+    s.secret ? present.includes(s.key) : Boolean(plain[s.key])
+  // Healthy and nothing stored: no field — the widget found its own way (the
+  // CLI). But a field once shown stays for as long as the page is open: saving
+  // one key makes a multi-app widget healthy, and its other empty fields (and
+  // anything typed in them) must not vanish under the user (Mitch, 2026-11-24).
+  const natural = settings
+    .filter((s) => attention || isSet(s) || s.required)
+    .map((s) => s.key)
+  const naturalKey = natural.join('\n')
+  const [kept, setKept] = useState<string[]>([])
+  const [showAll, setShowAll] = useState(false)
+  useEffect(() => {
+    const keys = naturalKey ? naturalKey.split('\n') : []
+    setKept((k) =>
+      keys.every((key) => k.includes(key))
+        ? k
+        : [...k, ...keys.filter((key) => !k.includes(key))],
+    )
+  }, [naturalKey])
   if (!settings.length) return null
+  const visible = (s: WidgetSetting) =>
+    showAll || natural.includes(s.key) || kept.includes(s.key)
+  const hidden = settings.filter((s) => !visible(s)).length
 
   const setPlain = (key: string, value: string) => {
     const mine = { ...plain }
@@ -188,10 +211,7 @@ export function WidgetSettings({
 
   const field = (s: WidgetSetting) => {
     const missing = widget.needs?.includes(s.key)
-    const isSet = s.secret ? present.includes(s.key) : Boolean(plain[s.key])
-    // Healthy and nothing stored: no field — the widget found its own way
-    // (the CLI). The row returns the moment the widget needs the user.
-    if (!attention && !isSet && !s.required) return null
+    if (!visible(s)) return null
     const req = (s.required || missing) && (
       <span className="widgetsetting-req"> · required</span>
     )
@@ -217,7 +237,7 @@ export function WidgetSettings({
       )
     }
     const withAuth = s.key === authKey
-    if (isSet) {
+    if (isSet(s)) {
       // Set: say so, offer clear — no input until they want to replace it.
       return (
         <div className="linkrow widgetsetting" key={s.key}>
@@ -290,6 +310,15 @@ export function WidgetSettings({
   return (
     <div className="widgetsettings">
       {settings.map(field)}
+      {hidden > 0 && (
+        <button
+          type="button"
+          className="btn widgetsetting-more"
+          onClick={() => setShowAll(true)}
+        >
+          show {hidden} more {hidden === 1 ? 'setting' : 'settings'}
+        </button>
+      )}
       {note && <p className="note error">{note}</p>}
     </div>
   )
