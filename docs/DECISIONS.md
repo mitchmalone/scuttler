@@ -5,6 +5,34 @@
 
 ---
 
+### 2026-11-23 · Settings navigation moves to a grouped sidebar with search; settings stays a window
+
+- **Context.** Seven tabs shared the 760px titlebar with the traffic lights (the CSS
+  already clipped and shrank them), five tabs had split into sub-tabs because the strip
+  was full, the Theme rung lived inside General, and Mitch is about to add more pages.
+  Designs: Claude Design "scuttler settings redesign" (today's record and directions
+  1a–1e). Mitch asked whether React is still right: yes — the window is created on
+  demand and destroyed on close, so it is outside the receipt, and the webview, not
+  React, is its cost.
+- **Decision.** A 1080×720 window: a sidebar grouped by the product model (core:
+  Launcher, Bar, Quicklinks, Color picker; Rungs: Theme, Desktop, Machine, each showing
+  on/off; Extend: Agents, Plugins, Widgets; scuttler: Updates, About), one page at a
+  time, no sub-tabs. One grammar for every page (`settings/ui.tsx`: Page → Section →
+  Row or Block, booleans as toggles). A registry (`settings/pages.ts`) holds the pages,
+  their groups, rung state, the pre-redesign tab ids (`general` → launcher, `menubar` →
+  bar, so `open_settings { tab }` callers keep working) and the search index. Search is
+  the prompt (`❯`, ⌘F, ↑/↓/↵/Esc) over `@scuttler/core` `fuzzyMatch` on labels plus
+  substring hits on terms and hints (invariant 5). A rung that is off shows what
+  turning it on does and one labelled Enter row (invariants 12, 13). No new IPC command
+  and no new config key.
+- **Not chosen.** Settings as a launcher panel (ROADMAP's re-decide): it would reuse the
+  warm webview, but a two-pane settings surface does not fit the 8-row panel; the window
+  stays. A search index derived from rendered rows: rows only exist on the mounted page;
+  the index is declared beside the pages and a test pins every page into it.
+- **Consequences.** Adding a page is one registry entry, one view and its index rows.
+  A renamed row label must be renamed in the index too (it is the row's anchor). Plan
+  `plans/active/2026-11-23-settings-redesign.md`.
+
 ### 2026-11-13 · The bar hides on a display the frontmost app covers whole
 
 - **Context.** A borderless-fullscreen game (World of Warcraft, "Windowed

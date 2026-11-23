@@ -4,8 +4,8 @@ use crate::error::{CmdError, CmdResult};
 
 /// The settings window — created on demand, focused if it already exists. A normal activating
 /// window (the panel's non-activating rules don't apply here; you're configuring, not
-/// launching). Titlebar is overlay-style: traffic lights float over the webview's tab strip,
-/// which doubles as the drag region.
+/// launching). Titlebar is overlay-style: traffic lights float over the webview's sidebar,
+/// whose top strip and brand row are the drag region.
 pub fn open(app: &AppHandle) -> CmdResult<()> {
     open_tab(app, None)
 }
@@ -30,7 +30,10 @@ pub fn open_tab(app: &AppHandle, tab: Option<&str>) -> CmdResult<()> {
     };
     WebviewWindowBuilder::new(app, "settings", WebviewUrl::App(url.into()))
         .title("scuttler settings")
-        .inner_size(760.0, 720.0)
+        // Sidebar + one page (plans/active/2026-11-23-settings-redesign.md); the
+        // minimum keeps the sidebar and a row's label + control side by side.
+        .inner_size(1080.0, 720.0)
+        .min_inner_size(860.0, 560.0)
         .resizable(true)
         .title_bar_style(TitleBarStyle::Overlay)
         .hidden_title(true)

@@ -10,6 +10,12 @@
 
 ## Where we are
 
+- **In flight: the settings redesign** (`plans/active/2026-11-23-settings-redesign.md`,
+  DECISIONS 2026-11-23), on `feat/settings-redesign` in the worktree
+  `../scuttler-settings-redesign`, kept open for the settings features Mitch adds next.
+  Sidebar + twelve pages + search, built and `pnpm verify` green; checked in a browser
+  against mocked IPC, dark and light themes. The native checklist (drag region, hotkey
+  recorder, zone-board drag, Desktop deep link) needs an installed build. Not merged.
 - **Released: v0.8.8** (2026-11-19, `releases/v0.8.8.md`): receipt 114.4 MB, cold
   start 223 ms. Signed, notarized, on GitHub with dmg, zip and `SHA256SUMS`; CI green
   on the release commit. It carries `desktop.borders.exclude` (process names
