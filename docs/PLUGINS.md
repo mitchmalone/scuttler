@@ -129,9 +129,21 @@ Every field is optional; `{}` is a valid blank cell.
 - `label` — short text beside the glyph: a count or a percentage; details belong in the card.
 - `tone` — `ok` (plain fg) · `warn` · `error` (theme danger) · `muted` · `accent`.
 - `click` — `{"type":"open","value":…}` (URL/file/app via `open`), `{"type":"copy","value":…}`,
+  `{"type":"settings","value":"widgets"}` (scuttler's Settings at a page),
   `{"type":"none"}` — the scripts action vocabulary.
-- `card` — `title`, dim `subtitle`, `rows` (each: `dot` tone, `text`, dim right-aligned
-  `hint`, optional `action`), dim `hint` at the bottom.
+- `card` — top to bottom:
+  - `title`, dim `subtitle`;
+  - `rows`, untitled: what needs attention goes here, on top;
+  - `sections` — `[{ "title": "In flight", "rows": [...] }]`, each under the shared
+    uppercase label; a section with no rows draws nothing;
+  - `footer` — `{ "left": "5 movies · 2 shows", "right": "3.5 TB free" }`, dim, under a rule;
+  - dim `hint` at the bottom.
+
+  A row: `dot` tone, `text`, dim right-aligned `hint`, optional `action`, and two
+  optional extras — `progress` (0–100, a bar under the row) and `badge`
+  (`{ "text": "4K DV", "tone": "accent" }`, after the hint; no tone = dim). The
+  reference for all of it is `apps/desktop/widgets/arr.ts`.
+
 - `setup` — `{ "message": "no GitHub credentials — sign in with the GitHub CLI", "fix": "gh auth login" }`:
   the plugin can't run until the user acts. A **dim** cell (nothing broke), the message in
   the card and the settings row, the fix as a copyable command. Use this for a missing or

@@ -105,6 +105,52 @@ describe('BarWidgetCard', () => {
     expect(html.match(/class="bar-widget-row[ "]/g)?.length).toBe(2)
   })
 
+  it('renders sections, a progress bar, a toned badge and a split footer', () => {
+    const media: BarWidget = {
+      ...uptime,
+      view: {
+        card: {
+          title: 'Media stack',
+          rows: [{ dot: 'warn', text: 'Monarch S01E04 aired, not grabbed' }],
+          sections: [
+            {
+              title: 'In flight',
+              rows: [
+                { dot: 'accent', text: 'Monarch', hint: '62%', progress: 62 },
+              ],
+            },
+            {
+              title: 'Recently added',
+              rows: [
+                {
+                  dot: 'ok',
+                  text: 'Eternals (2021)',
+                  hint: '3h',
+                  badge: { text: '4K DV', tone: 'accent' },
+                },
+              ],
+            },
+            { title: 'Coming up', rows: [] },
+          ],
+          footer: { left: '5 movies · 2 shows', right: '3.5 TB free' },
+        },
+      },
+    }
+    const html = renderToStaticMarkup(
+      <BarWidgetCard widget={media} now={now} />,
+    )
+    expect(html).toContain('In flight')
+    expect(html).toContain('Recently added')
+    // An empty section draws nothing, not a bare heading.
+    expect(html).not.toContain('Coming up')
+    expect(html).toContain('bar-widget-row-progress')
+    expect(html).toContain('width:62%')
+    expect(html).toContain('bar-widget-badge bar-tone-accent')
+    expect(html).toContain('3h · ')
+    expect(html).toContain('bar-widget-foot')
+    expect(html).toContain('3.5 TB free')
+  })
+
   it('shows a waiting hint before the first tick', () => {
     const fresh = { ...uptime, view: null, lastOk: null, updatedAt: null }
     const html = renderToStaticMarkup(

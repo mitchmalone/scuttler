@@ -51,6 +51,7 @@ import type {
   UsageBarAccount,
   UsageBarState,
   WidgetAction,
+  WidgetRow,
   WifiDetail,
 } from './types'
 
@@ -1100,10 +1101,77 @@ export function WidgetGlyph({
   return <DynamicIcon name={(name || 'puzzle') as IconName} {...props} />
 }
 
+/** One list of a widget card's rows: dot, text, hint and badge, an optional
+ * progress bar underneath, and a click when the row carries an action. */
+function WidgetRows({
+  rows,
+  onAction,
+}: {
+  rows: WidgetRow[]
+  onAction?: (action: WidgetAction) => void
+}) {
+  return (
+    <div className="bar-widget-rows">
+      {rows.map((row, i) => {
+        const progress =
+          typeof row.progress === 'number' && Number.isFinite(row.progress)
+            ? Math.min(100, Math.max(0, row.progress))
+            : null
+        const body = (
+          <>
+            {row.dot != null ? (
+              <span className={`bar-widget-dot ${widgetToneClass(row.dot)}`}>
+                ●
+              </span>
+            ) : (
+              progress !== null && <span />
+            )}
+            <span className="bar-widget-text">{row.text}</span>
+            {(row.hint || row.badge) && (
+              <span className="bar-widget-hint">
+                {row.hint}
+                {row.hint && row.badge && ' · '}
+                {row.badge && (
+                  <span
+                    className={`bar-widget-badge ${row.badge.tone ? widgetToneClass(row.badge.tone) : ''}`}
+                  >
+                    {row.badge.text}
+                  </span>
+                )}
+              </span>
+            )}
+            {progress !== null && (
+              <span className="bar-widget-progress">
+                <span style={{ width: `${progress}%` }} />
+              </span>
+            )}
+          </>
+        )
+        const cls = `bar-widget-row${progress !== null ? ' bar-widget-row-progress' : ''}`
+        const action = row.action
+        return action && action.type !== 'none' && onAction ? (
+          <button
+            key={i}
+            type="button"
+            className={`${cls} bar-widget-row-action`}
+            onClick={() => onAction(action)}
+          >
+            {body}
+          </button>
+        ) : (
+          <div key={i} className={cls}>
+            {body}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 /**
- * A widget's card: the tick's title/subtitle, dot-rows (each optionally a
- * click), a hint, and — when the last tick failed — the health line. Purely
- * what the widget said, styled once here.
+ * A widget's card: the tick's title/subtitle, untitled rows, titled sections,
+ * a split footer, a hint, and — when the last tick failed — the health line.
+ * Purely what the widget said, styled once here (docs/PLUGINS.md, WidgetView).
  */
 export function BarWidgetCard({
   widget,
@@ -1121,12 +1189,14 @@ export function BarWidgetCard({
   const needs = widget.needs ?? []
   const setup = view?.setup
   const health = needs.length
-    ? `needs setup: ${needs.join(', ')} — Settings → Menubar → Custom widgets`
+    ? `needs setup: ${needs.join(', ')} — Settings → Widgets`
     : setup
       ? setup.message
       : widgetHealth(widget.error, widget.lastOk, now)
   const quiet = needs.length > 0 || setup != null
   const rows = card?.rows ?? []
+  const sections = card?.sections ?? []
+  const footer = card?.footer
   return (
     <BarCard variant="widget" cardRef={cardRef}>
       <div className="bar-widget-head">
@@ -1160,40 +1230,23 @@ export function BarWidgetCard({
           <span className="bar-widget-hint">copy</span>
         </button>
       )}
-      {rows.length > 0 && (
-        <div className="bar-widget-rows">
-          {rows.map((row, i) => {
-            const body = (
-              <>
-                {row.dot != null && (
-                  <span
-                    className={`bar-widget-dot ${widgetToneClass(row.dot)}`}
-                  >
-                    ●
-                  </span>
-                )}
-                <span className="bar-widget-text">{row.text}</span>
-                {row.hint && (
-                  <span className="bar-widget-hint">{row.hint}</span>
-                )}
-              </>
-            )
-            const action = row.action
-            return action && action.type !== 'none' && onAction ? (
-              <button
-                key={i}
-                type="button"
-                className="bar-widget-row bar-widget-row-action"
-                onClick={() => onAction(action)}
-              >
-                {body}
-              </button>
-            ) : (
-              <div key={i} className="bar-widget-row">
-                {body}
+      {rows.length > 0 && <WidgetRows rows={rows} onAction={onAction} />}
+      {sections.map((section, i) =>
+        section.rows.length ? (
+          <div key={i} className="bar-widget-section">
+            {section.title && (
+              <div className="bar-card-section bar-widget-section-title">
+                {section.title}
               </div>
-            )
-          })}
+            )}
+            <WidgetRows rows={section.rows} onAction={onAction} />
+          </div>
+        ) : null,
+      )}
+      {(footer?.left || footer?.right) && (
+        <div className="bar-widget-foot">
+          <span>{footer.left}</span>
+          <span>{footer.right}</span>
         </div>
       )}
       {(card?.hint || (!view && !health)) && (

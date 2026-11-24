@@ -144,13 +144,38 @@ export interface WidgetRow {
   text: string
   hint?: string | null
   action?: WidgetAction | null
+  /** 0–100: a progress bar under the row. */
+  progress?: number | null
+  /** A short toned tag after the hint ("4K DV"); no tone = dim like the hint. */
+  badge?: WidgetBadge | null
 }
 
-/** Mirrors WidgetCard in widgets.rs. */
+/** Mirrors WidgetBadge in widgets.rs. */
+export interface WidgetBadge {
+  text: string
+  tone?: WidgetTone | string | null
+}
+
+/** Mirrors WidgetSection in widgets.rs — a titled group of rows. */
+export interface WidgetSection {
+  title?: string | null
+  rows: WidgetRow[]
+}
+
+/** Mirrors WidgetFooter in widgets.rs — the card's last line, split. */
+export interface WidgetFooter {
+  left?: string | null
+  right?: string | null
+}
+
+/** Mirrors WidgetCard in widgets.rs. Untitled `rows` come first (issues),
+ * then `sections`, then the `footer` under a rule, then `hint`. */
 export interface WidgetCard {
   title?: string | null
   subtitle?: string | null
   rows?: WidgetRow[]
+  sections?: WidgetSection[]
+  footer?: WidgetFooter | null
   hint?: string | null
 }
 

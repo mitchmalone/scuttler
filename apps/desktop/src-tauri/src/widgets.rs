@@ -147,6 +147,41 @@ pub struct WidgetRow {
     /// Click on the row — the scripts action vocabulary.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub action: Option<ScriptAction>,
+    /// 0–100: a progress bar under the row.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub progress: Option<f64>,
+    /// A short toned tag after the hint ("4K DV").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub badge: Option<WidgetBadge>,
+}
+
+/// A row's tag: text, and a tone (ok | warn | error | muted | accent); none = dim.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WidgetBadge {
+    pub text: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tone: Option<String>,
+}
+
+/// A titled group of rows, after the card's untitled `rows`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WidgetSection {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(default)]
+    pub rows: Vec<WidgetRow>,
+}
+
+/// The card's last line, split: left and right, under a rule.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WidgetFooter {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub left: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub right: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
@@ -158,6 +193,10 @@ pub struct WidgetCard {
     pub subtitle: Option<String>,
     #[serde(default)]
     pub rows: Vec<WidgetRow>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sections: Vec<WidgetSection>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub footer: Option<WidgetFooter>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hint: Option<String>,
 }
@@ -1126,6 +1165,20 @@ mod tests {
         assert!(card.rows[1].action.is_none());
         assert!(!v.hidden);
         assert!(parse_view(r#"{"hidden":true}"#).unwrap().hidden);
+        // Sections, a progress bar, a toned badge and a split footer survive
+        // the trip to the bar: a field Rust doesn't know is dropped.
+        let rich = parse_view(
+            r#"{"card":{"rows":[],"sections":[{"title":"In flight","rows":[
+                  {"text":"Monarch","progress":62,"badge":{"text":"4K DV","tone":"accent"}}]}],
+                "footer":{"left":"5 movies","right":"3.5 TB free"}}}"#,
+        )
+        .unwrap();
+        let card = rich.card.unwrap();
+        assert_eq!(card.sections[0].title.as_deref(), Some("In flight"));
+        assert_eq!(card.sections[0].rows[0].progress, Some(62.0));
+        let badge = card.sections[0].rows[0].badge.as_ref().unwrap();
+        assert_eq!(badge.tone.as_deref(), Some("accent"));
+        assert_eq!(card.footer.unwrap().right.as_deref(), Some("3.5 TB free"));
         // The empty object is a valid (blank) view.
         assert_eq!(parse_view("{}").unwrap(), WidgetView::default());
         assert!(parse_view("not json").is_err());

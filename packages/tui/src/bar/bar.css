@@ -951,6 +951,46 @@
   color: var(--dim, #8b90a5);
 }
 
+/* A section: the shared uppercase label, then its rows. */
+.bar-widget-section-title {
+  margin: 12px 0 0;
+}
+.bar-widget-section .bar-widget-rows {
+  margin-top: 4px;
+}
+
+/* A row with progress: dot | text | hint, the bar under text and hint. */
+.bar-widget-row-progress {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  column-gap: 8px;
+  row-gap: 3px;
+}
+.bar-widget-progress {
+  grid-column: 2 / 4;
+  height: 2px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--dim, #8b90a5) 25%, transparent);
+  overflow: hidden;
+}
+.bar-widget-progress > span {
+  display: block;
+  height: 100%;
+  background: var(--accent, #9db2ff);
+}
+
+/* The split footer under a rule: counts left, a figure right. */
+.bar-widget-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border, #34364a);
+  color: var(--dim, #8b90a5);
+  white-space: nowrap;
+}
+
 /* Dots and the health line live in a card, outside any zone. */
 .bar-card .bar-tone-ok {
   color: var(--fg, #dde1f0);

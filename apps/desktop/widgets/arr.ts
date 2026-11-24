@@ -9,8 +9,9 @@
 // running conversion, the last five imports of the past week, the next five
 // releases of the next two weeks; a dim footer counts the library. The cell is
 // a clapperboard: plain when idle, accent with a count while downloading or
-// when something was imported in the last day, amber with a count on
-// warnings, a red triangle on errors.
+// when something was imported today, amber with a count on warnings, a red
+// triangle on errors. Issues are the card's untitled rows; the rest are
+// titled sections (In flight, Recently added, Coming up) and a split footer.
 //
 // Why API keys and not a login: every *arr API authenticates with the app's
 // API key (Settings → General → Security in each app). The key travels only
@@ -26,13 +27,14 @@
 // download has been waiting to import, and the library counts (the full movie
 // and series lists are fetched at most every 15 minutes).
 //
-// "New" is the last 24 hours: the host does not tell a widget when its card
-// was opened, so there is no "since you last looked".
+// "New" is today (since local midnight): the host does not tell a widget when
+// its card was opened, so there is no "since you last looked".
 //
 // Install: copy into ~/.config/scuttler/widgets/. Runs under Bun or Node.
 import type {
   WidgetAction,
   WidgetRow,
+  WidgetSection,
   WidgetTone,
   WidgetView,
 } from '@scuttler/tui/bar/types'
@@ -61,6 +63,7 @@ export type Download = {
   progress?: number
   eta?: string
   level: 'ok' | 'warn' | 'error'
+  /** Why it isn't fine; on a healthy row, what it's doing ('verify'). */
   note?: string
 }
 
@@ -99,8 +102,8 @@ export type Recent = {
   key: string
   title: string
   at: number
-  /** '4K DV', '1080p'. */
-  badge?: string
+  /** '4K DV' (accent), '1080p' (dim). */
+  badge?: { text: string; tone?: WidgetTone }
   /** Path under the app's URL: `/movie/<slug>`, `/series/<slug>`. */
   path?: string
 }
@@ -151,7 +154,7 @@ const MONTHS = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')
 const WEEKDAYS = 'Sun Mon Tue Wed Thu Fri Sat'.split(' ')
 
 const REASONS: Record<string, string> = {
-  'no-forced-main-language': 'no forced English subtitles',
+  'no-forced-main-language': 'no forced English subs',
 }
 
 export function manifest() {
@@ -234,6 +237,8 @@ const clip = (text: string, max = TEXT_CHARS): string =>
 
 const basename = (path: string): string =>
   path.split(/[\\/]/).filter(Boolean).pop() ?? path
+/** A file name without its extension: 'The Bear S03E01.mkv' → 'The Bear S03E01'. */
+const stem = (name: string): string => name.replace(/\.[a-z0-9]{2,4}$/i, '')
 
 /** '12m' / '2h 5m' / '3d' for a duration in ms. */
 export function span(ms: number): string {
@@ -369,7 +374,9 @@ function queueTitle(r: Record<string, unknown>): string {
   const movie = isRecord(r.movie) ? movieTitle(r.movie) : undefined
   if (movie) return movie
   const series = isRecord(r.series) ? str(r.series.title) : undefined
-  if (series) return episodeTitle(series, isRecord(r.episode) ? r.episode : {})
+  if (series) {
+    return episodeTitle(series, isRecord(r.episode) ? r.episode : {}, true)
+  }
   return str(r.title) ?? 'download'
 }
 
@@ -377,7 +384,7 @@ function queueTitle(r: Record<string, unknown>): string {
 export function qualityBadge(
   quality: unknown,
   mediaInfo?: unknown,
-): string | undefined {
+): { text: string; tone?: WidgetTone } | undefined {
   const q =
     isRecord(quality) && isRecord(quality.quality) ? quality.quality : {}
   const res = num(q.resolution)
@@ -390,7 +397,10 @@ export function qualityBadge(
     : range.includes('hdr') || range.includes('hlg')
       ? 'HDR'
       : undefined
-  return [size, hdr].filter(Boolean).join(' ') || undefined
+  const text = [size, hdr].filter(Boolean).join(' ')
+  if (!text) return undefined
+  // 4K or a dynamic range is the detail worth seeing; 1080p stays dim.
+  return size === '4K' || hdr ? { text, tone: 'accent' } : { text }
 }
 
 /**
@@ -472,7 +482,7 @@ export function calendarItems(
       at = Date.parse(str(c.airDateUtc) ?? '')
       path = slugPath('series', series)
     } else {
-      title = movieTitle(c)
+      title = str(c.title)
       const dates = (['digital', 'physical'] as const)
         .map((k) => ({ k, at: Date.parse(str(c[`${k}Release`]) ?? '') }))
         .filter((d) => Number.isFinite(d.at))
@@ -492,8 +502,8 @@ export function calendarItems(
       late.push({
         app,
         level: 'warn',
-        text: middle(title),
-        hint: app === 'sonarr' ? 'aired, not grabbed' : 'released, not grabbed',
+        text: `${middle(title, 36)} ${app === 'sonarr' ? 'aired' : 'released'}, not grabbed`,
+        hint: `${NAMES[app]} · ${ago(now - at)}`,
         link: path,
       })
     }
@@ -704,13 +714,16 @@ export function pipelineSnapshot(
         {
           app: 'pipeline' as const,
           level,
-          text: middle(basename(path)),
-          hint: clip(REASONS[reason] ?? reason, 60),
+          text: clip(
+            `${middle(stem(basename(path)), 36)}: ${REASONS[reason] ?? reason}`,
+          ),
+          hint: 'pipeline',
         },
       ]
     })
   const queue = isRecord(body.queue) ? body.queue : {}
-  const running = isRecord(queue.running) ? str(queue.running.path) : undefined
+  const job = isRecord(queue.running) ? queue.running : {}
+  const running = str(job.path)
   return {
     app: 'pipeline',
     state: 'up',
@@ -723,8 +736,10 @@ export function pipelineSnapshot(
       ? [
           {
             app: 'pipeline',
-            title: `Converting ${basename(running)}`,
+            title: `Converting ${stem(basename(running))}`,
             level: 'ok',
+            note: str(job.stage),
+            progress: num(job.progress),
           },
         ]
       : [],
@@ -819,10 +834,15 @@ export function toView(snaps: AppSnapshot[], now: number): WidgetView {
   upcoming.sort((a, b) => a.at - b.at)
 
   const bad = downloads.filter((d) => d.level !== 'ok')
-  const active = downloads.length - bad.length
+  // Downloading means the *arr queue; a conversion is in flight, not a download.
+  const active = downloads.filter(
+    (d) => d.level === 'ok' && d.app !== 'pipeline',
+  ).length
   const problems = issues.length + bad.length
   const anyError = [...issues, ...bad].some((p) => p.level === 'error')
-  const fresh = recent.filter((r) => now - r.at <= DAY).length
+  const midnight = new Date(now)
+  midnight.setHours(0, 0, 0, 0)
+  const fresh = recent.filter((r) => r.at >= midnight.getTime()).length
 
   // The app to open: the one with the worst problem, in app order on ties.
   const worst = (app: AppId) =>
@@ -858,57 +878,68 @@ export function toView(snaps: AppSnapshot[], now: number): WidgetView {
     return open(base && path ? `${base}${path}` : base)
   }
 
-  const rows: WidgetRow[] = [
-    ...shownIssues.map((i) => ({
-      dot: i.level,
-      text: i.text,
-      hint: i.hint ?? NAMES[i.app],
-      action: i.configure
-        ? CONFIGURE
-        : i.link && !/^https?:/i.test(i.link)
-          ? at(i.app, i.link)
-          : open(i.link ?? urls.get(i.app)),
-    })),
-    ...shownDownloads.map((d) => {
-      const base = urls.get(d.app)
-      const progress = [
-        d.progress !== undefined ? `${d.progress}%` : null,
-        d.eta ?? null,
-      ].filter(Boolean)
-      return {
-        dot: (d.level === 'ok' ? 'accent' : d.level) satisfies WidgetTone,
-        text: middle(d.title),
-        hint:
-          d.level === 'ok' ? progress.join(' · ') || null : (d.note ?? null),
-        action: open(
-          base && d.app !== 'pipeline' ? `${base}/activity/queue` : base,
-        ),
-      }
-    }),
-    ...shownRecent.map((r) => ({
-      dot: 'ok',
-      text: middle(r.title),
-      hint: [ago(now - r.at), r.badge].filter(Boolean).join(' · '),
-      action: at(r.app, r.path),
-    })),
-    ...shownUpcoming.map((u) => ({
-      dot: 'muted',
-      text: middle(u.title),
-      hint: [u.kind, when(u.at, now)].filter(Boolean).join(' · '),
-      action: at(u.app, u.path),
-    })),
-  ]
+  const rows: WidgetRow[] = shownIssues.map((i) => ({
+    dot: i.level,
+    text: i.text,
+    hint: i.hint ?? NAMES[i.app],
+    action: i.configure
+      ? CONFIGURE
+      : i.link && !/^https?:/i.test(i.link)
+        ? at(i.app, i.link)
+        : open(i.link ?? urls.get(i.app)),
+  }))
+  const sections: WidgetSection[] = [
+    {
+      title: 'In flight',
+      rows: shownDownloads.map((d) => {
+        const base = urls.get(d.app)
+        const ok = d.level === 'ok'
+        const status = [
+          d.progress !== undefined ? `${d.progress}%` : null,
+          d.eta ?? null,
+        ].filter(Boolean)
+        return {
+          dot: (ok ? 'accent' : d.level) satisfies WidgetTone,
+          text: middle(d.title),
+          hint: ok
+            ? status.join(' · ') || (d.note ? `${d.note}…` : null)
+            : (d.note ?? null),
+          progress: ok ? (d.progress ?? null) : null,
+          action: open(
+            base && d.app !== 'pipeline' ? `${base}/activity/queue` : base,
+          ),
+        }
+      }),
+    },
+    {
+      title: 'Recently added',
+      rows: shownRecent.map((r) => ({
+        dot: 'ok',
+        text: middle(r.title),
+        hint: ago(now - r.at),
+        badge: r.badge ?? null,
+        action: at(r.app, r.path),
+      })),
+    },
+    {
+      title: 'Coming up',
+      rows: shownUpcoming.map((u) => ({
+        dot: 'muted',
+        text: middle(u.title),
+        hint: [u.kind, when(u.at, now)].filter(Boolean).join(' · '),
+        action: at(u.app, u.path),
+      })),
+    },
+  ].filter((section) => section.rows.length > 0)
 
-  const footer = [
+  const counts = [
     library.radarr !== undefined ? plural(library.radarr, 'movie') : null,
     library.sonarr !== undefined ? plural(library.sonarr, 'show') : null,
-    free !== undefined ? `${bytes(free)} free` : null,
-    more > 0 ? `+${more} more` : null,
   ].filter(Boolean)
   const subtitle = [
     problems ? plural(problems, 'issue') : null,
     active ? `${active} downloading` : null,
-    fresh ? `${fresh} new` : null,
+    fresh ? `${fresh} new today` : null,
   ].filter(Boolean)
   return {
     icon: anyError ? 'triangle-alert' : 'clapperboard',
@@ -931,7 +962,15 @@ export function toView(snaps: AppSnapshot[], now: number): WidgetView {
       title: 'Media stack',
       subtitle: subtitle.join(' · ') || 'all good',
       rows,
-      hint: footer.join(' · ') || null,
+      sections,
+      footer:
+        counts.length || free !== undefined
+          ? {
+              left: counts.join(' · ') || null,
+              right: free !== undefined ? `${bytes(free)} free` : null,
+            }
+          : null,
+      hint: more > 0 ? `+${more} more` : null,
     },
   }
 }

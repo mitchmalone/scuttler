@@ -52,7 +52,6 @@ const dl = (title: string, extra: Partial<Download> = {}): Download => ({
   level: 'ok',
   ...extra,
 })
-const rows = (snaps: AppSnapshot[]) => toView(snaps, NOW).card?.rows ?? []
 
 describe('arr manifest', () => {
   it('declares a URL and a secret key per app, none required', () => {
@@ -345,18 +344,18 @@ describe('arr pipeline status', () => {
         {
           app: 'pipeline',
           level: 'error',
-          text: 'Bad (2020).mkv',
-          hint: 'verify failed: audio stream count',
+          text: 'Bad (2020): verify failed: audio stream count',
+          hint: 'pipeline',
         },
         {
           app: 'pipeline',
           level: 'warn',
-          text: 'Subs (2022).mkv',
-          hint: 'no forced English subtitles',
+          text: 'Subs (2022): no forced English subs',
+          hint: 'pipeline',
         },
       ],
       downloads: [
-        { app: 'pipeline', title: 'Converting Movie (2021).mkv', level: 'ok' },
+        { app: 'pipeline', title: 'Converting Movie (2021)', level: 'ok' },
       ],
     })
   })
@@ -374,6 +373,16 @@ describe('arr pipeline status', () => {
   })
 })
 
+/** Every row of a card, in order, tagged with its section ('' = top). */
+const flat = (v: ReturnType<typeof toView>) => [
+  ...(v.card?.rows ?? []).map((r) => ({ section: '', ...r })),
+  ...(v.card?.sections ?? []).flatMap((s) =>
+    s.rows.map((r) => ({ section: s.title ?? '', ...r })),
+  ),
+]
+const brief = (v: ReturnType<typeof toView>) =>
+  flat(v).map((r) => [r.section, r.dot, r.text, r.hint])
+
 describe('arr view', () => {
   it('asks for setup with nothing configured', () => {
     const v = toView(
@@ -388,7 +397,7 @@ describe('arr view', () => {
     expect(toView([], NOW).setup).toBeDefined()
   })
 
-  it('is plain when idle: nothing new, nothing in flight, no problems', () => {
+  it('is plain when idle: an empty library has only its footer', () => {
     const v = toView(
       [
         up('radarr', RADARR, { library: 0, free: 2.9 * 1024 * GB }),
@@ -404,56 +413,64 @@ describe('arr view', () => {
       click: { type: 'open', value: RADARR },
     })
     expect(v.hidden).toBeUndefined()
-    // An empty library: no rows at all, no app rows with versions.
     expect(v.card).toMatchObject({
       subtitle: 'all good',
       rows: [],
-      hint: '0 movies · 0 shows · 2.9 TB free',
+      sections: [],
+      footer: { left: '0 movies · 0 shows', right: '2.9 TB free' },
+      hint: null,
     })
   })
 
-  it('shows what is new and what is coming when all is well', () => {
+  it('answers what is in flight, what is new and what is coming', () => {
     const v = toView(
       [
         up('radarr', RADARR, {
           library: 5,
-          free: 2.9 * 1024 * GB,
+          free: 3.5 * 1024 * GB,
           recent: [
             {
               app: 'radarr',
               key: 'movie:1',
               title: 'Eternals (2021)',
-              at: NOW - 2 * 60 * MIN,
-              badge: '4K DV',
+              at: NOW - 3 * 60 * MIN,
+              badge: { text: '4K DV', tone: 'accent' },
               path: '/movie/eternals-2021',
             },
           ],
           upcoming: [
             {
               app: 'radarr',
-              title: 'Dune: Part Three (2026)',
+              title: 'Dune: Part Three',
               at: NOW + 10 * 86_400_000,
               kind: 'digital',
-              path: '/movie/dune-part-three-2026',
+              path: '/movie/dune-part-three',
             },
           ],
         }),
         up('sonarr', SONARR, {
           library: 2,
+          downloads: [
+            dl('Monarch S01E02 · Secrets and Lies', {
+              app: 'sonarr',
+              progress: 62,
+              eta: '4m',
+            }),
+          ],
           recent: [
             {
               app: 'sonarr',
               key: 'episode:9',
               title: 'Monarch S01E01 · Aftermath',
               at: NOW - 30 * 60 * MIN,
-              badge: '1080p',
+              badge: { text: '1080p' },
               path: '/series/monarch',
             },
           ],
           upcoming: [
             {
               app: 'sonarr',
-              title: 'Monarch S01E05',
+              title: 'Monarch S02E01',
               at: NOW + 2 * 86_400_000,
               path: '/series/monarch',
             },
@@ -462,39 +479,68 @@ describe('arr view', () => {
       ],
       NOW,
     )
-    // One import in the last day: accent with a count.
+    // Downloading wins the cell's count; the subtitle says both.
     expect(v).toMatchObject({ tone: 'accent', label: '1' })
-    expect(v.card?.subtitle).toBe('1 new')
-    expect(v.card?.hint).toBe('5 movies · 2 shows · 2.9 TB free')
-    expect(v.card?.rows).toEqual([
+    expect(v.card?.subtitle).toMatch(/^1 downloading( · 1 new today)?$/)
+    expect(v.card?.rows).toEqual([])
+    expect(v.card?.sections?.map((s) => s.title)).toEqual([
+      'In flight',
+      'Recently added',
+      'Coming up',
+    ])
+    expect(v.card?.sections?.[0]?.rows[0]).toEqual({
+      dot: 'accent',
+      text: 'Monarch S01E02 · Secrets and Lies',
+      hint: '62% · 4m',
+      progress: 62,
+      action: { type: 'open', value: `${SONARR}/activity/queue` },
+    })
+    expect(v.card?.sections?.[1]?.rows).toEqual([
       {
         dot: 'ok',
         text: 'Eternals (2021)',
-        hint: '2h · 4K DV',
+        hint: '3h',
+        badge: { text: '4K DV', tone: 'accent' },
         action: { type: 'open', value: `${RADARR}/movie/eternals-2021` },
       },
       {
         dot: 'ok',
         text: 'Monarch S01E01 · Aftermath',
-        hint: '1d · 1080p',
+        hint: '1d',
+        badge: { text: '1080p' },
         action: { type: 'open', value: `${SONARR}/series/monarch` },
-      },
-      {
-        dot: 'muted',
-        text: 'Monarch S01E05',
-        hint: expect.stringMatching(/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat)$/),
-        action: { type: 'open', value: `${SONARR}/series/monarch` },
-      },
-      {
-        dot: 'muted',
-        text: 'Dune: Part Three (2026)',
-        hint: 'digital · 3 Dec',
-        action: {
-          type: 'open',
-          value: `${RADARR}/movie/dune-part-three-2026`,
-        },
       },
     ])
+    expect(
+      v.card?.sections?.[2]?.rows.map((r) => [r.dot, r.text, r.hint]),
+    ).toEqual([
+      [
+        'muted',
+        'Monarch S02E01',
+        expect.stringMatching(/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat)$/),
+      ],
+      ['muted', 'Dune: Part Three', 'digital · 3 Dec'],
+    ])
+    expect(v.card?.footer).toEqual({
+      left: '5 movies · 2 shows',
+      right: '3.5 TB free',
+    })
+  })
+
+  it('counts imports since midnight as new', () => {
+    const midnight = new Date(NOW)
+    midnight.setHours(0, 0, 0, 0)
+    const at = midnight.getTime() + 60_000
+    const v = toView(
+      [
+        up('radarr', RADARR, {
+          recent: [{ app: 'radarr', key: 'movie:1', title: 'X', at }],
+        }),
+      ],
+      NOW,
+    )
+    expect(v).toMatchObject({ tone: 'accent', label: '1' })
+    expect(v.card?.subtitle).toBe('1 new today')
   })
 
   it('goes accent with a count while downloads are active', () => {
@@ -512,23 +558,13 @@ describe('arr view', () => {
       label: '2',
     })
     expect(v.card?.subtitle).toBe('2 downloading')
-    expect(v.card?.rows?.slice(0, 2)).toEqual([
-      {
-        dot: 'accent',
-        text: 'Fast',
-        hint: '42% · 12m',
-        action: { type: 'open', value: `${RADARR}/activity/queue` },
-      },
-      {
-        dot: 'accent',
-        text: 'Slow',
-        hint: '8% · 1h 40m',
-        action: { type: 'open', value: `${RADARR}/activity/queue` },
-      },
+    expect(brief(v)).toEqual([
+      ['In flight', 'accent', 'Fast', '42% · 12m'],
+      ['In flight', 'accent', 'Slow', '8% · 1h 40m'],
     ])
   })
 
-  it('goes amber on a health warning and opens that app', () => {
+  it('goes amber on a health warning, on top, and opens that app', () => {
     const issue: Issue = {
       app: 'sonarr',
       level: 'warn',
@@ -554,7 +590,7 @@ describe('arr view', () => {
     })
   })
 
-  it('goes red on a blocked import, shown once with its reason', () => {
+  it('goes red on a blocked import, shown in flight with its reason', () => {
     const v = toView(
       [
         up('radarr', RADARR, {
@@ -576,13 +612,15 @@ describe('arr view', () => {
       label: '1',
     })
     expect(v.card?.subtitle).toBe('1 issue · 1 downloading')
-    expect(v.card?.rows?.map((r) => [r.dot, r.text, r.hint])).toEqual([
-      ['error', 'Blocked', 'No files found'],
-      ['accent', 'Fine', '42% · 12m'],
+    expect(brief(v)).toEqual([
+      ['In flight', 'error', 'Blocked', 'No files found'],
+      ['In flight', 'accent', 'Fine', '42% · 12m'],
     ])
+    // Only a healthy download draws a bar.
+    expect(flat(v)[0]?.progress).toBeNull()
   })
 
-  it('shows one app down and one with a bad key', () => {
+  it('shows one app down and one with a bad key, as issues only', () => {
     const v = toView(
       [
         {
@@ -605,10 +643,10 @@ describe('arr view', () => {
       click: { type: 'open', value: RADARR },
     })
     expect(v.setup).toBeUndefined()
-    expect(v.card?.rows?.map((r) => [r.dot, r.text, r.hint])).toEqual([
-      ['error', 'Radarr unreachable', 'timeout · ok 5m ago'],
-      ['error', 'Sonarr rejected the API key', 'Configure'],
-      ['warn', 'Bazarr: API key missing', 'Configure'],
+    expect(brief(v)).toEqual([
+      ['', 'error', 'Radarr unreachable', 'timeout · ok 5m ago'],
+      ['', 'error', 'Sonarr rejected the API key', 'Configure'],
+      ['', 'warn', 'Bazarr: API key missing', 'Configure'],
     ])
     // A half-configured app is fixed in Settings, not in the app.
     expect(v.card?.rows?.[2]?.action).toEqual({
@@ -651,20 +689,16 @@ describe('arr view', () => {
     })
   })
 
-  it('lists pipeline failures with their reason and the running job', () => {
+  it('lists pipeline problems on top and the running job in flight', () => {
     const snap = pipelineSnapshot(
       {
-        queue: { pending: 2, running: { path: '/in/Movie (2021).mkv' } },
-        failures: [
-          {
-            path: '/m/Bad.mkv',
-            reason: 'verify failed',
-            time: new Date(NOW).toISOString(),
-          },
-        ],
+        queue: {
+          pending: 2,
+          running: { path: '/in/The Bear S03E01.mkv', stage: 'verify' },
+        },
         warnings: [
           {
-            path: '/m/Subs.mkv',
+            path: '/m/Shang-Chi (2021).mkv',
             reason: 'no-forced-main-language',
             time: new Date(NOW).toISOString(),
           },
@@ -673,12 +707,9 @@ describe('arr view', () => {
       'http://beebee:9099/status.json',
       NOW,
     )
-    expect(
-      rows([up('radarr', RADARR), snap]).map((r) => [r.dot, r.text, r.hint]),
-    ).toEqual([
-      ['error', 'Bad.mkv', 'verify failed'],
-      ['warn', 'Subs.mkv', 'no forced English subtitles'],
-      ['accent', 'Converting Movie (2021).mkv', null],
+    expect(brief(toView([up('radarr', RADARR), snap], NOW))).toEqual([
+      ['', 'warn', 'Shang-Chi (2021): no forced English subs', 'pipeline'],
+      ['In flight', 'accent', 'Converting The Bear S03E01', 'verify…'],
     ])
     const down = toView(
       [
@@ -717,19 +748,26 @@ describe('arr view', () => {
       ],
       NOW,
     )
-    const r = v.card?.rows ?? []
+    const r = flat(v)
     expect(r).toHaveLength(14)
     // All 12 issues (errors first), then two downloads; no room for imports.
     expect(r.slice(0, 6).every((x) => x.dot === 'error')).toBe(true)
     expect(r.slice(6, 12).every((x) => x.dot === 'warn')).toBe(true)
-    expect(r.slice(12).map((x) => x.text)).toEqual(['d0', 'd1'])
+    expect(r.slice(12).map((x) => [x.section, x.text])).toEqual([
+      ['In flight', 'd0'],
+      ['In flight', 'd1'],
+    ])
     expect(v.card?.hint).toBe('+5 more')
     expect(v.label).toBe('12')
 
     // With room to spare, downloads still stop at five; the import follows.
     const few = toView([up('radarr', RADARR, { downloads, recent })], NOW)
-    expect(few.card?.rows).toHaveLength(6)
-    expect(few.card?.rows?.[5]).toMatchObject({ text: 'New', hint: '3d' })
+    expect(flat(few)).toHaveLength(6)
+    expect(flat(few)[5]).toMatchObject({
+      section: 'Recently added',
+      text: 'New',
+      hint: '3d',
+    })
     expect(few.card?.hint).toBe('+2 more')
   })
 })
@@ -771,7 +809,7 @@ describe('arr v2 sources', () => {
         key: 'movie:1',
         title: 'Eternals (2021)',
         at: NOW - 2 * 60 * MIN,
-        badge: '4K DV',
+        badge: { text: '4K DV', tone: 'accent' },
         path: '/movie/eternals-2021',
       },
     ])
@@ -793,7 +831,7 @@ describe('arr v2 sources', () => {
       ],
     }
     expect(
-      recentImports('sonarr', sonarr, NOW).map((r) => [r.title, r.badge]),
+      recentImports('sonarr', sonarr, NOW).map((r) => [r.title, r.badge?.text]),
     ).toEqual([
       ['Monarch S01E02', undefined],
       ['Monarch S01E01 · Aftermath', '1080p'],
@@ -802,10 +840,16 @@ describe('arr v2 sources', () => {
 
   it('badges resolution and dynamic range', () => {
     const q = (resolution: number) => ({ quality: { resolution } })
-    expect(qualityBadge(q(2160), { videoDynamicRangeType: 'HDR10' })).toBe(
-      '4K HDR',
-    )
-    expect(qualityBadge(q(720))).toBe('720p')
+    expect(qualityBadge(q(2160), { videoDynamicRangeType: 'HDR10' })).toEqual({
+      text: '4K HDR',
+      tone: 'accent',
+    })
+    expect(qualityBadge(q(1080), { videoDynamicRangeType: 'DV' })).toEqual({
+      text: '1080p DV',
+      tone: 'accent',
+    })
+    // Plain HD is not worth a colour.
+    expect(qualityBadge(q(720))).toEqual({ text: '720p' })
     expect(qualityBadge(undefined)).toBeUndefined()
   })
 
@@ -851,8 +895,8 @@ describe('arr v2 sources', () => {
       {
         app: 'sonarr',
         level: 'warn',
-        text: 'Monarch S01E04',
-        hint: 'aired, not grabbed',
+        text: 'Monarch S01E04 aired, not grabbed',
+        hint: 'Sonarr · 2d',
         link: '/series/monarch',
       },
     ])
@@ -878,7 +922,7 @@ describe('arr v2 sources', () => {
     expect(calendarItems('radarr', radarr, NOW).upcoming).toEqual([
       {
         app: 'radarr',
-        title: 'Dune: Part Three (2026)',
+        title: 'Dune: Part Three',
         at: NOW + 10 * 86_400_000,
         kind: 'digital',
         path: '/movie/dune',
