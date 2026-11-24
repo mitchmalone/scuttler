@@ -6,6 +6,19 @@
 
 ---
 
+### 2026-11-24 · Radarr's import history omits the movie file; an empty calendar is normal
+
+Read off Mitch's live stack (a read-only probe of every endpoint the arr widget uses).
+`/api/v3/history?eventType=3&includeMovie=true` returns `eventType` as the string
+`downloadFolderImported` and a `movie` object without `movieFile`, so the dynamic range
+(`mediaInfo.videoDynamicRangeType`, e.g. `DV HDR10Plus`) is only in `/movie`; the widget
+keeps a movie id to range map from that list. History repeats a movie on every
+re-import (15 records, 5 movies); dedupe by `movieId`. Radarr's `titleSlug` is the TMDB
+id, so `/movie/<titleSlug>` still opens it. Bazarr's `missing_subtitles` entries are
+objects with a boolean `forced`. Radarr and Sonarr report the same disk under different
+root folders, so free space is the largest root, not a sum. Both calendars were empty
+for the next 14 days, so a card has to read well with only "Recently added" in it.
+
 ### 2026-11-24 · An ad-hoc build is a new app to macOS every time
 
 `tauri build` without `APPLE_SIGNING_IDENTITY` signs ad-hoc, and an ad-hoc signature's

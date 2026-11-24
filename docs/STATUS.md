@@ -4,9 +4,9 @@
 > history lives in git, `plans/done/`, `releases/` and `JOURNAL.md`; the backlog with its
 > triggers lives in `ROADMAP.md`.
 >
-> Last updated: 2026-11-19 (v0.8.8 released; the tap is still on 0.8.6 because the
-> fan-out's tap token is dead; the admin-rule and fullscreen-bar live runs are still
-> open; B4's GitHub settings remain)
+> Last updated: 2026-11-24 (0.9 work on `feat/settings-redesign`: the arr widget merged
+> in, widget cards gained sections, and the arr card does not yet match Mitch's mock;
+> v0.8.8 is the latest release, the tap still on 0.8.6)
 
 ## Where we are
 
@@ -22,12 +22,17 @@
   Sidebar + twelve pages + search, built and `pnpm verify` green; checked in a browser
   against mocked IPC, dark and light themes. The native checklist (drag region, hotkey
   recorder, zone-board drag, Desktop deep link) needs an installed build. Not merged.
-- **Built 2026-11-23, live run open: the `arr` reference widget** (Media stack:
-  Radarr, Sonarr, Prowlarr, Bazarr health, downloads and warnings; merged into
-  `feat/settings-redesign` for 0.9, `plans/active/2026-11-23-arr-widget.md`). A single-file widget
-  like `vercel.ts`, no Rust and no new command. `pnpm verify` green and the fetch
-  shell proven against a fake stack; the acceptance run on the live stack needs
-  Mitch's API keys.
+- **In flight, not done: the `arr` widget v2** (Media stack; merged into
+  `feat/settings-redesign` for 0.9, `plans/active/2026-11-23-arr-widget.md`). Data is
+  right: parsing checked against live responses from Mitch's stack, keys in the
+  Keychain via Settings. **The card does not look like Mitch's mock**
+  (`~/Downloads/arr-widget-v2-mock.png`; now: `~/Downloads/arr-widget-v2-now.png`):
+  structure is there (sections, progress bar, toned badge, split footer, added to every
+  widget card), the styling is not. Next step in the plan's "Card styling" list.
+- **Also on the branch, 2026-11-24:** `dev-install.sh --build` signs with the Developer
+  ID, so TCC and Keychain grants survive rebuilds (JOURNAL 2026-11-24); a `settings`
+  row action (DECISIONS 2026-11-24); widget settings fields no longer vanish after a
+  save, and only CLI-backed widgets hide empty ones.
 - **Released: v0.8.8** (2026-11-19, `releases/v0.8.8.md`): receipt 114.4 MB, cold
   start 223 ms. Signed, notarized, on GitHub with dmg, zip and `SHA256SUMS`; CI green
   on the release commit. It carries `desktop.borders.exclude` (process names

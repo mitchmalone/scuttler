@@ -85,6 +85,29 @@ Where the build departs from the spec, and why:
       episode, a forced-only gap (no warning) and a full English gap (warning)
 - [ ] Live acceptance on Mitch's stack (below)
 
+### Card styling (open, next)
+
+Mitch's verdict on the v2 card (2026-11-24): it does not look like the mock. Measured
+against `~/Downloads/arr-widget-v2-mock.png`, taking the row text size as F:
+
+- [ ] Header: title about 1.2F and brighter; subtitle at row size, dim; the glyph about
+      1.9F (lucide, never the mock's emoji); more space under the header
+- [ ] Rows: line pitch about 1.9F (today it is the bar's 3px gap); card text a little
+      larger than the 12px strip (the mock's rows are about 1.15x its bar text)
+- [ ] Section labels: smaller tracked caps tinted toward the accent, with clear space
+      above (about 2.2F) and below (about 1.7F)
+- [ ] Wider card so real titles fit ("Shang-Chi and the Legend of the Ten Rings (2021)",
+      "Monarch: Legacy of Monsters S01E01 · Aftermath"); today the cap is 60ch
+- [ ] Progress bar 3px; coming-up dots darker than recently-added dots
+- [ ] The one-section case (nothing downloading, empty calendar: Mitch's real data
+      today) has to look good on its own
+- [ ] Verify by rendering the real `BarWidgetCard` from the live responses next to the
+      mock at the same scale, before calling it done (the miss on 2026-11-24 was
+      checking structure, not looks)
+
+These are `.bar-widget-card` styles in `packages/tui/src/bar/bar.css` (every widget
+card, which is the intent) plus the head glyph size in `components.tsx`.
+
 ## Acceptance criteria
 
 - [x] `pnpm verify` green
