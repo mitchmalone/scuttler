@@ -13,6 +13,7 @@ import {
   libraryCount,
   manifest,
   middle,
+  movieRanges,
   normalizeUrl,
   pipelineSnapshot,
   qualityBadge,
@@ -836,6 +837,36 @@ describe('arr v2 sources', () => {
       ['Monarch S01E02', undefined],
       ['Monarch S01E01 · Aftermath', '1080p'],
     ])
+  })
+
+  it('takes the dynamic range from the movie list when history lacks the file', () => {
+    // Radarr's history includes the movie but not its file (seen live).
+    const history = {
+      records: [
+        {
+          movieId: 3,
+          date: iso(NOW - 60 * MIN),
+          quality: { quality: { resolution: 2160 } },
+          movie: { id: 3, title: 'Eternals', year: 2021, titleSlug: '524434' },
+        },
+      ],
+    }
+    const ranges = movieRanges([
+      {
+        id: 3,
+        movieFile: { mediaInfo: { videoDynamicRangeType: 'DV HDR10Plus' } },
+      },
+      { id: 4, movieFile: { mediaInfo: { videoDynamicRangeType: '' } } },
+    ])
+    expect(ranges).toEqual({ '3': 'DV HDR10Plus' })
+    expect(recentImports('radarr', history, NOW, ranges)[0]?.badge).toEqual({
+      text: '4K DV',
+      tone: 'accent',
+    })
+    expect(recentImports('radarr', history, NOW)[0]?.badge).toEqual({
+      text: '4K',
+      tone: 'accent',
+    })
   })
 
   it('badges resolution and dynamic range', () => {

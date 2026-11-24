@@ -101,10 +101,13 @@ Where the build departs from the spec, and why:
       checked against a live instance):
   - [ ] Radarr and Sonarr only: within a tick, recent imports and coming up listed, the
         footer counts match the apps
-  - [ ] v2 endpoints answer as the fixtures assume: history `records` with `movie` /
-        `series` + `episode` included, `quality.quality.resolution`, movie file
-        `mediaInfo.videoDynamicRangeType`, calendar `digitalRelease`, Bazarr wanted
-        `missing_subtitles` with `code2` / `forced`
+  - [x] v2 endpoints checked against live responses (2026-11-24, saved by Mitch's own
+        run of a read-only probe): history `records` with `movie` / `series` + `episode`,
+        `quality.quality.resolution`, Bazarr `missing_subtitles` objects with `code2` and a
+        boolean `forced`, one root folder per app on the same disk. One miss, fixed:
+        Radarr's history omits the movie file, so the DV/HDR badge reads the cached
+        `/movie` list (`movieRanges`). Both calendars were empty, so Coming up is
+        unproven live
   - [ ] Break the Radarr key: red cell, "Radarr rejected the API key"; fix it, recovers
   - [ ] A download running: accent cell and a progress row
   - [ ] Pipeline URL set: an injected warning reads "no forced English subtitles"

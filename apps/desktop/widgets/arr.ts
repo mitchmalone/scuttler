@@ -405,12 +405,15 @@ export function qualityBadge(
 
 /**
  * `/history?eventType=3` (downloadFolderImported) as imports of the past
- * 7 days, newest first, one per movie or episode.
+ * 7 days, newest first, one per movie or episode. Radarr's history carries
+ * the movie but not its file, so the dynamic range comes from `ranges` (movie
+ * id → `videoDynamicRangeType`, from the `/movie` list: `movieRanges`).
  */
 export function recentImports(
   app: 'radarr' | 'sonarr',
   body: unknown,
   now: number,
+  ranges: Record<string, string> = {},
 ): Recent[] {
   const records = isRecord(body) ? list(body.records) : list(body)
   const seen = new Set<string>()
@@ -425,12 +428,16 @@ export function recentImports(
       const title = movieTitle(movie) ?? str(r.sourceTitle)
       if (id === undefined || !title) continue
       const file = isRecord(movie.movieFile) ? movie.movieFile : {}
+      const range = ranges[String(id)]
       item = {
         app,
         key: `movie:${id}`,
         title,
         at,
-        badge: qualityBadge(r.quality, file.mediaInfo),
+        badge: qualityBadge(
+          r.quality,
+          range ? { videoDynamicRangeType: range } : file.mediaInfo,
+        ),
         path: slugPath('movie', movie),
       }
     } else {
@@ -543,6 +550,19 @@ export function libraryCount(app: 'radarr' | 'sonarr', body: unknown): number {
       : (num(isRecord(x.statistics) ? x.statistics.episodeFileCount : 0) ?? 0) >
         0,
   ).length
+}
+
+/** Radarr `/movie`: movie id → its file's dynamic range, where it has one. */
+export function movieRanges(body: unknown): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const m of list(body)) {
+    const id = num(m.id)
+    const file = isRecord(m.movieFile) ? m.movieFile : {}
+    const info = isRecord(file.mediaInfo) ? file.mediaInfo : {}
+    const range = str(info.videoDynamicRangeType)
+    if (id !== undefined && range) out[String(id)] = range
+  }
+  return out
 }
 
 /** Largest free space across `/rootfolder` entries, in bytes. */
@@ -982,7 +1002,17 @@ type Cache = {
   /** `pendingKey` → epoch ms first seen waiting to import. */
   pending: Record<string, number>
   /** Library counts and when they were fetched (`LIBRARY_TTL`). */
-  library?: Partial<Record<'radarr' | 'sonarr', { count: number; at: number }>>
+  library?: Partial<
+    Record<
+      'radarr' | 'sonarr',
+      {
+        count: number
+        at: number
+        /** Radarr: movie id → dynamic range, for the import badges. */
+        ranges?: Record<string, string>
+      }
+    >
+  >
 }
 
 type Fetched =
@@ -1192,7 +1222,11 @@ async function arrSnapshot(
   const to = encodeURIComponent(new Date(now + UPCOMING_WINDOW).toISOString())
   // The full movie or series list only every 15 minutes: it can be large.
   const cached = cache.library?.[id]
-  const stale = !cached || now - cached.at > LIBRARY_TTL
+  const stale =
+    !cached ||
+    now - cached.at > LIBRARY_TTL ||
+    // A cache from before the range map: fetch now, not in 15 minutes.
+    (id === 'radarr' && !cached.ranges)
   const [health, queue, disks, roots, history, calendar, all] =
     await Promise.all([
       part('health', '/health'),
@@ -1224,16 +1258,25 @@ async function arrSnapshot(
   }
   Object.assign(cache.pending, since)
   snap.downloads = queueDownloads(id, queue, now, since)
-  snap.recent = recentImports(id, history, now)
   const cal = calendarItems(id, calendar, now)
   snap.upcoming = cal.upcoming
   issues.push(...cal.late)
   if (Array.isArray(all)) {
     cache.library = {
       ...cache.library,
-      [id]: { count: libraryCount(id, all), at: now },
+      [id]: {
+        count: libraryCount(id, all),
+        at: now,
+        ...(id === 'radarr' ? { ranges: movieRanges(all) } : {}),
+      },
     }
   }
+  snap.recent = recentImports(
+    id,
+    history,
+    now,
+    cache.library?.[id]?.ranges ?? {},
+  )
   snap.library = cache.library?.[id]?.count
   snap.free = freeSpace(roots)
   return snap
