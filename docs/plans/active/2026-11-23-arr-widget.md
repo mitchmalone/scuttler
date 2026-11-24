@@ -12,9 +12,21 @@ links:
 
 ## Goal
 
-A reference widget, `apps/desktop/widgets/arr.ts`, that shows the health of a self-hosted
-\*arr stack (Radarr, Sonarr, Prowlarr, Bazarr) in the bar and lists what needs attention
-in its card. The user enters a URL and an API key per app; nothing else to install.
+A reference widget, `apps/desktop/widgets/arr.ts`, for a self-hosted \*arr stack
+(Radarr, Sonarr, Prowlarr, Bazarr). The user enters a URL and an API key per app; nothing
+else to install.
+
+**v2 (Mitch's addendum, 2026-11-24, supersedes v1 where they conflict):** most of the
+time the card answers what's new, what's coming and what's in flight. Issues stay on top
+when there are any; the per-app rows with versions are gone (an app only shows as an
+issue: down or refusing its key). Sections: issues, in flight (downloads, the running
+conversion), recently added (last 5 imports of the past 7 days, Radarr and Sonarr
+history `eventType=3`, deduped, `2h · 4K DV`), coming up (next 5 in 14 days from the
+calendars; a monitored episode or movie more than a day past its date without a file is a
+warning, "aired, not grabbed"), and a footer `5 movies · 2 shows · 2.9 TB free` (library
+lists cached 15 minutes). Bazarr's `/badges` count is replaced by `/movies/wanted` and
+`/episodes/wanted`, counting only non-forced English gaps. "New" is the last 24 hours:
+the host does not tell a widget when its card was opened.
 
 ## Context
 
@@ -68,6 +80,9 @@ Where the build departs from the spec, and why:
 - [x] `arr.test.ts`: the spec's ten fixtures plus each classifier
 - [x] `docs/WIDGETS.md` reference table
 - [x] Fetch shell run against a throwaway fake stack on loopback (below)
+- [x] v2: recently added, coming up, past due, English-only subtitle gaps, footer; app
+      rows removed; fixtures for the healthy default, an empty library, a past-due
+      episode, a forced-only gap (no warning) and a full English gap (warning)
 - [ ] Live acceptance on Mitch's stack (below)
 
 ## Acceptance criteria
@@ -84,7 +99,12 @@ Where the build departs from the spec, and why:
 - [ ] Live, on `beebee` over Tailscale, keys from Mitch (not done: no keys in this
       session, and paths and field names are from the spec and upstream docs, not yet
       checked against a live instance):
-  - [ ] Radarr and Sonarr only: `ok` cell within a tick, both versions listed
+  - [ ] Radarr and Sonarr only: within a tick, recent imports and coming up listed, the
+        footer counts match the apps
+  - [ ] v2 endpoints answer as the fixtures assume: history `records` with `movie` /
+        `series` + `episode` included, `quality.quality.resolution`, movie file
+        `mediaInfo.videoDynamicRangeType`, calendar `digitalRelease`, Bazarr wanted
+        `missing_subtitles` with `code2` / `forced`
   - [ ] Break the Radarr key: red cell, "Radarr rejected the API key"; fix it, recovers
   - [ ] A download running: accent cell and a progress row
   - [ ] Pipeline URL set: an injected warning reads "no forced English subtitles"

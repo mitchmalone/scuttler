@@ -1,11 +1,16 @@
-// scuttler widget: health of a self-hosted *arr media stack (docs/WIDGETS.md).
+// scuttler widget: a self-hosted *arr media stack (docs/WIDGETS.md).
 //
 // Radarr, Sonarr, Prowlarr and Bazarr, each optional: give an app a URL and an
-// API key in Settings → Widgets and it joins the card. The
-// cell is a clapperboard: plain while all is well, accent while something
-// downloads, amber with a count on warnings, a red triangle on errors. The
-// card lists what needs attention (health issues, low disks, disabled
-// indexers), then up to five downloads, then one row per app.
+// API key in Settings → Widgets and it joins the card. Most of the time the
+// card answers what's new, what's coming and what's in flight; problems go on
+// top when there are any (v2, Mitch 2026-11-24). Top to bottom: issues (health,
+// low disks, disabled indexers, an app down or refusing its key, an episode
+// aired and not grabbed, titles without English subtitles), downloads and the
+// running conversion, the last five imports of the past week, the next five
+// releases of the next two weeks; a dim footer counts the library. The cell is
+// a clapperboard: plain when idle, accent with a count while downloading or
+// when something was imported in the last day, amber with a count on
+// warnings, a red triangle on errors.
 //
 // Why API keys and not a login: every *arr API authenticates with the app's
 // API key (Settings → General → Security in each app). The key travels only
@@ -17,8 +22,12 @@
 //
 // Every request has a 5 s timeout and the whole tick a 15 s deadline; an app
 // that does not answer is a red row, never a failed tick. The only state kept
-// between ticks is a small cache (when each app last answered, and since when
-// a download has been waiting to import).
+// between ticks is a small cache: when each app last answered, since when a
+// download has been waiting to import, and the library counts (the full movie
+// and series lists are fetched at most every 15 minutes).
+//
+// "New" is the last 24 hours: the host does not tell a widget when its card
+// was opened, so there is no "since you last looked".
 //
 // Install: copy into ~/.config/scuttler/widgets/. Runs under Bun or Node.
 import type {
@@ -71,16 +80,40 @@ export type AppSnapshot =
       app: AppId
       state: 'up'
       url: string
-      version?: string
       issues: Issue[]
       downloads: Download[]
-      missing?: number
-      missingSubs?: { movies: number; episodes: number }
-      /** Sonarr: episodes airing today. */
-      airing?: number
-      /** Pipeline: files waiting to be processed. */
-      pending?: number
+      /** Radarr and Sonarr: imports of the past 7 days. */
+      recent?: Recent[]
+      /** Radarr and Sonarr: releases in the next 14 days. */
+      upcoming?: Upcoming[]
+      /** Radarr: movies with a file. Sonarr: series with at least one. */
+      library?: number
+      /** Largest free space across the app's root folders, in bytes. */
+      free?: number
     }
+
+/** One import: a movie or an episode that landed in the library. */
+export type Recent = {
+  app: 'radarr' | 'sonarr'
+  /** Dedupe key: the movie or episode id. */
+  key: string
+  title: string
+  at: number
+  /** '4K DV', '1080p'. */
+  badge?: string
+  /** Path under the app's URL: `/movie/<slug>`, `/series/<slug>`. */
+  path?: string
+}
+
+/** One release coming up: an episode airing or a movie's digital/physical date. */
+export type Upcoming = {
+  app: 'radarr' | 'sonarr'
+  title: string
+  at: number
+  /** 'digital', 'physical'; none for an episode. */
+  kind?: string
+  path?: string
+}
 
 const ARRS: ArrId[] = ['radarr', 'sonarr', 'prowlarr', 'bazarr']
 const ORDER: AppId[] = [...ARRS, 'pipeline']
@@ -102,10 +135,20 @@ const MINUTE = 60_000
 const DAY = 24 * 60 * MINUTE
 const GB = 1024 ** 3
 const STALE_IMPORT = 30 * MINUTE
+const RECENT_WINDOW = 7 * DAY
+const UPCOMING_WINDOW = 14 * DAY
+/** An aired episode or released movie without a file warns after this. */
+const LATE = DAY
+const LIST_ROWS = 5
+const LIBRARY_TTL = 15 * MINUTE
 const PIPELINE_WINDOW = 7 * DAY
 const REQUEST_TIMEOUT = 5000
 const TICK_DEADLINE = 15_000
 const PER_APP_CONCURRENCY = 4
+
+const pad2 = (n: number) => String(n).padStart(2, '0')
+const MONTHS = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')
+const WEEKDAYS = 'Sun Mon Tue Wed Thu Fri Sat'.split(' ')
 
 const REASONS: Record<string, string> = {
   'no-forced-main-language': 'no forced English subtitles',
@@ -229,6 +272,28 @@ function clock(at: number, now: number): string {
   return `${d.toLocaleDateString('en', { month: 'short', day: 'numeric' })} ${hm}`
 }
 
+/** '12m' / '2h' / '3d': how long ago, one unit. */
+export function ago(ms: number): string {
+  const m = Math.max(0, Math.floor(ms / MINUTE))
+  if (m < 60) return `${m}m`
+  if (m < 24 * 60) return `${Math.floor(m / 60)}h`
+  return `${Math.floor(m / (24 * 60))}d`
+}
+
+/** 'today' / 'tomorrow' / 'Thu' within the week / '12 Dec' after, local time. */
+export function when(at: number, now: number): string {
+  const day = (t: number) => {
+    const d = new Date(t)
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  }
+  const days = Math.round((day(at) - day(now)) / DAY)
+  const d = new Date(at)
+  if (days === 0) return 'today'
+  if (days === 1) return 'tomorrow'
+  if (days > 1 && days < 7) return WEEKDAYS[d.getDay()]!
+  return `${d.getDate()} ${MONTHS[d.getMonth()]}`
+}
+
 /* ---- classification (pure) ------------------------------------------ */
 
 /**
@@ -273,23 +338,209 @@ export const pendingKey = (app: AppId, record: Record<string, unknown>) =>
 export const isImportPending = (record: Record<string, unknown>) =>
   lower(record.trackedDownloadState) === 'importpending'
 
-function queueTitle(r: Record<string, unknown>): string {
-  const movie = isRecord(r.movie) ? str(r.movie.title) : undefined
-  if (movie) {
-    const year = isRecord(r.movie) ? num(r.movie.year) : undefined
-    return year ? `${movie} (${year})` : movie
-  }
-  const series = isRecord(r.series) ? str(r.series.title) : undefined
-  if (series) {
-    const ep = isRecord(r.episode) ? r.episode : {}
-    const s = num(ep.seasonNumber)
-    const e = num(ep.episodeNumber)
-    const pad = (n: number) => String(n).padStart(2, '0')
-    return s !== undefined && e !== undefined
-      ? `${series} S${pad(s)}E${pad(e)}`
+const movieTitle = (m: Record<string, unknown>): string | undefined => {
+  const title = str(m.title)
+  const year = num(m.year)
+  return title && year ? `${title} (${year})` : title
+}
+
+/** 'Monarch S01E05', with ' · <episode title>' when `withName`. */
+const episodeTitle = (
+  series: string,
+  ep: Record<string, unknown>,
+  withName = false,
+): string => {
+  const s = num(ep.seasonNumber)
+  const e = num(ep.episodeNumber)
+  const base =
+    s !== undefined && e !== undefined
+      ? `${series} S${pad2(s)}E${pad2(e)}`
       : series
-  }
+  const name = withName ? str(ep.title) : undefined
+  return name && !/^(episode|tba)\b/i.test(name) ? `${base} · ${name}` : base
+}
+
+const slugPath = (kind: 'movie' | 'series', o: unknown) => {
+  const slug = isRecord(o) ? str(o.titleSlug) : undefined
+  return slug ? `/${kind}/${encodeURIComponent(slug)}` : undefined
+}
+
+function queueTitle(r: Record<string, unknown>): string {
+  const movie = isRecord(r.movie) ? movieTitle(r.movie) : undefined
+  if (movie) return movie
+  const series = isRecord(r.series) ? str(r.series.title) : undefined
+  if (series) return episodeTitle(series, isRecord(r.episode) ? r.episode : {})
   return str(r.title) ?? 'download'
+}
+
+/** '4K', '1080p', plus 'DV' or 'HDR' when the file's dynamic range says so. */
+export function qualityBadge(
+  quality: unknown,
+  mediaInfo?: unknown,
+): string | undefined {
+  const q =
+    isRecord(quality) && isRecord(quality.quality) ? quality.quality : {}
+  const res = num(q.resolution)
+  const size = res ? (res >= 2160 ? '4K' : `${res}p`) : undefined
+  const range = isRecord(mediaInfo)
+    ? lower(mediaInfo.videoDynamicRangeType)
+    : ''
+  const hdr = range.includes('dv')
+    ? 'DV'
+    : range.includes('hdr') || range.includes('hlg')
+      ? 'HDR'
+      : undefined
+  return [size, hdr].filter(Boolean).join(' ') || undefined
+}
+
+/**
+ * `/history?eventType=3` (downloadFolderImported) as imports of the past
+ * 7 days, newest first, one per movie or episode.
+ */
+export function recentImports(
+  app: 'radarr' | 'sonarr',
+  body: unknown,
+  now: number,
+): Recent[] {
+  const records = isRecord(body) ? list(body.records) : list(body)
+  const seen = new Set<string>()
+  const out: Recent[] = []
+  for (const r of records) {
+    const at = Date.parse(str(r.date) ?? '')
+    if (!(now - at <= RECENT_WINDOW)) continue
+    let item: Recent | null = null
+    if (app === 'radarr') {
+      const movie = isRecord(r.movie) ? r.movie : {}
+      const id = num(r.movieId) ?? num(movie.id)
+      const title = movieTitle(movie) ?? str(r.sourceTitle)
+      if (id === undefined || !title) continue
+      const file = isRecord(movie.movieFile) ? movie.movieFile : {}
+      item = {
+        app,
+        key: `movie:${id}`,
+        title,
+        at,
+        badge: qualityBadge(r.quality, file.mediaInfo),
+        path: slugPath('movie', movie),
+      }
+    } else {
+      const series = isRecord(r.series) ? r.series : {}
+      const ep = isRecord(r.episode) ? r.episode : {}
+      const id = num(r.episodeId) ?? num(ep.id)
+      const name = str(series.title)
+      if (id === undefined || !name) continue
+      item = {
+        app,
+        key: `episode:${id}`,
+        title: episodeTitle(name, ep, true),
+        at,
+        badge: qualityBadge(r.quality),
+        path: slugPath('series', series),
+      }
+    }
+    if (seen.has(item.key)) continue
+    seen.add(item.key)
+    out.push(item)
+  }
+  return out.sort((a, b) => b.at - a.at)
+}
+
+/**
+ * `/calendar` over [now − 7 days, now + 14 days]: what is coming up, and what
+ * aired or was released more than a day ago without a file (a warning).
+ * Episodes air at `airDateUtc`; a movie's date is its earliest digital or
+ * physical release (cinema dates are not something you can grab).
+ */
+export function calendarItems(
+  app: 'radarr' | 'sonarr',
+  body: unknown,
+  now: number,
+): { upcoming: Upcoming[]; late: Issue[] } {
+  const upcoming: Upcoming[] = []
+  const late: Issue[] = []
+  for (const c of list(body)) {
+    if (c.monitored === false || c.hasFile === true) continue
+    let title: string | undefined
+    let at = NaN
+    let kind: string | undefined
+    let path: string | undefined
+    if (app === 'sonarr') {
+      const series = isRecord(c.series) ? c.series : {}
+      const name = str(series.title)
+      if (!name) continue
+      title = episodeTitle(name, c)
+      at = Date.parse(str(c.airDateUtc) ?? '')
+      path = slugPath('series', series)
+    } else {
+      title = movieTitle(c)
+      const dates = (['digital', 'physical'] as const)
+        .map((k) => ({ k, at: Date.parse(str(c[`${k}Release`]) ?? '') }))
+        .filter((d) => Number.isFinite(d.at))
+        .sort((a, b) => a.at - b.at)
+      // The next release still ahead, else the latest one already past.
+      const next = dates.find((d) => d.at >= now) ?? dates[dates.length - 1]
+      if (next) {
+        at = next.at
+        kind = next.k
+      }
+      path = slugPath('movie', c)
+    }
+    if (!title || !Number.isFinite(at)) continue
+    if (at >= now && at - now <= UPCOMING_WINDOW) {
+      upcoming.push({ app, title, at, kind, path })
+    } else if (now - at > LATE && now - at <= RECENT_WINDOW) {
+      late.push({
+        app,
+        level: 'warn',
+        text: middle(title),
+        hint: app === 'sonarr' ? 'aired, not grabbed' : 'released, not grabbed',
+        link: path,
+      })
+    }
+  }
+  return { upcoming: upcoming.sort((a, b) => a.at - b.at), late }
+}
+
+/**
+ * Bazarr `/movies/wanted` or `/episodes/wanted`: how many items lack full
+ * English subtitles. Forced-only gaps don't count: a forced English track
+ * often doesn't exist for a title anywhere, so counting it never clears.
+ * `missing_subtitles` entries are objects (`code2`, `forced`) or, on older
+ * releases, strings like 'en' / 'en:forced'.
+ */
+export function englishGaps(body: unknown): number {
+  const rows = isRecord(body) ? list(body.data) : list(body)
+  return rows.filter((r) =>
+    (Array.isArray(r.missing_subtitles) ? r.missing_subtitles : []).some(
+      (m: unknown) => {
+        if (typeof m === 'string') {
+          const [code, flag] = m.toLowerCase().split(':')
+          return code === 'en' && flag !== 'forced'
+        }
+        if (!isRecord(m)) return false
+        const forced = m.forced === true || lower(m.forced) === 'true'
+        return lower(m.code2) === 'en' && !forced
+      },
+    ),
+  ).length
+}
+
+/** Radarr `/movie`: movies with a file. Sonarr `/series`: series with one. */
+export function libraryCount(app: 'radarr' | 'sonarr', body: unknown): number {
+  return list(body).filter((x) =>
+    app === 'radarr'
+      ? x.hasFile === true
+      : (num(isRecord(x.statistics) ? x.statistics.episodeFileCount : 0) ?? 0) >
+        0,
+  ).length
+}
+
+/** Largest free space across `/rootfolder` entries, in bytes. */
+export function freeSpace(rootfolders: unknown): number | undefined {
+  const free = list(rootfolders)
+    .map((r) => num(r.freeSpace))
+    .filter((n): n is number => n !== undefined)
+  return free.length ? Math.max(...free) : undefined
 }
 
 /**
@@ -477,7 +728,6 @@ export function pipelineSnapshot(
           },
         ]
       : [],
-    pending: num(queue.pending),
   }
 }
 
@@ -487,59 +737,6 @@ const RANK = { error: 0, warn: 1, ok: 2 } as const
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 const open = (value: string | undefined): WidgetAction | null =>
   value ? { type: 'open', value } : null
-
-function appRow(snap: AppSnapshot, now: number): WidgetRow | null {
-  const name = NAMES[snap.app]
-  switch (snap.state) {
-    case 'unconfigured':
-      return null
-    case 'misconfigured':
-      // Its issue row already says what is missing and where to set it.
-      return null
-    case 'auth':
-      return {
-        dot: 'error',
-        text: name,
-        hint: snap.reason,
-        action: open(snap.url),
-      }
-    case 'down':
-      return {
-        dot: 'error',
-        text: name,
-        hint:
-          snap.lastOkAt !== undefined
-            ? `${snap.reason} · ok ${now - snap.lastOkAt < MINUTE ? 'just now' : `${span(now - snap.lastOkAt)} ago`}`
-            : snap.reason,
-        action: open(snap.url),
-      }
-    case 'up': {
-      const extras: string[] = []
-      if (snap.missing) extras.push(`${snap.missing} missing`)
-      if (snap.airing) extras.push(`${snap.airing} airing today`)
-      const subs = snap.missingSubs
-      if (subs && subs.movies + subs.episodes > 0) {
-        const parts = [
-          subs.movies ? plural(subs.movies, 'movie') : null,
-          subs.episodes ? plural(subs.episodes, 'episode') : null,
-        ].filter(Boolean)
-        extras.push(`${parts.join(', ')} without subs`)
-      }
-      const hint =
-        snap.app === 'pipeline'
-          ? snap.pending
-            ? `${snap.pending} pending`
-            : 'idle'
-          : (snap.version ?? null)
-      return {
-        dot: 'ok',
-        text: [name, ...extras].join(' · '),
-        hint,
-        action: open(snap.url),
-      }
-    }
-  }
-}
 
 /** The cell and card for one tick's snapshots. No I/O. */
 export function toView(snaps: AppSnapshot[], now: number): WidgetView {
@@ -565,6 +762,10 @@ export function toView(snaps: AppSnapshot[], now: number): WidgetView {
   const urls = new Map<AppId, string>()
   const issues: Issue[] = []
   const downloads: Download[] = []
+  const recent: Recent[] = []
+  const upcoming: Upcoming[] = []
+  const library: Partial<Record<AppId, number>> = {}
+  let free: number | undefined
   for (const s of configured) {
     const name = NAMES[s.app]
     if (s.state !== 'misconfigured' && s.state !== 'unconfigured') {
@@ -579,6 +780,10 @@ export function toView(snaps: AppSnapshot[], now: number): WidgetView {
         configure: true,
       })
     } else if (s.state === 'down') {
+      const seen =
+        s.lastOkAt !== undefined
+          ? ` · ok ${now - s.lastOkAt < MINUTE ? 'just now' : `${ago(now - s.lastOkAt)} ago`}`
+          : ''
       issues.push({
         app: s.app,
         level: 'error',
@@ -586,6 +791,7 @@ export function toView(snaps: AppSnapshot[], now: number): WidgetView {
           s.app === 'pipeline'
             ? 'Pipeline status unreachable'
             : `${name} unreachable`,
+        hint: `${s.reason}${seen}`,
       })
     } else if (s.state === 'auth') {
       issues.push({
@@ -598,6 +804,10 @@ export function toView(snaps: AppSnapshot[], now: number): WidgetView {
     } else if (s.state === 'up') {
       issues.push(...s.issues)
       downloads.push(...s.downloads)
+      recent.push(...(s.recent ?? []))
+      upcoming.push(...(s.upcoming ?? []))
+      if (s.library !== undefined) library[s.app] = s.library
+      if (s.free !== undefined) free = Math.max(free ?? 0, s.free)
     }
   }
   issues.sort((a, b) => RANK[a.level] - RANK[b.level])
@@ -605,11 +815,14 @@ export function toView(snaps: AppSnapshot[], now: number): WidgetView {
     (a, b) =>
       RANK[a.level] - RANK[b.level] || (b.progress ?? 0) - (a.progress ?? 0),
   )
+  recent.sort((a, b) => b.at - a.at)
+  upcoming.sort((a, b) => a.at - b.at)
 
   const bad = downloads.filter((d) => d.level !== 'ok')
   const active = downloads.length - bad.length
   const problems = issues.length + bad.length
   const anyError = [...issues, ...bad].some((p) => p.level === 'error')
+  const fresh = recent.filter((r) => now - r.at <= DAY).length
 
   // The app to open: the one with the worst problem, in app order on ties.
   const worst = (app: AppId) =>
@@ -625,27 +838,36 @@ export function toView(snaps: AppSnapshot[], now: number): WidgetView {
       (a, b) => worst(a) - worst(b),
     )[0] ?? ORDER.find((id) => urls.has(id))
 
-  // App rows always stay; the 14-row cap falls on issues, then downloads.
-  const apps = configured
-    .map((s) => appRow(s, now))
-    .filter((r): r is WidgetRow => r !== null)
-  const room = Math.max(0, MAX_ROWS - apps.length)
-  const shownIssues = issues.slice(0, room)
-  const shownDownloads = downloads.slice(
-    0,
-    Math.min(MAX_DOWNLOADS, room - shownIssues.length),
-  )
+  // 14 rows, filled in priority order: issues, in flight, new, coming up.
+  let room = MAX_ROWS
+  const take = <T>(items: T[], max = MAX_ROWS): T[] => {
+    const out = items.slice(0, Math.min(max, room))
+    room -= out.length
+    return out
+  }
+  const shownIssues = take(issues)
+  const shownDownloads = take(downloads, MAX_DOWNLOADS)
+  const shownRecent = take(recent, LIST_ROWS)
+  const shownUpcoming = take(upcoming, LIST_ROWS)
   const more =
     issues.length -
     shownIssues.length +
     (downloads.length - shownDownloads.length)
+  const at = (app: AppId, path: string | undefined) => {
+    const base = urls.get(app)
+    return open(base && path ? `${base}${path}` : base)
+  }
 
   const rows: WidgetRow[] = [
     ...shownIssues.map((i) => ({
       dot: i.level,
       text: i.text,
       hint: i.hint ?? NAMES[i.app],
-      action: i.configure ? CONFIGURE : open(i.link ?? urls.get(i.app)),
+      action: i.configure
+        ? CONFIGURE
+        : i.link && !/^https?:/i.test(i.link)
+          ? at(i.app, i.link)
+          : open(i.link ?? urls.get(i.app)),
     })),
     ...shownDownloads.map((d) => {
       const base = urls.get(d.app)
@@ -663,21 +885,45 @@ export function toView(snaps: AppSnapshot[], now: number): WidgetView {
         ),
       }
     }),
-    ...apps,
+    ...shownRecent.map((r) => ({
+      dot: 'ok',
+      text: middle(r.title),
+      hint: [ago(now - r.at), r.badge].filter(Boolean).join(' · '),
+      action: at(r.app, r.path),
+    })),
+    ...shownUpcoming.map((u) => ({
+      dot: 'muted',
+      text: middle(u.title),
+      hint: [u.kind, when(u.at, now)].filter(Boolean).join(' · '),
+      action: at(u.app, u.path),
+    })),
   ]
 
+  const footer = [
+    library.radarr !== undefined ? plural(library.radarr, 'movie') : null,
+    library.sonarr !== undefined ? plural(library.sonarr, 'show') : null,
+    free !== undefined ? `${bytes(free)} free` : null,
+    more > 0 ? `+${more} more` : null,
+  ].filter(Boolean)
   const subtitle = [
     problems ? plural(problems, 'issue') : null,
     active ? `${active} downloading` : null,
+    fresh ? `${fresh} new` : null,
   ].filter(Boolean)
   return {
     icon: anyError ? 'triangle-alert' : 'clapperboard',
-    label: problems ? String(problems) : active ? String(active) : null,
+    label: problems
+      ? String(problems)
+      : active
+        ? String(active)
+        : fresh
+          ? String(fresh)
+          : null,
     tone: anyError
       ? 'error'
       : problems
         ? 'warn'
-        : downloads.length
+        : downloads.length || fresh
           ? 'accent'
           : 'ok',
     click: open(target ? urls.get(target) : undefined),
@@ -685,7 +931,7 @@ export function toView(snaps: AppSnapshot[], now: number): WidgetView {
       title: 'Media stack',
       subtitle: subtitle.join(' · ') || 'all good',
       rows,
-      hint: more > 0 ? `+${more} more` : null,
+      hint: footer.join(' · ') || null,
     },
   }
 }
@@ -696,6 +942,8 @@ type Cache = {
   apps: Partial<Record<AppId, { lastOkAt: number }>>
   /** `pendingKey` → epoch ms first seen waiting to import. */
   pending: Record<string, number>
+  /** Library counts and when they were fetched (`LIBRARY_TTL`). */
+  library?: Partial<Record<'radarr' | 'sonarr', { count: number; at: number }>>
 }
 
 type Fetched =
@@ -810,15 +1058,6 @@ function settings(id: ArrId): { url: string; key: string } | AppSnapshot {
   return { url, key }
 }
 
-function today(now: number): { start: string; end: string } {
-  const d = new Date(now)
-  const start = new Date(d.getFullYear(), d.getMonth(), d.getDate())
-  return {
-    start: start.toISOString(),
-    end: new Date(start.getTime() + DAY).toISOString(),
-  }
-}
-
 async function arrSnapshot(
   id: ArrId,
   cache: Cache,
@@ -846,12 +1085,6 @@ async function arrSnapshot(
           lastOkAt: cache.apps[id]?.lastOkAt,
         }
   }
-  const info =
-    id === 'bazarr' && isRecord(status.body) ? status.body.data : status.body
-  const version = isRecord(info)
-    ? str(id === 'bazarr' ? info.bazarr_version : info.version)
-    : undefined
-
   const issues: Issue[] = []
   /** A secondary endpoint: its body, or undefined with the failure noted. */
   const part = async (label: string, path: string): Promise<unknown> => {
@@ -871,22 +1104,26 @@ async function arrSnapshot(
     app: id,
     state: 'up',
     url,
-    version,
     issues,
     downloads: [],
   }
 
   if (id === 'bazarr') {
-    const [health, badges] = await Promise.all([
+    const [health, movies, episodes] = await Promise.all([
       part('health', '/system/health'),
-      part('badges', '/badges'),
+      part('wanted movies', '/movies/wanted?start=0&length=-1'),
+      part('wanted episodes', '/episodes/wanted?start=0&length=-1'),
     ])
     issues.push(...healthIssues(id, health))
-    if (isRecord(badges)) {
-      snap.missingSubs = {
-        movies: num(badges.movies) ?? 0,
-        episodes: num(badges.episodes) ?? 0,
-      }
+    const movieGaps = englishGaps(movies)
+    const gaps = movieGaps + englishGaps(episodes)
+    if (gaps > 0) {
+      issues.push({
+        app: id,
+        level: 'warn',
+        text: `${plural(gaps, 'title')} without English subs`,
+        link: movieGaps ? '/wanted/movies' : '/wanted/series',
+      })
     }
     return snap
   }
@@ -912,20 +1149,29 @@ async function arrSnapshot(
     id === 'radarr'
       ? 'includeMovie=true'
       : 'includeSeries=true&includeEpisode=true'
-  const day = today(now)
-  const [health, queue, missing, disks, roots, calendar] = await Promise.all([
-    part('health', '/health'),
-    part('queue', `/queue?page=1&pageSize=50&${unknown}=true&${include}`),
-    part('missing', '/wanted/missing?page=1&pageSize=1&monitored=true'),
-    part('disk space', '/diskspace'),
-    part('root folders', '/rootfolder'),
-    id === 'sonarr'
-      ? part(
-          'calendar',
-          `/calendar?start=${encodeURIComponent(day.start)}&end=${encodeURIComponent(day.end)}`,
-        )
-      : undefined,
-  ])
+  const from = encodeURIComponent(new Date(now - RECENT_WINDOW).toISOString())
+  const to = encodeURIComponent(new Date(now + UPCOMING_WINDOW).toISOString())
+  // The full movie or series list only every 15 minutes: it can be large.
+  const cached = cache.library?.[id]
+  const stale = !cached || now - cached.at > LIBRARY_TTL
+  const [health, queue, disks, roots, history, calendar, all] =
+    await Promise.all([
+      part('health', '/health'),
+      part('queue', `/queue?page=1&pageSize=50&${unknown}=true&${include}`),
+      part('disk space', '/diskspace'),
+      part('root folders', '/rootfolder'),
+      part(
+        'history',
+        `/history?page=1&pageSize=20&eventType=3&sortKey=date&sortDirection=descending&${include}`,
+      ),
+      part(
+        'calendar',
+        `/calendar?start=${from}&end=${to}${id === 'sonarr' ? '&includeSeries=true' : ''}`,
+      ),
+      stale
+        ? part('library', id === 'radarr' ? '/movie' : '/series')
+        : undefined,
+    ])
   issues.push(...healthIssues(id, health), ...diskIssues(id, roots, disks))
   // Remember since when each record has been waiting to import.
   const since: Record<string, number> = {}
@@ -939,8 +1185,18 @@ async function arrSnapshot(
   }
   Object.assign(cache.pending, since)
   snap.downloads = queueDownloads(id, queue, now, since)
-  if (isRecord(missing)) snap.missing = num(missing.totalRecords)
-  if (Array.isArray(calendar)) snap.airing = calendar.length
+  snap.recent = recentImports(id, history, now)
+  const cal = calendarItems(id, calendar, now)
+  snap.upcoming = cal.upcoming
+  issues.push(...cal.late)
+  if (Array.isArray(all)) {
+    cache.library = {
+      ...cache.library,
+      [id]: { count: libraryCount(id, all), at: now },
+    }
+  }
+  snap.library = cache.library?.[id]?.count
+  snap.free = freeSpace(roots)
   return snap
 }
 
