@@ -169,7 +169,21 @@ fn login_user() -> String {
 /// The mas to copy: the one the panel found. Must be an absolute path to a
 /// file; anything else means "no mas" rather than a guess.
 fn mas_source() -> Option<PathBuf> {
-    crate::updates::locate_mas().filter(|p| p.is_absolute() && p.is_file())
+    crate::updates::locate_mas()
+        .filter(|p| p.is_absolute() && p.is_file())
+        .map(|p| real_mas(&p))
+}
+
+/// mas 7's `bin/mas` is a zsh wrapper that execs `../libexec/bin/mas`; copied
+/// alone it dies with "no such file" (exit 127, JOURNAL 2026-11-26). The copy
+/// is taken from the real binary whenever the wrapper's sibling exists; same
+/// rule as `sc_sudoers_mas_bin`.
+fn real_mas(found: &Path) -> PathBuf {
+    std::fs::canonicalize(found)
+        .ok()
+        .and_then(|real| Some(real.parent()?.parent()?.join("libexec/bin/mas")))
+        .filter(|real| real.is_file())
+        .unwrap_or_else(|| found.to_path_buf())
 }
 
 /// Turn the rule on or off: the dialog and the root step, then the user half.
@@ -260,6 +274,26 @@ mod tests {
                 "mas={mas}"
             );
         }
+    }
+
+    #[test]
+    fn the_copy_is_taken_from_the_real_binary_behind_mas_7s_wrapper() {
+        let keg = std::env::temp_dir().join(format!("scuttler-mas-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&keg);
+        std::fs::create_dir_all(keg.join("bin")).unwrap();
+        std::fs::create_dir_all(keg.join("libexec/bin")).unwrap();
+        let wrapper = keg.join("bin/mas");
+        std::fs::write(&wrapper, "#!/bin/zsh\n").unwrap();
+        // No sibling: the found file is the binary (mas 1 through 6).
+        assert_eq!(real_mas(&wrapper), wrapper);
+        std::fs::write(keg.join("libexec/bin/mas"), "binary").unwrap();
+        let real = real_mas(&wrapper);
+        assert!(real.ends_with("libexec/bin/mas"));
+        // Through a symlink, as Homebrew's bin/mas is.
+        let link = keg.join("mas-link");
+        std::os::unix::fs::symlink(&wrapper, &link).unwrap();
+        assert_eq!(real_mas(&link), real);
+        let _ = std::fs::remove_dir_all(&keg);
     }
 
     #[test]

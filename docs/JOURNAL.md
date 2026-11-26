@@ -6,6 +6,17 @@
 
 ---
 
+### 2026-11-26 · The root-owned copy of mas was a wrapper script: exit 127
+
+With "allow admin" fixed (2026-11-25) the rule and the copy were written, and the first
+App Store upgrade died: `/usr/local/libexec/scuttler/mas:106: no such file or directory:
+/usr/local/libexec/scuttler/../libexec/bin/mas`. mas 7's `bin/mas` is a zsh wrapper that
+execs `../libexec/bin/mas`; scuttler copied the wrapper alone. Both doors now copy the
+real binary when the wrapper's sibling exists (`sudoers.rs::real_mas`,
+`sc_sudoers_mas_bin`). Skipping the wrapper loses nothing for `upgrade`/`update`: it
+only reformats `list`, `outdated` and `search`, which the panel runs unprivileged from
+Homebrew's path. An existing copy must be rewritten: "allow admin" again.
+
 ### 2026-11-25 · "allow admin" never ran as root: `/bin/sh` dropped the privilege
 
 The updates panel's "allow admin" took the password and then logged
