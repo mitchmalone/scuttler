@@ -6,6 +6,19 @@
 
 ---
 
+### 2026-11-25 · "allow admin" never ran as root: `/bin/sh` dropped the privilege
+
+The updates panel's "allow admin" took the password and then logged
+`mktemp: mkstemp failed on /etc/sudoers.d/.scuttler.XXXXXX: Permission denied`, so the
+rule was never rewritten, `/usr/local/libexec/scuttler/mas` never existed, and every App
+Store upgrade was skipped ("no sudoers rule"). `AuthorizationExecuteWithPrivileges` runs
+the tool with effective uid 0 and the user's real uid. `/usr/bin/env` keeps that;
+`/bin/sh` is bash, and bash started with euid != ruid resets the effective uid unless
+given `-p`. The 2026-11-07 spike ran `/usr/bin/id -u` directly, which prints the
+effective uid, so it read 0 and hid this; the shell wrapper arrived a day later (B3)
+and was never run through the dialog. Fix: `/bin/bash -p -c` (`sudoers.rs::root_argv`).
+Lesson: a root spike must run the same interpreter the shipped step uses.
+
 ### 2026-11-25 · brew exited 0 and left six formulae with links to kegs that were never installed
 
 "Upgrade everything" in the panel failed all 36 rows with `Error:

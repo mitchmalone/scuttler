@@ -98,7 +98,7 @@ disablesleep 0|1`, so `awake` can switch macOS sleep off while a hold is armed, 
    path, not its owner), so the updates panel can upgrade App Store apps after the
    system approval sheet (Touch ID, Apple Watch or password, `localauth.rs`). The rule
    is written from a click through the system admin dialog, one Mac password typed into
-   Apple's dialog (`authorization.rs`, `sudoers.rs`: a constant `/bin/sh` script under
+   Apple's dialog (`authorization.rs`, `sudoers.rs`: a constant `/bin/bash -p` script under
    `env -i`, absolute paths, nothing user-owned runs as root), or by `scuttler sudoers
 on` in a terminal; the text is identical either way. The app only runs `sudo -n` — it
    never asks; panel children find a `sudo -n` shim first on PATH for the same reason

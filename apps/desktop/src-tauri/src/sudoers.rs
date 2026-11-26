@@ -29,7 +29,7 @@ pub const MAS_COPY: &str = "/usr/local/libexec/scuttler/mas";
 /// The empty environment the root step runs under.
 const ROOT_PATH: &str = "PATH=/usr/bin:/bin:/usr/sbin:/sbin";
 
-/// The root half of "allow admin", as `/bin/sh -c` text. `$1` is the rule,
+/// The root half of "allow admin", as `/bin/bash -p -c` text. `$1` is the rule,
 /// `$2` the mas to copy (empty: none). The temp file is made inside
 /// `/etc/sudoers.d` (root-only, so no one swaps it between visudo's check
 /// and install), with a dot in its name (sudo ignores such files). stderr
@@ -113,10 +113,20 @@ pub fn rule_text(user: &str, mas: bool) -> String {
     out
 }
 
-/// argv for `/usr/bin/env`: an empty environment, a fixed PATH, `/bin/sh`
+/// argv for `/usr/bin/env`: an empty environment, a fixed PATH, `/bin/bash -p`
 /// running one of the scripts above with its positional arguments.
 pub fn root_argv(on: bool, rule: &str, mas: Option<&Path>) -> Vec<String> {
-    let mut argv: Vec<String> = vec!["-i".into(), ROOT_PATH.into(), "/bin/sh".into(), "-c".into()];
+    // `-p` is the whole fix for "mktemp: Permission denied": the admin dialog
+    // runs the tool with effective uid 0 and the user's real uid, and bash
+    // (which `/bin/sh` is) resets the effective uid to the real one unless
+    // started privileged. Named as bash so `/var/select/sh` cannot change it.
+    let mut argv: Vec<String> = vec![
+        "-i".into(),
+        ROOT_PATH.into(),
+        "/bin/bash".into(),
+        "-p".into(),
+        "-c".into(),
+    ];
     if on {
         argv.push(INSTALL_SCRIPT.into());
         argv.push("sh".into());
@@ -267,10 +277,10 @@ mod tests {
     #[test]
     fn root_argv_is_an_empty_env_and_absolute_paths_only() {
         let argv = root_argv(true, "RULE\n", Some(Path::new("/opt/homebrew/bin/mas")));
-        assert_eq!(&argv[..4], ["-i", ROOT_PATH, "/bin/sh", "-c"]);
-        assert_eq!(argv[5], "sh");
-        assert_eq!(argv[6], "RULE");
-        assert_eq!(argv[7], "/opt/homebrew/bin/mas");
+        assert_eq!(&argv[..5], ["-i", ROOT_PATH, "/bin/bash", "-p", "-c"]);
+        assert_eq!(argv[6], "sh");
+        assert_eq!(argv[7], "RULE");
+        assert_eq!(argv[8], "/opt/homebrew/bin/mas");
         // Every command in the scripts is spelled with its directory.
         for script in [INSTALL_SCRIPT, REMOVE_SCRIPT] {
             for line in script.lines().map(str::trim) {
@@ -293,9 +303,9 @@ mod tests {
             }
         }
         let off = root_argv(false, "", None);
-        assert_eq!(off.len(), 6);
-        assert!(off[4].contains("/etc/sudoers.d/scuttler"));
-        assert!(off[4].contains(MAS_COPY));
+        assert_eq!(off.len(), 7);
+        assert!(off[5].contains("/etc/sudoers.d/scuttler"));
+        assert!(off[5].contains(MAS_COPY));
     }
 
     #[test]
