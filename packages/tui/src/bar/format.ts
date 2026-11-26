@@ -312,6 +312,26 @@ export function wifiSignalLabel(rssi: number | null): string {
   return `${rssi} dBm · ${word}`
 }
 
+/**
+ * The wifi card's title. A withheld name is not a hidden network (macOS
+ * redacts it without Location Services), so unknown is just "Connected".
+ */
+export function wifiTitle(online: boolean, ssid: string | null): string {
+  if (!online) return 'Wi-Fi offline'
+  return ssid ? `Connected to ${ssid}` : 'Connected'
+}
+
+/**
+ * How many of the card meter's `count` bars are lit: −90 dBm lights one,
+ * −50 lights them all, and each quarter of the meter is one `wifiBars` band.
+ * Unknown strength lights none.
+ */
+export function wifiMeterLit(rssi: number | null, count: number): number {
+  if (rssi == null) return 0
+  const quality = Math.max(0, Math.min(1, (rssi + 90) / 40))
+  return Math.min(count, Math.floor(quality * count) + 1)
+}
+
 /* ---- widgets ---------------------------------------------------------- */
 
 /** The tones a widget may name (docs/WIDGETS.md); anything else is plain. */

@@ -525,10 +525,14 @@
   font-weight: 700;
 }
 
-.bar-wifi-state {
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+.bar-wifi-meter {
+  display: block;
+  margin-top: 6px;
+  color: var(--fg, #dde1f0);
+}
+
+.bar-wifi-meter-poor {
+  color: var(--warn, #d29922);
 }
 
 .bar-wifi-grid {
