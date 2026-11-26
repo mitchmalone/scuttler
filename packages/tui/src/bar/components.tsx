@@ -4,6 +4,7 @@ import {
   BatteryLow,
   BatteryMedium,
   BatteryWarning,
+  Bot,
   Coffee,
   RefreshCw,
   WifiOff,
@@ -1081,7 +1082,8 @@ export function BarUsageCard({
 }
 
 /**
- * The usage cell: the tiny meter alone — no percent. Its colour is the pace
+ * The usage cell: a robot alone, no percent and no meter (the card's head keeps
+ * the meter, where the fill can be read). Its colour is the pace
  * across every account (worst wins): green with headroom to spin up agents,
  * fg on pace, red when usage is outrunning the clock. Dim before the first
  * scan.
@@ -1099,7 +1101,7 @@ export function BarUsageCell({
 }) {
   const pace = usage ? usagePace(usage.accounts, nowSecs) : null
   const className = `bar-cell bar-pace-${pace ?? 'off'}`
-  const body = <UsageMeterIcon pct={glyphFill(usage)} />
+  const body = <Bot {...ICON_PROPS} />
   const title = pace ? `Agent usage · ${PACE_LABEL[pace]}` : 'Agent usage'
   if (!hover) {
     return (
