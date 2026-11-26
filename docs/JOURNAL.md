@@ -6,6 +6,23 @@
 
 ---
 
+### 2026-11-25 · brew exited 0 and left six formulae with links to kegs that were never installed
+
+"Upgrade everything" in the panel failed all 36 rows with `Error:
+/opt/homebrew/Cellar/docker-buildx/0.39.1 is not a directory`. The Cellar held only
+0.39.0; `opt/docker-buildx` and `var/homebrew/linked/docker-buildx` pointed at 0.39.1.
+Five more formulae (luajit, mole, ruby, wireshark, powerlevel10k) were the same, all
+written 2026-11-22 15:34. `scuttler.log` shows that was the panel's own `brew upgrade`:
+started 15:31:30, **exit 0** at 15:34:28, not cancelled, not stalled, and the re-check a
+second later still listed six. So brew reported success and left them half-upgraded;
+why is unknown, because the tail kept forty lines in memory and they are gone. brew
+aborts a whole run on the first dangling link it resolves, so fixing one reveals the
+next, and with dismissals in play the panel runs one job per package, hence 36
+identical failures. `brew outdated` does not trip on it, which is why the check stayed
+green. The fix by hand: remove both links for each formula; brew then sees the old keg
+as outdated and upgrades it. Only `opt/` and `var/homebrew/linked/` dangle, never
+`bin`, `lib` or `share`.
+
 ### 2026-11-25 · The Vercel CLI's token lives eight hours, and scuttler's PATH can't find the CLI
 
 The Vercel cell went dim most mornings with "the Vercel CLI login went stale (403)".

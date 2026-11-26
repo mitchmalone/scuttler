@@ -10,6 +10,13 @@
 
 ## Where we are
 
+- **Built 2026-11-25, for 0.9, live run open: the updates panel handles Homebrew's
+  broken links** (`plans/active/2026-11-25-brew-broken-links.md`, DECISIONS and JOURNAL
+  2026-11-25). The brew check finds formulae whose links point at a keg that was never
+  installed; the panel and the card ask for the fix above the packages, Enter removes
+  only those links. Homebrew is held out of a batch until then, one failure stops the
+  brew queue, brew's error is explained, and every run's output is kept on disk. Why
+  brew exited 0 on 2026-11-22 is still unknown.
 - **Done 2026-11-25, for 0.9: widget cards and the updates card have a refresh
   button.** The updates card's asks its service to check again (the panel's `r`). A small button in
   every widget card's header ticks that widget now (a `refresh` action through the

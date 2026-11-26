@@ -1156,6 +1156,16 @@ fn native_send(
             let on = message.get("sudoers").unwrap().as_str().unwrap() == "on";
             Some(crate::updates::admin_rule(on))
         }
+        "updates"
+            if message
+                .get("repairLinks")
+                .and_then(|c| c.as_str())
+                .is_some() =>
+        {
+            // infallible: guarded by is_some() above
+            let class = message.get("repairLinks").unwrap().as_str().unwrap();
+            Some(crate::updates::repair_links(class))
+        }
         "updates" if message.get("cancelUpgrade").and_then(|c| c.as_bool()) == Some(true) => {
             crate::updates::cancel_upgrade();
             Some(Ok(()))

@@ -168,6 +168,11 @@ pub struct UpdateSource {
     /// Absent on sources that run as the user.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub admin: Option<AdminAccess>,
+    /// Homebrew only: formulae whose links point at a keg that was never
+    /// installed (brewlinks.rs). Any one of them aborts every `brew upgrade`,
+    /// so the panel and the card ask for the fix above the packages.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub broken: Vec<crate::brewlinks::BrokenFormula>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -201,6 +206,9 @@ struct Runner {
     /// Unix seconds the current run last wrote a line (or started): the
     /// stall watchdog's clock.
     last_output: u64,
+    /// The current run's whole output on disk (`open_run_log`): the tail
+    /// keeps forty lines, and the run of 2026-11-22 needed the rest.
+    log: Option<std::fs::File>,
 }
 
 static RUNNER: Mutex<Runner> = Mutex::new(Runner {
@@ -214,6 +222,7 @@ static RUNNER: Mutex<Runner> = Mutex::new(Runner {
         started_at: 0,
     },
     last_output: 0,
+    log: None,
 });
 /// The approval sheet's state (`Approval`); None when no root job is waiting
 /// on one and the last answer was yes.
@@ -283,6 +292,19 @@ impl Runner {
                     }
                 ),
             );
+            if let Some(mut log) = self.log.take() {
+                use std::io::Write;
+                let _ = writeln!(
+                    log,
+                    "# finished {}: {}",
+                    run.finished_at,
+                    match (run.cancelled, run.exit_code) {
+                        (true, _) => "cancelled".to_string(),
+                        (false, Some(c)) => format!("exit {c}"),
+                        (false, None) => "killed".to_string(),
+                    }
+                );
+            }
             self.recent.push(run.clone());
             if self.recent.len() > RECENT_RUNS {
                 let drop_n = self.recent.len() - RECENT_RUNS;
@@ -291,8 +313,22 @@ impl Runner {
         }
     }
 
+    /// Drop every waiting job of `source`; the batch shrinks with them.
+    /// Returns how many went.
+    fn drop_queued(&mut self, source: &str) -> u32 {
+        let before = self.queue.len();
+        self.queue.retain(|job| job.source != source);
+        let dropped = (before - self.queue.len()) as u32;
+        self.batch.total = self.batch.total.saturating_sub(dropped);
+        dropped
+    }
+
     fn push_tail(&mut self, line: String) {
         self.last_output = now_secs();
+        if let Some(log) = self.log.as_mut() {
+            use std::io::Write;
+            let _ = writeln!(log, "{line}");
+        }
         if let Some((run, _)) = self.current.as_mut() {
             run.tail.push(line);
             if run.tail.len() > TAIL_LINES {
@@ -336,10 +372,25 @@ pub fn report() -> UpdatesReport {
 /// `report()`; when the queue drains a re-check runs so the count drops. Err
 /// for an unknown source or package.
 pub fn upgrade(source: &str, item: Option<&str>) -> Result<(), String> {
-    let jobs = jobs_for(source, item)?;
+    let mut jobs = jobs_for(source, item)?;
     if let Some(name) = item {
         // Upgrading a dismissed package by hand is the end of its dismissal.
         forget_dismissal(source, name);
+    }
+    // A half-upgraded formula aborts every brew job on its first line: look
+    // before queueing, and leave Homebrew out until its links are fixed (the
+    // panel asks, above the packages) rather than failing once per package.
+    if jobs.iter().any(|job| job.source == BREW) {
+        let broken = brew_broken();
+        let blocked = broken.iter().filter(|f| f.repairable()).count();
+        set_broken(broken);
+        if blocked > 0 {
+            crate::logbook::breadcrumb(
+                "updates",
+                &format!("skipped brew: {blocked} half-upgraded formula(e), fix the links first"),
+            );
+            jobs.retain(|job| job.source != BREW);
+        }
     }
     // A new click retires the last refusal's line.
     {
@@ -632,6 +683,7 @@ fn pump(runner: &mut Runner) {
         }
     };
     let started_at = run.started_at;
+    runner.log = open_run_log(&run);
     runner.current = Some((run, Some(child.id())));
     runner.last_output = now_secs();
     let pid = child.id();
@@ -644,9 +696,25 @@ fn pump(runner: &mut Runner) {
         let _ = err_h.join();
         let mut runner = RUNNER.lock().unwrap();
         runner.finish(status.ok().and_then(|s| s.code()));
+        // One dangling link fails every brew job the same way: stop at the
+        // first, so the panel reports one cause instead of one per package.
+        let broken_links = runner
+            .current
+            .as_ref()
+            .is_some_and(|(run, _)| link_failure(run));
+        if broken_links {
+            let dropped = runner.drop_queued(BREW);
+            crate::logbook::breadcrumb(
+                "updates",
+                &format!("brew stopped on a dangling link: dropped {dropped} queued brew job(s)"),
+            );
+        }
         pump(&mut runner);
         let drained = !runner.running();
         drop(runner);
+        if broken_links {
+            set_broken(brew_broken());
+        }
         if drained {
             kick(true);
         }
@@ -680,6 +748,56 @@ fn start_selfupdate(runner: &mut Runner, job: UpgradeJob) {
             pump(&mut runner);
         }
     });
+}
+
+/// Upgrade runs kept on disk, newest last to go.
+const RUN_LOGS_KEPT: usize = 20;
+
+/// `~/Library/Logs/scuttler-upgrades/<started>-<source>[-<item>].log`: the
+/// command, then every line the run prints, then how it ended. Best-effort;
+/// None in tests (they must not write the developer's logs) or when the
+/// directory cannot be made. Older logs past `RUN_LOGS_KEPT` are removed.
+fn open_run_log(run: &UpgradeRun) -> Option<std::fs::File> {
+    use std::io::Write;
+    if cfg!(test) {
+        return None;
+    }
+    let dir = dirs::home_dir()?.join("Library/Logs/scuttler-upgrades");
+    std::fs::create_dir_all(&dir).ok()?;
+    let mut old: Vec<PathBuf> = std::fs::read_dir(&dir)
+        .ok()?
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|x| x == "log"))
+        .collect();
+    // Names start with the epoch second, so name order is age order.
+    old.sort();
+    let excess = (old.len() + 1).saturating_sub(RUN_LOGS_KEPT);
+    for path in old.iter().take(excess) {
+        let _ = std::fs::remove_file(path);
+    }
+    let mut file = std::fs::File::create(dir.join(run_log_name(run))).ok()?;
+    let _ = writeln!(file, "# {}", run.command);
+    Some(file)
+}
+
+/// The log file's name for a run; the item is reduced to file-safe characters.
+fn run_log_name(run: &UpgradeRun) -> String {
+    let item: String = run
+        .item
+        .as_deref()
+        .unwrap_or_default()
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '@' | '-') {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    let sep = if item.is_empty() { "" } else { "-" };
+    format!("{}-{}{sep}{item}.log", run.started_at, run.source)
 }
 
 /// Kill the in-flight panel upgrade and drop everything queued behind it; a
@@ -1231,7 +1349,91 @@ fn check_source(def: &'static SourceDef, bin: &Path) -> UpdateSource {
         admin: def
             .root
             .then(|| root_path(def).map_or(AdminAccess::NeedsRule, |p| admin_access(&p))),
+        broken: if def.id == BREW {
+            brew_broken()
+        } else {
+            Vec::new()
+        },
     }
+}
+
+// ---- Homebrew's half-upgraded formulae (brewlinks.rs) --------------------
+
+/// The Homebrew source id: the one source with link state to look after.
+const BREW: &str = "brew";
+/// `brew --prefix` is bash, not Ruby: it answers in milliseconds.
+const PREFIX_TIMEOUT: Duration = Duration::from_secs(10);
+/// The prefix of the brew at a path, asked once per brew binary.
+static BREW_PREFIX: Mutex<Option<(PathBuf, PathBuf)>> = Mutex::new(None);
+
+/// Homebrew's prefix, from `brew --prefix` (never assumed: Intel Macs and
+/// custom installs differ). None when brew is absent or does not answer with
+/// a directory that holds a Cellar.
+fn brew_prefix() -> Option<PathBuf> {
+    let bin = locate(BREW)?;
+    if let Some((cached_bin, prefix)) = BREW_PREFIX.lock().unwrap().as_ref() {
+        if *cached_bin == bin {
+            return Some(prefix.clone());
+        }
+    }
+    let (stdout, _) = run_check(&bin, &["--prefix"], PREFIX_TIMEOUT).ok()?;
+    let prefix = PathBuf::from(stdout.trim());
+    if !prefix.is_absolute() || !prefix.join("Cellar").is_dir() {
+        return None;
+    }
+    *BREW_PREFIX.lock().unwrap() = Some((bin, prefix.clone()));
+    Some(prefix)
+}
+
+/// Every half-upgraded formula right now; empty when brew is absent. A few
+/// hundred `readlink`s, so it rides on every brew check and before every
+/// brew upgrade.
+fn brew_broken() -> Vec<crate::brewlinks::BrokenFormula> {
+    brew_prefix()
+        .map(|prefix| crate::brewlinks::scan(&prefix))
+        .unwrap_or_default()
+}
+
+/// Put a fresh scan on the cached Homebrew row, so the panel shows it now
+/// rather than at the next check.
+fn set_broken(broken: Vec<crate::brewlinks::BrokenFormula>) {
+    if let Some(report) = REPORT.lock().unwrap().as_mut() {
+        if let Some(row) = report.sources.iter_mut().find(|s| s.id == BREW) {
+            row.broken = broken;
+        }
+    }
+}
+
+/// Remove the dangling links of one class (`repairable` or `stale`), on the
+/// user's Enter: only the symlinks a fresh scan finds, never a keg, each one
+/// written to the log. Refused while an upgrade runs: brew may be writing
+/// those very links.
+pub fn repair_links(class: &str) -> Result<(), String> {
+    let class = crate::brewlinks::Class::parse(class)
+        .ok_or_else(|| format!("unknown link class: {class}"))?;
+    if RUNNER.lock().unwrap().running() {
+        return Err("an upgrade is running".to_string());
+    }
+    let prefix = brew_prefix().ok_or("Homebrew's prefix was not found")?;
+    let removed = crate::brewlinks::repair(&prefix, class)?;
+    for link in &removed {
+        crate::logbook::breadcrumb("updates", &format!("removed dangling brew link {link}"));
+    }
+    set_broken(crate::brewlinks::scan(&prefix));
+    kick(true);
+    Ok(())
+}
+
+/// Whether a finished run died on a dangling link: brew's own words for it,
+/// anywhere in the tail of a run that failed.
+fn link_failure(run: &UpgradeRun) -> bool {
+    run.source == BREW
+        && !run.cancelled
+        && run.exit_code != Some(0)
+        && run
+            .tail
+            .iter()
+            .any(|line| crate::brewlinks::missing_keg_in(line).is_some())
 }
 
 /// The mas on this Mac, the source of the root-owned copy the rule names and
@@ -1915,6 +2117,85 @@ mod tests {
         assert_eq!(tail[0], "line 5");
         assert_eq!(tail.last().unwrap(), &format!("line {}", TAIL_LINES + 4));
         reset_runner();
+    }
+
+    #[test]
+    fn a_dangling_link_failure_drops_the_rest_of_the_brew_queue() {
+        let _guard = RUNNER_TEST_LOCK.lock().unwrap();
+        reset_runner();
+        let mut r = RUNNER.lock().unwrap();
+        r.enqueue(vec![
+            job("brew", Some("gcc")),
+            job("brew", Some("vips")),
+            job("pnpm", None),
+            job("brew", Some("wget")),
+        ]);
+        assert_eq!(r.batch.total, 4);
+        assert_eq!(r.drop_queued("brew"), 3);
+        assert_eq!(r.batch.total, 1);
+        assert_eq!(r.queue.len(), 1);
+        assert_eq!(r.queue[0].source, "pnpm");
+        drop(r);
+        reset_runner();
+    }
+
+    #[test]
+    fn link_failure_reads_brews_error_only_off_a_failed_brew_run() {
+        let line = "Error: /opt/homebrew/Cellar/luajit/2.1.2 is not a directory";
+        let failed = |source: &str, exit: i32, cancelled: bool, tail: &str| UpgradeRun {
+            source: source.into(),
+            finished_at: 2,
+            exit_code: Some(exit),
+            cancelled,
+            tail: vec!["==> Upgrading".into(), tail.into()],
+            ..Default::default()
+        };
+        assert!(link_failure(&failed("brew", 1, false, line)));
+        assert!(!link_failure(&failed("brew", 0, false, line)));
+        assert!(!link_failure(&failed("brew", 1, true, line)));
+        assert!(!link_failure(&failed("pnpm", 1, false, line)));
+        assert!(!link_failure(&failed("brew", 1, false, "Error: no bottle")));
+    }
+
+    #[test]
+    fn run_logs_are_named_by_start_source_and_a_file_safe_item() {
+        let run = |item: Option<&str>| UpgradeRun {
+            source: "brew".into(),
+            item: item.map(str::to_owned),
+            started_at: 1795321890,
+            ..Default::default()
+        };
+        assert_eq!(run_log_name(&run(None)), "1795321890-brew.log");
+        assert_eq!(
+            run_log_name(&run(Some("python@3.13"))),
+            "1795321890-brew-python@3.13.log"
+        );
+        assert_eq!(
+            run_log_name(&run(Some("../evil name"))),
+            "1795321890-brew-.._evil_name.log"
+        );
+    }
+
+    #[test]
+    fn broken_formulae_ride_the_brew_row_and_stay_off_the_wire_when_none() {
+        let mut row = UpdateSource {
+            id: "brew".into(),
+            ..Default::default()
+        };
+        assert!(!serde_json::to_string(&row).unwrap().contains("broken"));
+        row.broken = vec![crate::brewlinks::BrokenFormula {
+            name: "luajit".into(),
+            missing: "2.1.2".into(),
+            kegs: vec!["2.1.1".into()],
+            links: vec!["/opt/homebrew/opt/luajit".into()],
+        }];
+        let json = serde_json::to_string(&row).unwrap();
+        assert!(json.contains(r#""broken":[{"name":"luajit","missing":"2.1.2","kegs":["2.1.1"]"#));
+    }
+
+    #[test]
+    fn repair_links_refuses_an_unknown_class() {
+        assert!(repair_links("everything").is_err());
     }
 
     #[test]

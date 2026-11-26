@@ -1017,6 +1017,7 @@
   color: var(--good, #3fb950);
 }
 .tui-updates-failed,
+.tui-updates-unchanged,
 .tui-updates-error {
   color: var(--danger, #ff6b6b);
 }
