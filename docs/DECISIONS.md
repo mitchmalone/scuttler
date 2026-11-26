@@ -5,6 +5,26 @@
 
 ---
 
+### 2026-11-25 · The wifi card says "Connected", and a signal meter replaces its subtitle
+
+- **Context.** On macOS 27.2.1 every unprivileged source of the network name is
+  redacted without Location Services: `ipconfig getsummary`, `networksetup
+-getairportnetwork`, and now `system_profiler SPAirPortDataType` too (current and
+  nearby networks, 3 of 3 runs from a shell). The card titled that "SSID hidden",
+  which is a different thing and was wrong more often than not.
+- **Decision.** The title is "Connected to {name}" when the name is known and
+  "Connected" when it is not (`wifiTitle`). The "connected · −56 dBm · excellent ·
+  en0" line is gone; a 16-bar ramp lit by RSSI takes its place (`wifiMeterLit`: −90
+  dBm lights one bar, −50 all, each quarter is one `wifiBars` band). Unlit bars are
+  ghosted like the glyph's arcs, a poor link is `warn` as the cell is, offline is
+  dark. The reading stays in the meter's `aria-label`. No Rust or IPC change.
+- **Not chosen.** Keeping the dBm figure on screen: the interface is still in the
+  grid, and the meter is the point. Guessing the name from known networks (the
+  standing rule in `bar_modules.rs`).
+- **Consequences.** The name itself is still missing on this macOS; how to get it
+  back (Location opt-in, or another route) is open. The slow `system_profiler`
+  resolve still runs up to three times per join and cannot succeed here.
+
 ### 2026-11-13 · The bar hides on a display the frontmost app covers whole
 
 - **Context.** A borderless-fullscreen game (World of Warcraft, "Windowed

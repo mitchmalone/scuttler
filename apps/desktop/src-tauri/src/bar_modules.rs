@@ -13,7 +13,7 @@ use serde::Serialize;
 #[serde(rename_all = "camelCase")]
 pub struct WifiState {
     pub online: bool,
-    /// None while online means the SSID couldn't be recovered ("SSID hidden").
+    /// None while online means macOS withheld the name; the card says "Connected".
     pub ssid: Option<String>,
     /// Signal strength in dBm (corewlan.rs); None when unknown. The bar's
     /// glyph is a strength indicator, the SSID lives in the hover card.

@@ -37,7 +37,9 @@ import {
   widgetHealth,
   widgetToneClass,
   wifiBars,
+  wifiMeterLit,
   wifiSignalLabel,
+  wifiTitle,
   wifiTone,
 } from './format'
 import type {
@@ -691,20 +693,13 @@ export function BarWifiCard({
   cardRef?: (el: HTMLElement | null) => void
 }) {
   const d = detail
-  const signal = online ? wifiSignalLabel(rssi) : ''
   return (
     <BarCard variant="wifi" cardRef={cardRef}>
       <div className="bar-wifi-head">
         <WifiGlyph online={online} rssi={rssi} size={20} />
         <div>
-          <BarCardTitle>
-            {online ? (ssid ?? 'SSID hidden') : 'Wi-Fi offline'}
-          </BarCardTitle>
-          <div className="bar-card-dim bar-wifi-state">
-            {online ? 'connected' : 'no connection'}
-            {signal ? ` · ${signal}` : ''}
-            {d?.iface ? ` · ${d.iface}` : ''}
-          </div>
+          <BarCardTitle>{wifiTitle(online, ssid)}</BarCardTitle>
+          <WifiMeter rssi={online ? rssi : null} />
         </div>
       </div>
       <div className="bar-wifi-grid">
@@ -720,6 +715,48 @@ export function BarWifiCard({
       )}
       <BarCardHint>wifi ⏎ networks · dns ⏎ details</BarCardHint>
     </BarCard>
+  )
+}
+
+const WIFI_METER_BARS = 16
+const WIFI_METER_BAR = { width: 3, gap: 2, min: 3, max: 11 } as const
+
+/**
+ * The card's signal meter: a ramp of bars lit up to the link's strength, in
+ * the place a "connected · −56 dBm · excellent" line used to be. Unlit bars
+ * are ghosted like the glyph's lost arcs; a poor link takes the cell's warn
+ * tone. The reading stays in the label for a screen reader.
+ */
+function WifiMeter({ rssi }: { rssi: number | null }) {
+  const { width, gap, min, max } = WIFI_METER_BAR
+  const lit = wifiMeterLit(rssi, WIFI_METER_BARS)
+  const poor = rssi != null && wifiBars(rssi) <= 1
+  return (
+    <svg
+      className={`bar-wifi-meter ${poor ? 'bar-wifi-meter-poor' : ''}`}
+      width={WIFI_METER_BARS * (width + gap) - gap}
+      height={max}
+      role="img"
+      aria-label={
+        rssi == null ? 'No signal' : `Signal ${wifiSignalLabel(rssi)}`
+      }
+      fill="currentColor"
+    >
+      {Array.from({ length: WIFI_METER_BARS }, (_, i) => {
+        const height = min + ((max - min) * i) / (WIFI_METER_BARS - 1)
+        return (
+          <rect
+            key={i}
+            x={i * (width + gap)}
+            y={max - height}
+            width={width}
+            height={height}
+            data-lit={i < lit}
+            opacity={i < lit ? 1 : 0.25}
+          />
+        )
+      })}
+    </svg>
   )
 }
 
