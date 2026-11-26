@@ -20,6 +20,11 @@
   - The GitHub Actions widget tracks every workflow, with pinned repos (`GITHUB_REPOS`)
     and failing rows first.
   - The wifi card says "Connected" and shows a signal meter (DECISIONS 2026-11-25).
+- **Done 2026-11-26, for 0.9, checked live by Mitch** (JOURNAL 2026-11-26):
+  - The bar's usage cell is a robot (lucide `Bot`); the card's head keeps the meter.
+  - The uptime widget reads an Uptime Kuma status page (`UPTIME_KUMA_URL`, required);
+    Upptime support is removed. Bundled widgets are copied by hand, so an installed
+    `~/.config/scuttler/widgets/uptime.ts` needs the new file and the setting.
 - **Built 2026-11-25, for 0.9, live run open: the updates panel handles Homebrew's
   broken links** (`plans/active/2026-11-25-brew-broken-links.md`, DECISIONS and JOURNAL
   2026-11-25). The brew check finds formulae whose links point at a keg that was never
