@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import * as actions from './github-actions'
 import * as trmnl from './trmnl'
@@ -130,6 +130,105 @@ describe('vercel', () => {
     expect(m.settings[0]).toMatchObject({ secret: true })
     expect('required' in m.settings[0]!).toBe(false)
     expect(m.requires[0]).toMatchObject({ fix: 'vercel login' })
+  })
+
+  describe('renewing the CLI login', () => {
+    const T = 1_795_000_000_000
+    const cli = (token: string, expiresAt: number | null) => ({
+      token,
+      team: null,
+      cli: true,
+      expiresAt,
+    })
+    const rejected = () => new vercel.SetupNeeded('rejected', 'vercel login')
+
+    it('renews an expired CLI token before the first request', async () => {
+      let stored = cli('old', T / 1000 - 10)
+      const renew = vi.fn(async () => {
+        stored = cli('new', T / 1000 + 28800)
+      })
+      const load = vi.fn(async (c: vercel.Credentials) => c.token)
+      await expect(
+        vercel.withRenewal(() => stored, renew, load, T),
+      ).resolves.toBe('new')
+      expect(renew).toHaveBeenCalledTimes(1)
+      expect(load).toHaveBeenCalledTimes(1)
+    })
+
+    it('leaves a live token alone', async () => {
+      const renew = vi.fn(async () => {})
+      await expect(
+        vercel.withRenewal(
+          () => cli('live', T / 1000 + 3600),
+          renew,
+          async (c) => c.token,
+          T,
+        ),
+      ).resolves.toBe('live')
+      expect(renew).not.toHaveBeenCalled()
+    })
+
+    it('renews once and retries when the API rejects a token with no known expiry', async () => {
+      let stored = cli('old', null)
+      const renew = vi.fn(async () => {
+        stored = cli('new', null)
+      })
+      const load = vi.fn(async (c: vercel.Credentials) => {
+        if (c.token === 'old') throw rejected()
+        return c.token
+      })
+      await expect(
+        vercel.withRenewal(() => stored, renew, load, T),
+      ).resolves.toBe('new')
+      expect(renew).toHaveBeenCalledTimes(1)
+      expect(load).toHaveBeenCalledTimes(2)
+    })
+
+    it('asks for a fresh login when the CLI cannot renew, without a doomed request', async () => {
+      const load = vi.fn(async () => 'never')
+      await expect(
+        vercel.withRenewal(
+          () => cli('old', T / 1000 - 10),
+          async () => {},
+          load,
+          T,
+        ),
+      ).rejects.toMatchObject({ fix: 'vercel login' })
+      expect(load).not.toHaveBeenCalled()
+    })
+
+    it('renews at most once when the renewed token is rejected too', async () => {
+      let stored = cli('old', T / 1000 - 10)
+      const renew = vi.fn(async () => {
+        stored = cli('new', T / 1000 + 28800)
+      })
+      await expect(
+        vercel.withRenewal(
+          () => stored,
+          renew,
+          async () => {
+            throw rejected()
+          },
+          T,
+        ),
+      ).rejects.toMatchObject({ fix: 'vercel login' })
+      expect(renew).toHaveBeenCalledTimes(1)
+    })
+
+    it('never runs the CLI for a pasted token', async () => {
+      const renew = vi.fn(async () => {})
+      await expect(
+        vercel.withRenewal(
+          () => ({ token: 'pasted', team: null, cli: false, expiresAt: null }),
+          renew,
+          async () => {
+            throw rejected()
+          },
+          T,
+        ),
+      ).rejects.toMatchObject({ message: 'rejected' })
+      expect(renew).not.toHaveBeenCalled()
+    })
   })
 
   it('picks the newest production deployment per project and links its inspector', () => {

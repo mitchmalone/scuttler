@@ -5,6 +5,20 @@
 
 ---
 
+### 2026-11-25 · The Vercel widget asks the CLI to renew its own login
+
+- **Context.** The CLI's token lasts eight hours (JOURNAL 2026-11-25), so the widget
+  that piggybacks it (2026-08-20) went to `setup` daily and told the user to run
+  `vercel whoami` by hand.
+- **Decision.** When the CLI token has expired or is rejected, `vercel.ts` runs
+  `vercel whoami` through the login shell, once per tick at most, then reads the store
+  again. The CLI refreshes and writes its own credentials; the widget still never reads
+  the refresh token or writes the store, so invariant 2 holds as written. A pasted
+  `VERCEL_TOKEN` never runs the CLI.
+- **Consequences.** A widget may run its provider's CLI to keep a piggybacked login
+  alive; `setup` is for what only the user can do (`vercel login`). A login the CLI
+  can't renew costs one shell start per tick until it is fixed.
+
 ### 2026-11-24 · A `settings` action: a row can open scuttler's Settings at a page
 
 - **Context.** A widget whose fix lives in scuttler (a missing API key) could only name the

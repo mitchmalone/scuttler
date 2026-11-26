@@ -113,7 +113,8 @@ Every field is optional; `{}` is a valid blank cell. The fields — `icon`, `lab
 `settings`, `requires` and `auth` are defined in [PLUGINS.md](PLUGINS.md) ("Settings and
 sign-in") and mean the same here: declared settings are collected in **Settings → Widgets** and arrive as environment variables on every `tick`; secrets go to the
 Keychain; piggyback on the provider CLI's own login first and answer `setup` when it is
-missing. `vercel.ts` reads `VERCEL_TOKEN`, else the Vercel CLI's store;
+missing. `vercel.ts` reads `VERCEL_TOKEN`, else the Vercel CLI's store, and runs
+`vercel whoami` when that login has expired so the CLI renews it;
 `github-actions.ts` carries the device-flow `auth` example.
 
 ## Refresh, failure, and the rules of the road

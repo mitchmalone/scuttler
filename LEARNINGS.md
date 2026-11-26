@@ -144,6 +144,9 @@ AGENTS.md rules here.
   Favicons in `apps/www/src/app/` use the ⌘-on-black artwork Mitch supplied verbatim.
 - Vercel CLI 61 moved its credential store to `~/.local/share/com.vercel.cli/auth.json`;
   read both locations and take the later-expiring token (2026-10-01).
+- The Vercel CLI's token lasts eight hours and an expired one answers 403, not 401. Only
+  a CLI run renews it, and the app's bare PATH can't find a version-managed CLI: run it
+  as `$SHELL -lic 'vercel whoami'` (2026-11-25).
 
 ## Toolchain
 
