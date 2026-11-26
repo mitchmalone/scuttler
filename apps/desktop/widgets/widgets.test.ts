@@ -67,7 +67,10 @@ describe('github-actions', () => {
     const m = actions.manifest()
     // Sign-in is offered only with a client id baked in (none in test env).
     expect(m.auth).toBeUndefined()
-    expect(m.settings.map((s) => s.key)).toEqual(['GITHUB_TOKEN'])
+    expect(m.settings.map((s) => s.key)).toEqual([
+      'GITHUB_TOKEN',
+      'GITHUB_REPOS',
+    ])
     expect(m.settings[0]).toMatchObject({ secret: true })
     expect('required' in m.settings[0]!).toBe(false)
     expect(m.requires[0]).toMatchObject({
@@ -75,14 +78,12 @@ describe('github-actions', () => {
     })
   })
 
-  it('sorts newest first, tones by state, and counts failures', () => {
+  it('tones by state and counts failures', () => {
     const v = actions.view(items, 'https://gh', NOW)
     expect(v).toMatchObject({ tone: 'error', icon: 'monitor-x', label: '1' })
     expect(v.click).toEqual({ type: 'open', value: 'https://gh' })
-    expect(v.card?.rows?.map((r) => r.text)).toEqual([
-      'x/b · Deploy',
-      'x/a · CI',
-    ])
+    expect(v.card?.subtitle).toBe('1 failing · 1 healthy')
+    expect(v.card?.rows?.map((r) => r.text)).toEqual(['b · Deploy', 'a · CI'])
     expect(v.card?.rows?.[0]).toMatchObject({ dot: 'error', hint: '30m' })
     expect(v.card?.rows?.[1]).toMatchObject({ dot: 'ok', hint: '1h' })
   })
@@ -107,6 +108,92 @@ describe('github-actions', () => {
       icon: 'monitor-check',
     })
     expect(actions.view([], 'https://gh', NOW).card?.subtitle).toBe('no runs')
+  })
+
+  it('puts failing first, then running, then newest', () => {
+    const run = (workflow: string, state: string, createdAt: string) => ({
+      repo: 'x/r',
+      workflow,
+      state,
+      url: '',
+      createdAt,
+    })
+    const v = actions.view(
+      [
+        run('new green', 'success', '2026-08-19T11:50:00Z'),
+        run('old red', 'failure', '2026-08-10T00:00:00Z'),
+        run('running', 'in_progress', '2026-08-19T11:00:00Z'),
+        run('old green', 'success', '2026-08-01T00:00:00Z'),
+      ],
+      'https://gh',
+      NOW,
+    )
+    expect(v.card?.rows?.map((r) => r.text)).toEqual([
+      'r · old red',
+      'r · running',
+      'r · new green',
+      'r · old green',
+    ])
+    expect(v.card?.subtitle).toBe('1 failing · 1 running · 2 healthy')
+  })
+
+  it('says how many rows the card left out', () => {
+    const many = Array.from({ length: 15 }, (_, i) => ({
+      repo: 'x/r',
+      workflow: `w${i}`,
+      state: 'success',
+      url: '',
+      createdAt: '',
+    }))
+    const card = actions.view(many, 'https://gh', NOW).card
+    expect(card?.rows).toHaveLength(12)
+    expect(card?.hint).toBe('3 more not shown · click a run to open it')
+  })
+
+  it('keeps the latest run of every workflow, not one per repo', () => {
+    const items = actions.latestPerWorkflow('x/peekay', [
+      {
+        workflow_id: 1,
+        name: 'Deploy',
+        status: 'completed',
+        conclusion: 'success',
+        created_at: 't3',
+      },
+      {
+        workflow_id: 2,
+        name: 'RSS',
+        status: 'completed',
+        conclusion: 'failure',
+        created_at: 't2',
+      },
+      {
+        workflow_id: 1,
+        name: 'Deploy',
+        status: 'completed',
+        conclusion: 'failure',
+        created_at: 't1',
+      },
+      { workflow_id: 3, name: 'Sync', status: 'in_progress', conclusion: null },
+    ])
+    expect(items.map((i) => [i.workflow, i.state])).toEqual([
+      ['Deploy', 'success'],
+      ['RSS', 'failure'],
+      ['Sync', 'in_progress'],
+    ])
+    expect(items[2]?.url).toBe('https://github.com/x/peekay/actions')
+  })
+
+  it('finds the active workflows a full page of runs left out', () => {
+    expect(
+      actions.missingWorkflows(
+        [
+          { id: 1, state: 'active' },
+          { id: 2, state: 'active' },
+          { id: 3, state: 'disabled_manually' },
+        ],
+        [{ workflow_id: 1 }],
+      ),
+    ).toEqual([2])
   })
 
   it('parses the repo list setting', () => {

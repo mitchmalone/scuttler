@@ -1,4 +1,4 @@
-// scuttler widget: latest GitHub Actions run per repo (docs/WIDGETS.md).
+// scuttler widget: latest GitHub Actions run per workflow (docs/WIDGETS.md).
 //
 // Credentials piggyback on the GitHub CLI (`gh auth token` — gh keeps its own
 // token fresh), or a pasted GITHUB_TOKEN setting overrides it. No CLI and no
@@ -7,10 +7,12 @@
 // device flow is still here but dormant: it lights up only when a CLIENT_ID
 // for a scuttler OAuth App is baked in below.
 //
-// Each tick: the ten repos you pushed to most recently (edit REPOS below to
-// pin a list) and each one's latest workflow run. The cell is a monitor, red
-// with the failing count while anything is failing, amber while something
-// runs; the card lists runs newest first.
+// Each tick: the repos pinned in the GITHUB_REPOS setting plus the ten you
+// pushed to most recently, and the latest run of every workflow in each (one
+// run per repo hid a failing scheduled workflow behind a newer green one).
+// The cell is a monitor, red with the failing count while anything is
+// failing, amber while something runs; the card lists failing first, then
+// running, then newest.
 //
 // Install: copy into ~/.config/scuttler/widgets/. Runs under Bun.
 import type { WidgetTone, WidgetView } from '@scuttler/tui/bar/types'
@@ -25,10 +27,10 @@ class SetupNeeded extends Error {
 }
 
 const API = 'https://api.github.com'
-const MAX_ROWS = 10
+const MAX_ROWS = 12
 const DEFAULT_REPOS = 10
-/** Pin repos here (`owner/repo`); empty = your most recently pushed. */
-const REPOS: string[] = []
+/** Runs read per repo in one page; workflows not in it are asked for one by one. */
+const RUNS_PER_REPO = 100
 /**
  * scuttler's GitHub OAuth App (device flow enabled). A client id is public —
  * it names the app the user is approving, nothing more. Fill in once the app
@@ -51,7 +53,7 @@ const TONES: Record<string, WidgetTone> = {
   in_progress: 'warn',
 }
 
-/** One repo's latest run, as `view` wants it. */
+/** One workflow's latest run, as `view` wants it. */
 export type RunItem = {
   repo: string
   workflow: string
@@ -75,6 +77,11 @@ export function manifest() {
         label: 'GitHub',
         hint: 'optional — a token to use instead of the GitHub CLI',
         secret: true,
+      },
+      {
+        key: 'GITHUB_REPOS',
+        label: 'Pinned repos',
+        hint: 'owner/repo, comma separated: always watched, on top of your ten most recently pushed',
       },
     ],
     requires: [
@@ -100,15 +107,28 @@ export function age(iso: string | undefined, now = Date.now()): string | null {
   return `${Math.floor(s / 86400)}d`
 }
 
+/** Failing first, then running, then the rest; newest first within each. */
+const RANK: Record<string, number> = { error: 0, warn: 1 }
+const rank = (r: RunItem) => RANK[TONES[r.state] ?? ''] ?? 2
+
 /** The view for a set of latest runs — pure, so it's testable. */
 export function view(
   items: RunItem[],
   home = 'https://github.com',
   now = Date.now(),
 ): WidgetView {
-  const runs = [...items].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+  const runs = [...items].sort(
+    (a, b) => rank(a) - rank(b) || (a.createdAt < b.createdAt ? 1 : -1),
+  )
   const failing = runs.filter((r) => TONES[r.state] === 'error').length
-  const running = runs.some((r) => TONES[r.state] === 'warn')
+  const running = runs.filter((r) => TONES[r.state] === 'warn').length
+  const healthy = runs.filter((r) => TONES[r.state] === 'ok').length
+  const counts = [
+    failing ? `${failing} failing` : null,
+    running ? `${running} running` : null,
+    healthy ? `${healthy} healthy` : null,
+  ].filter(Boolean)
+  const hidden = runs.length - MAX_ROWS
   return {
     icon: failing ? 'monitor-x' : 'monitor-check',
     label: failing ? String(failing) : null,
@@ -116,20 +136,61 @@ export function view(
     click: { type: 'open', value: home },
     card: {
       title: 'GitHub Actions',
-      subtitle: failing
-        ? `${failing} failing`
-        : runs.length
-          ? 'all green'
-          : 'no runs',
+      subtitle: counts.length ? counts.join(' · ') : 'no runs',
       rows: runs.slice(0, MAX_ROWS).map((r) => ({
         dot: TONES[r.state] ?? 'muted',
-        text: `${r.repo} · ${r.workflow}`,
+        // The owner is dropped: the workflow name is what gets truncated.
+        text: `${r.repo.split('/').pop()} · ${r.workflow}`,
         hint: age(r.createdAt, now),
         action: { type: 'open' as const, value: r.url },
       })),
-      hint: 'click a run to open it',
+      hint:
+        hidden > 0
+          ? `${hidden} more not shown · click a run to open it`
+          : 'click a run to open it',
     },
   }
+}
+
+/**
+ * The latest run of each workflow in one repo. `runs` is GitHub's list,
+ * newest first, so the first run seen per workflow is its latest.
+ */
+export function latestPerWorkflow(
+  repo: string,
+  runs: WorkflowRun[],
+): RunItem[] {
+  const seen = new Set<string>()
+  const out: RunItem[] = []
+  for (const run of runs) {
+    const key = String(run.workflow_id ?? run.name ?? '')
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push({
+      repo,
+      workflow: run.name ?? 'workflow',
+      state:
+        run.status === 'completed'
+          ? (run.conclusion ?? 'unknown')
+          : (run.status ?? 'unknown'),
+      url: run.html_url ?? `https://github.com/${repo}/actions`,
+      createdAt: run.created_at ?? '',
+    })
+  }
+  return out
+}
+
+export type Workflow = { id?: number; state?: string }
+
+/** Ids of the active workflows that have no run in `runs`. */
+export function missingWorkflows(
+  workflows: Workflow[],
+  runs: WorkflowRun[],
+): number[] {
+  const seen = new Set(runs.map((r) => r.workflow_id))
+  return workflows
+    .filter((w) => w.state === 'active' && w.id != null && !seen.has(w.id))
+    .map((w) => w.id as number)
 }
 
 /** `owner/repo,owner/repo` → trimmed, deduped, empties dropped. */
@@ -165,7 +226,8 @@ async function gh<T>(path: string, token: string): Promise<T> {
 }
 
 type Repo = { full_name: string; html_url?: string }
-type WorkflowRun = {
+export type WorkflowRun = {
+  workflow_id?: number
   name?: string
   status?: string
   conclusion?: string | null
@@ -204,42 +266,65 @@ async function tick(): Promise<WidgetView> {
       },
     }
   }
-  let repos = parseRepos(REPOS.join(','))
-  if (!repos.length) {
-    const mine = await gh<Repo[]>(
-      `/user/repos?sort=pushed&per_page=${DEFAULT_REPOS}&affiliation=owner,collaborator,organization_member`,
-      token,
-    )
-    repos = mine.map((r) => r.full_name)
-  }
-  const items = await Promise.all(
-    repos.map(async (repo): Promise<RunItem | null> => {
-      const { workflow_runs } = await gh<{ workflow_runs: WorkflowRun[] }>(
-        `/repos/${repo}/actions/runs?per_page=1`,
-        token,
-      )
-      const run = workflow_runs?.[0]
-      if (!run) return null
-      return {
-        repo,
-        workflow: run.name ?? 'workflow',
-        state:
-          run.status === 'completed'
-            ? (run.conclusion ?? 'unknown')
-            : (run.status ?? 'unknown'),
-        url: run.html_url ?? `https://github.com/${repo}/actions`,
-        createdAt: run.created_at ?? '',
-      }
-    }),
+  const mine = await gh<Repo[]>(
+    `/user/repos?sort=pushed&per_page=${DEFAULT_REPOS}&affiliation=owner,collaborator,organization_member`,
+    token,
   )
+  const repos = [
+    ...new Set([
+      ...parseRepos(process.env.GITHUB_REPOS),
+      ...mine.map((r) => r.full_name),
+    ]),
+  ]
+  const items = (
+    await Promise.all(
+      repos.map(async (repo): Promise<RunItem[]> => {
+        try {
+          const { workflow_runs } = await gh<{ workflow_runs: WorkflowRun[] }>(
+            `/repos/${repo}/actions/runs?per_page=${RUNS_PER_REPO}`,
+            token,
+          )
+          const runs = workflow_runs ?? []
+          // A full page can leave out a workflow that last ran long ago
+          // behind busier ones; ask for those directly.
+          if (runs.length === RUNS_PER_REPO) {
+            const { workflows } = await gh<{ workflows: Workflow[] }>(
+              `/repos/${repo}/actions/workflows?per_page=100`,
+              token,
+            )
+            const rest = await Promise.all(
+              missingWorkflows(workflows ?? [], runs).map((id) =>
+                gh<{ workflow_runs: WorkflowRun[] }>(
+                  `/repos/${repo}/actions/workflows/${id}/runs?per_page=1`,
+                  token,
+                ).then((r) => r.workflow_runs?.[0]),
+              ),
+            )
+            runs.push(...rest.filter((r): r is WorkflowRun => r != null))
+          }
+          return latestPerWorkflow(repo, runs)
+        } catch (e) {
+          if (e instanceof SetupNeeded) throw e
+          // One unreachable repo (renamed, no access) is a grey row, not a
+          // dead widget.
+          return [
+            {
+              repo,
+              workflow: 'could not read runs',
+              state: 'unknown',
+              url: `https://github.com/${repo}/actions`,
+              createdAt: '',
+            },
+          ]
+        }
+      }),
+    )
+  ).flat()
   const me = await gh<{ login?: string }>('/user', token)
   const home = me.login
     ? `https://github.com/${me.login}?tab=repositories`
     : 'https://github.com'
-  return view(
-    items.filter((i): i is RunItem => i != null),
-    home,
-  )
+  return view(items, home)
 }
 
 /** A line of the auth protocol (widgets.rs): printed as one JSON object. */
