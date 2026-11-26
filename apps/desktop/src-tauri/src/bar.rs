@@ -874,12 +874,31 @@ pub fn switch_workspace(ws: &str) -> CmdResult<()> {
 
 /// The aerospace CLI, wherever Homebrew put it (one locator for the bar and the
 /// desktop layer: deps.rs).
+///
+/// Always under a deadline: the CLI is a socket client, and when the AeroSpace
+/// server stops answering it waits forever. An untimed call here froze every
+/// bar push for 17 hours (JOURNAL 2026-11-26); a killed call reads as "no
+/// answer", which every caller already handles.
 pub(crate) fn aerospace(args: &[&str]) -> Option<String> {
     let bin = crate::deps::locate(crate::deps::Dep::Aerospace.binary())?;
-    let out = Command::new(bin).args(args).output().ok()?;
-    out.status
-        .success()
-        .then(|| String::from_utf8_lossy(&out.stdout).into_owned())
+    run_bounded(Command::new(bin).args(args), AEROSPACE_TIMEOUT)
+}
+
+/// Longest an aerospace call may take. A healthy one answers in tens of
+/// milliseconds.
+const AEROSPACE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(3);
+
+/// stdout of a command that exits 0 inside `timeout`; killed and `None` past it.
+fn run_bounded(cmd: &mut Command, timeout: std::time::Duration) -> Option<String> {
+    match crate::widgets::run(cmd, timeout) {
+        Ok(out) => Some(out),
+        Err(why) => {
+            if why.contains("timed out") {
+                crate::logbook::breadcrumb("bar", &format!("aerospace {why}"));
+            }
+            None
+        }
+    }
 }
 
 fn parse_lines(out: &str) -> Vec<String> {
@@ -893,6 +912,25 @@ fn parse_lines(out: &str) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_command_that_never_answers_is_killed_not_waited_on() {
+        let started = std::time::Instant::now();
+        let out = run_bounded(
+            Command::new("/bin/sleep").arg("30"),
+            std::time::Duration::from_millis(200),
+        );
+        assert_eq!(out, None);
+        assert!(started.elapsed() < std::time::Duration::from_secs(5));
+        assert_eq!(
+            run_bounded(
+                Command::new("/bin/echo").arg("hi"),
+                std::time::Duration::from_secs(5)
+            )
+            .as_deref(),
+            Some("hi\n")
+        );
+    }
 
     #[test]
     fn parses_workspace_table() {
