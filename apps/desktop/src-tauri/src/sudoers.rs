@@ -29,7 +29,7 @@ pub const MAS_COPY: &str = "/usr/local/libexec/scuttler/mas";
 /// The empty environment the root step runs under.
 const ROOT_PATH: &str = "PATH=/usr/bin:/bin:/usr/sbin:/sbin";
 
-/// The root half of "allow admin", as `/bin/sh -c` text. `$1` is the rule,
+/// The root half of "allow admin", as `/bin/bash -p -c` text. `$1` is the rule,
 /// `$2` the mas to copy (empty: none). The temp file is made inside
 /// `/etc/sudoers.d` (root-only, so no one swaps it between visudo's check
 /// and install), with a dot in its name (sudo ignores such files). stderr
@@ -113,10 +113,20 @@ pub fn rule_text(user: &str, mas: bool) -> String {
     out
 }
 
-/// argv for `/usr/bin/env`: an empty environment, a fixed PATH, `/bin/sh`
+/// argv for `/usr/bin/env`: an empty environment, a fixed PATH, `/bin/bash -p`
 /// running one of the scripts above with its positional arguments.
 pub fn root_argv(on: bool, rule: &str, mas: Option<&Path>) -> Vec<String> {
-    let mut argv: Vec<String> = vec!["-i".into(), ROOT_PATH.into(), "/bin/sh".into(), "-c".into()];
+    // `-p` is the whole fix for "mktemp: Permission denied": the admin dialog
+    // runs the tool with effective uid 0 and the user's real uid, and bash
+    // (which `/bin/sh` is) resets the effective uid to the real one unless
+    // started privileged. Named as bash so `/var/select/sh` cannot change it.
+    let mut argv: Vec<String> = vec![
+        "-i".into(),
+        ROOT_PATH.into(),
+        "/bin/bash".into(),
+        "-p".into(),
+        "-c".into(),
+    ];
     if on {
         argv.push(INSTALL_SCRIPT.into());
         argv.push("sh".into());
@@ -159,7 +169,21 @@ fn login_user() -> String {
 /// The mas to copy: the one the panel found. Must be an absolute path to a
 /// file; anything else means "no mas" rather than a guess.
 fn mas_source() -> Option<PathBuf> {
-    crate::updates::locate_mas().filter(|p| p.is_absolute() && p.is_file())
+    crate::updates::locate_mas()
+        .filter(|p| p.is_absolute() && p.is_file())
+        .map(|p| real_mas(&p))
+}
+
+/// mas 7's `bin/mas` is a zsh wrapper that execs `../libexec/bin/mas`; copied
+/// alone it dies with "no such file" (exit 127, JOURNAL 2026-11-26). The copy
+/// is taken from the real binary whenever the wrapper's sibling exists; same
+/// rule as `sc_sudoers_mas_bin`.
+fn real_mas(found: &Path) -> PathBuf {
+    std::fs::canonicalize(found)
+        .ok()
+        .and_then(|real| Some(real.parent()?.parent()?.join("libexec/bin/mas")))
+        .filter(|real| real.is_file())
+        .unwrap_or_else(|| found.to_path_buf())
 }
 
 /// Turn the rule on or off: the dialog and the root step, then the user half.
@@ -253,6 +277,26 @@ mod tests {
     }
 
     #[test]
+    fn the_copy_is_taken_from_the_real_binary_behind_mas_7s_wrapper() {
+        let keg = std::env::temp_dir().join(format!("scuttler-mas-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&keg);
+        std::fs::create_dir_all(keg.join("bin")).unwrap();
+        std::fs::create_dir_all(keg.join("libexec/bin")).unwrap();
+        let wrapper = keg.join("bin/mas");
+        std::fs::write(&wrapper, "#!/bin/zsh\n").unwrap();
+        // No sibling: the found file is the binary (mas 1 through 6).
+        assert_eq!(real_mas(&wrapper), wrapper);
+        std::fs::write(keg.join("libexec/bin/mas"), "binary").unwrap();
+        let real = real_mas(&wrapper);
+        assert!(real.ends_with("libexec/bin/mas"));
+        // Through a symlink, as Homebrew's bin/mas is.
+        let link = keg.join("mas-link");
+        std::os::unix::fs::symlink(&wrapper, &link).unwrap();
+        assert_eq!(real_mas(&link), real);
+        let _ = std::fs::remove_dir_all(&keg);
+    }
+
+    #[test]
     fn user_names_are_names_not_user_lists() {
         assert!(valid_user("mitch"));
         assert!(valid_user("_mbsetupuser"));
@@ -267,10 +311,10 @@ mod tests {
     #[test]
     fn root_argv_is_an_empty_env_and_absolute_paths_only() {
         let argv = root_argv(true, "RULE\n", Some(Path::new("/opt/homebrew/bin/mas")));
-        assert_eq!(&argv[..4], ["-i", ROOT_PATH, "/bin/sh", "-c"]);
-        assert_eq!(argv[5], "sh");
-        assert_eq!(argv[6], "RULE");
-        assert_eq!(argv[7], "/opt/homebrew/bin/mas");
+        assert_eq!(&argv[..5], ["-i", ROOT_PATH, "/bin/bash", "-p", "-c"]);
+        assert_eq!(argv[6], "sh");
+        assert_eq!(argv[7], "RULE");
+        assert_eq!(argv[8], "/opt/homebrew/bin/mas");
         // Every command in the scripts is spelled with its directory.
         for script in [INSTALL_SCRIPT, REMOVE_SCRIPT] {
             for line in script.lines().map(str::trim) {
@@ -293,9 +337,9 @@ mod tests {
             }
         }
         let off = root_argv(false, "", None);
-        assert_eq!(off.len(), 6);
-        assert!(off[4].contains("/etc/sudoers.d/scuttler"));
-        assert!(off[4].contains(MAS_COPY));
+        assert_eq!(off.len(), 7);
+        assert!(off[5].contains("/etc/sudoers.d/scuttler"));
+        assert!(off[5].contains(MAS_COPY));
     }
 
     #[test]

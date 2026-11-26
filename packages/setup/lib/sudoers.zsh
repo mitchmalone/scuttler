@@ -36,9 +36,16 @@ _sc_as_root() { if _sc_root; then "$@"; else _sc_sudo "$@"; fi; }
 # The mas the copy is taken from: `SCUTTLER_MAS_BIN` (the app passes the one it
 # found; tests pin it), else the one on PATH. Empty means no mas: the rule then
 # names sleep alone.
+#
+# mas 7's `bin/mas` is a zsh wrapper that execs `../libexec/bin/mas`; copied
+# alone it dies with "no such file" (exit 127). The copy is taken from the
+# real binary whenever the wrapper's sibling exists.
 sc_sudoers_mas_bin() {
-  if [[ -n "${SCUTTLER_MAS_BIN:-}" ]]; then print -r -- "$SCUTTLER_MAS_BIN"; return 0; fi
-  command -v mas 2>/dev/null
+  local found real
+  if [[ -n "${SCUTTLER_MAS_BIN:-}" ]]; then found="$SCUTTLER_MAS_BIN"; else found="$(command -v mas 2>/dev/null)"; fi
+  [[ -n "$found" ]] || return 0
+  real="${found:A:h:h}/libexec/bin/mas"
+  if [[ -f "$real" ]]; then print -r -- "$real"; else print -r -- "$found"; fi
 }
 
 # A sudoers User_List is a grammar; the name must not be one.

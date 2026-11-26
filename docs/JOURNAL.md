@@ -6,6 +6,30 @@
 
 ---
 
+### 2026-11-26 · The root-owned copy of mas was a wrapper script: exit 127
+
+With "allow admin" fixed (2026-11-25) the rule and the copy were written, and the first
+App Store upgrade died: `/usr/local/libexec/scuttler/mas:106: no such file or directory:
+/usr/local/libexec/scuttler/../libexec/bin/mas`. mas 7's `bin/mas` is a zsh wrapper that
+execs `../libexec/bin/mas`; scuttler copied the wrapper alone. Both doors now copy the
+real binary when the wrapper's sibling exists (`sudoers.rs::real_mas`,
+`sc_sudoers_mas_bin`). Skipping the wrapper loses nothing for `upgrade`/`update`: it
+only reformats `list`, `outdated` and `search`, which the panel runs unprivileged from
+Homebrew's path. An existing copy must be rewritten: "allow admin" again.
+
+### 2026-11-25 · "allow admin" never ran as root: `/bin/sh` dropped the privilege
+
+The updates panel's "allow admin" took the password and then logged
+`mktemp: mkstemp failed on /etc/sudoers.d/.scuttler.XXXXXX: Permission denied`, so the
+rule was never rewritten, `/usr/local/libexec/scuttler/mas` never existed, and every App
+Store upgrade was skipped ("no sudoers rule"). `AuthorizationExecuteWithPrivileges` runs
+the tool with effective uid 0 and the user's real uid. `/usr/bin/env` keeps that;
+`/bin/sh` is bash, and bash started with euid != ruid resets the effective uid unless
+given `-p`. The 2026-11-07 spike ran `/usr/bin/id -u` directly, which prints the
+effective uid, so it read 0 and hid this; the shell wrapper arrived a day later (B3)
+and was never run through the dialog. Fix: `/bin/bash -p -c` (`sudoers.rs::root_argv`).
+Lesson: a root spike must run the same interpreter the shipped step uses.
+
 ### 2026-11-25 · brew exited 0 and left six formulae with links to kegs that were never installed
 
 "Upgrade everything" in the panel failed all 36 rows with `Error:
