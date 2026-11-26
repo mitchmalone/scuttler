@@ -6,6 +6,17 @@
 
 ---
 
+### 2026-11-26 · The uptime widget reads Uptime Kuma, not Upptime
+
+Mitch is retiring the Upptime repo (`RamenAmok/uptime`) for Uptime Kuma on his NAS.
+`uptime.ts` now reads a public status page: `/api/status-page/<slug>` for groups and
+monitors, `/api/status-page/heartbeat/<slug>` for the latest beat (last in each list;
+0 down, 1 up, 2 pending, 3 maintenance) and `uptimeList["<id>_24"]`. The address is a
+required `UPTIME_KUMA_URL` setting, the status page's own URL, and no default is baked
+in: the old default was a public site, the new one is a Tailnet host and this repo is
+public. Upptime support is gone, not kept beside it. Written from the API's documented
+shape; the agent could not reach the Tailnet host, so the first live tick is the check.
+
 ### 2026-11-26 · The usage cell is a robot
 
 Mitch's ticket: the bar's usage icon goes from the progress meter to a robot (lucide
