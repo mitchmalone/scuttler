@@ -168,7 +168,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .bar-agent-icon-working,
-  .bar-agent-breathe {
+  .bar-agent-breathe,
+  .bar-refreshing svg {
     animation: none;
   }
 }
@@ -901,6 +902,34 @@
 
 .bar-widget-sub {
   margin-top: 1px;
+}
+
+/* Header refresh: dim until hovered, spinning while its refresh is in flight. */
+.bar-refresh {
+  display: flex;
+  flex-shrink: 0;
+  padding: 3px;
+  border: 0;
+  background: none;
+  color: var(--dim, #8b90a5);
+  cursor: pointer;
+}
+
+.bar-refresh:hover {
+  color: var(--fg, #dde1f0);
+}
+
+.bar-refreshing {
+  cursor: default;
+}
+
+.bar-refreshing svg {
+  animation: bar-agent-spin 1.1s linear infinite;
+}
+
+.bar-widget-head .bar-refresh {
+  align-self: flex-start;
+  margin-left: auto;
 }
 
 .bar-widget-health {

@@ -58,6 +58,8 @@ export type ScriptAction =
   /** Open scuttler's Settings at a page id (`widgets`, `bar`, …). */
   | { type: 'settings'; value: string }
   | { type: 'open'; value: string }
+  /** Tick a widget now, by id. */
+  | { type: 'refresh'; value: string }
   | { type: 'none' }
 
 export type ScriptItem = {

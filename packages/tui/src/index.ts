@@ -67,6 +67,7 @@ export {
   BarCell,
   BarClock,
   BarFrontApp,
+  BarRefreshButton,
   BarHoverCell,
   BarUsageCard,
   BarUsageCell,

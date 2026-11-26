@@ -130,6 +130,7 @@ Every field is optional; `{}` is a valid blank cell.
 - `tone` — `ok` (plain fg) · `warn` · `error` (theme danger) · `muted` · `accent`.
 - `click` — `{"type":"open","value":…}` (URL/file/app via `open`), `{"type":"copy","value":…}`,
   `{"type":"settings","value":"widgets"}` (scuttler's Settings at a page),
+  `{"type":"refresh","value":"<widget id>"}` (tick that widget now),
   `{"type":"none"}` — the scripts action vocabulary.
 - `card` — top to bottom:
   - `title`, dim `subtitle`;

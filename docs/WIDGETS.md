@@ -119,7 +119,8 @@ missing. `vercel.ts` reads `VERCEL_TOKEN`, else the Vercel CLI's store, and runs
 
 ## Refresh, failure, and the rules of the road
 
-- **On demand:** `touch ~/.config/scuttler/triggers/widget.<id>` ticks a widget now —
+- **On demand:** the refresh button in the card's header, or
+  `touch ~/.config/scuttler/triggers/widget.<id>`, ticks a widget now —
   wire it to a git hook, a cron, a keybinding, anything.
 - **Live:** the dir is watched. Drop a widget in and its cell appears within a second;
   edit it and it re-ticks; delete it and the cell goes.
