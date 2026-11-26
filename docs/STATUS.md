@@ -4,12 +4,22 @@
 > history lives in git, `plans/done/`, `releases/` and `JOURNAL.md`; the backlog with its
 > triggers lives in `ROADMAP.md`.
 >
-> Last updated: 2026-11-25 (the Vercel widget renews its CLI login; 0.9 work on `feat/settings-redesign`: the arr widget merged
-> in, widget cards gained sections, and the arr card does not yet match Mitch's mock;
-> v0.8.8 is the latest release, the tap still on 0.8.6)
+> Last updated: 2026-11-26 (0.9 is one release on `release/0.9`, the branch that was
+> `feat/settings-redesign`; every piece of work lands as a topic branch merged into it.
+> The arr card does not yet match Mitch's mock; v0.8.8 is the latest release, the tap
+> still on 0.8.6)
 
 ## Where we are
 
+- **Done 2026-11-26, for 0.9, each with a live check still open** (JOURNAL 2026-11-25
+  and 2026-11-26):
+  - The bar no longer freezes on a hung `aerospace` call: every call has a 3 s deadline.
+  - "allow admin" writes the sudoers rule (its root step runs under `bash -p`) and copies
+    the real mas binary. The copy on this Mac is still the broken wrapper until "allow
+    admin" is pressed again; no App Store upgrade has succeeded yet.
+  - The GitHub Actions widget tracks every workflow, with pinned repos (`GITHUB_REPOS`)
+    and failing rows first.
+  - The wifi card says "Connected" and shows a signal meter (DECISIONS 2026-11-25).
 - **Built 2026-11-25, for 0.9, live run open: the updates panel handles Homebrew's
   broken links** (`plans/active/2026-11-25-brew-broken-links.md`, DECISIONS and JOURNAL
   2026-11-25). The brew check finds formulae whose links point at a keg that was never
@@ -35,13 +45,13 @@
   on the way: the old Focus → theme mapping never worked without Full Disk Access, and
   missed scheduled Focus (JOURNAL 2026-11-23).
 - **In flight: the settings redesign** (`plans/active/2026-11-23-settings-redesign.md`,
-  DECISIONS 2026-11-23), on `feat/settings-redesign` in the worktree
+  DECISIONS 2026-11-23), on `release/0.9` in the worktree
   `../scuttler-settings-redesign`, kept open for the settings features Mitch adds next.
   Sidebar + twelve pages + search, built and `pnpm verify` green; checked in a browser
   against mocked IPC, dark and light themes. The native checklist (drag region, hotkey
   recorder, zone-board drag, Desktop deep link) needs an installed build. Not merged.
 - **In flight, not done: the `arr` widget v2** (Media stack; merged into
-  `feat/settings-redesign` for 0.9, `plans/active/2026-11-23-arr-widget.md`). Data is
+  `release/0.9` for 0.9, `plans/active/2026-11-23-arr-widget.md`). Data is
   right: parsing checked against live responses from Mitch's stack, keys in the
   Keychain via Settings. **The card does not look like Mitch's mock**
   (`~/Downloads/arr-widget-v2-mock.png`; now: `~/Downloads/arr-widget-v2-now.png`):
