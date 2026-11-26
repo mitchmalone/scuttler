@@ -6,6 +6,13 @@
 
 ---
 
+### 2026-11-26 · The usage cell is a robot
+
+Mitch's ticket: the bar's usage icon goes from the progress meter to a robot (lucide
+`Bot`, invariant 14). The cell never showed a percent, only pace by colour (DECISIONS
+2026-09-30), and that is unchanged. The fill level the meter drew is now only in the
+card, whose head keeps the meter.
+
 ### 2026-11-26 · The root-owned copy of mas was a wrapper script: exit 127
 
 With "allow admin" fixed (2026-11-25) the rule and the copy were written, and the first
