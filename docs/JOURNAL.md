@@ -17,6 +17,19 @@ real binary when the wrapper's sibling exists (`sudoers.rs::real_mas`,
 only reformats `list`, `outdated` and `search`, which the panel runs unprivileged from
 Homebrew's path. An existing copy must be rewritten: "allow admin" again.
 
+### 2026-11-26 · One hung `aerospace` call froze the whole bar for 17 hours
+
+Mitch saw a stale GitHub Actions card, a workspace 7 that no longer existed, and thought
+the app had crashed. It was alive: `sample` showed the bar's push thread
+(`bar::run_push` → `snapshot_with` → `bar::aerospace`) blocked in `Command::output()` on
+`aerospace list-workspaces`, started 2026-11-25 16:19:38 and still running the next
+morning. The CLI is a socket client and waits forever when the server does not answer;
+nothing bounded it, so every later bar push (widgets, workspaces, everything) queued
+behind it. Widgets kept ticking; their results never reached the webview. Why AeroSpace
+stopped answering at 16:19 is unknown. Fix: every aerospace call runs under a 3 s
+deadline (`bar::run_bounded`, the widgets' timed runner), logs a breadcrumb on a kill,
+and reads as "no answer". Lesson: no child process on a push path without a deadline.
+
 ### 2026-11-26 · The GitHub Actions widget said "all green" over two failing workflows
 
 Compared against Mitch's Glance board before he retired it. The widget read one run per
