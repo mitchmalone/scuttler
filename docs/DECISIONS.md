@@ -5,6 +5,56 @@
 
 ---
 
+### 2026-11-25 · Broken Homebrew links: scuttler reports them and removes them only when asked
+
+- **Context.** A `brew upgrade` can leave `opt/<formula>` and
+  `var/homebrew/linked/<formula>` pointing at a keg that was never installed; every
+  later upgrade then aborts on the first one (JOURNAL 2026-11-25). The panel showed
+  brew's raw error once per package: 36 failed rows for one cause.
+- **Decision.** The brew check scans those two directories under `brew --prefix`
+  (`brewlinks.rs`) and reports each formula as repairable (an older keg remains) or
+  stale (none does). The panel and the bar card show them above the packages, each kind
+  with its own labelled fix; Enter sends `{ repairLinks: <class> }` through the existing
+  plugin message path (invariant 3: still 84 commands). Rust rescans and removes only
+  the dangling symlinks of that class, never a keg, and logs each path. While anything
+  repairable is broken, Homebrew is left out of an upgrade batch; a brew job that still
+  dies on a dangling link drops the rest of the brew queue.
+- **Why ask.** The prefix is Homebrew's, not scuttler's (invariant 11). Removing a link
+  there is the user's decision each time, even though it is the same two `rm`s Mitch ran
+  by hand; `c` on the row copies that command. Mitch chose asking over silent repair.
+- **Consequences.** Homebrew's prefix is the one place outside its own config where
+  scuttler deletes something it did not write, and only on Enter. Every upgrade run's
+  whole output is now kept in `~/Library/Logs/scuttler-upgrades/` (the last twenty), and
+  a run that exits 0 but leaves its package outdated reads "not upgraded" rather than
+  vanishing.
+
+### 2026-11-25 · A `refresh` action: every widget card gets a refresh button
+
+- **Context.** A widget ticks on its interval; the only way to ask sooner was
+  `touch ~/.config/scuttler/triggers/widget.<id>`. Mitch wanted a button in the card.
+- **Decision.** The scripts action vocabulary gains `{"type": "refresh", "value":
+"<widget id>"}`, run by the existing `script_action` through `widgets::poke`, the same
+  call the trigger file makes. `BarWidgetCard` shows a small refresh button in its
+  header wherever actions can run; it spins until a newer tick lands. No new command
+  (invariant 3: still 84), no per-widget opt-in, nothing for a widget to implement.
+- **Consequences.** A widget row or cell click may also carry `refresh`. Plugin cards are
+  not widget cards: one that wants the button renders the shared `BarRefreshButton` and
+  sends its own service message, as the updates card does with `{ refresh: true }`.
+
+### 2026-11-25 · The Vercel widget asks the CLI to renew its own login
+
+- **Context.** The CLI's token lasts eight hours (JOURNAL 2026-11-25), so the widget
+  that piggybacks it (2026-08-20) went to `setup` daily and told the user to run
+  `vercel whoami` by hand.
+- **Decision.** When the CLI token has expired or is rejected, `vercel.ts` runs
+  `vercel whoami` through the login shell, once per tick at most, then reads the store
+  again. The CLI refreshes and writes its own credentials; the widget still never reads
+  the refresh token or writes the store, so invariant 2 holds as written. A pasted
+  `VERCEL_TOKEN` never runs the CLI.
+- **Consequences.** A widget may run its provider's CLI to keep a piggybacked login
+  alive; `setup` is for what only the user can do (`vercel login`). A login the CLI
+  can't renew costs one shell start per tick until it is fixed.
+
 ### 2026-11-24 · A `settings` action: a row can open scuttler's Settings at a page
 
 - **Context.** A widget whose fix lives in scuttler (a missing API key) could only name the

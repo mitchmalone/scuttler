@@ -144,6 +144,13 @@ AGENTS.md rules here.
   Favicons in `apps/www/src/app/` use the ⌘-on-black artwork Mitch supplied verbatim.
 - Vercel CLI 61 moved its credential store to `~/.local/share/com.vercel.cli/auth.json`;
   read both locations and take the later-expiring token (2026-10-01).
+- `brew upgrade` can exit 0 and leave `opt/<formula>` and `var/homebrew/linked/<formula>`
+  pointing at a keg that was never installed; the next upgrade aborts with `Error:
+…/Cellar/<formula>/<version> is not a directory`, one formula per run, while `brew
+outdated` stays healthy. Removing both links repairs it (2026-11-25).
+- The Vercel CLI's token lasts eight hours and an expired one answers 403, not 401. Only
+  a CLI run renews it, and the app's bare PATH can't find a version-managed CLI: run it
+  as `$SHELL -lic 'vercel whoami'` (2026-11-25).
 
 ## Toolchain
 

@@ -113,12 +113,14 @@ Every field is optional; `{}` is a valid blank cell. The fields — `icon`, `lab
 `settings`, `requires` and `auth` are defined in [PLUGINS.md](PLUGINS.md) ("Settings and
 sign-in") and mean the same here: declared settings are collected in **Settings → Widgets** and arrive as environment variables on every `tick`; secrets go to the
 Keychain; piggyback on the provider CLI's own login first and answer `setup` when it is
-missing. `vercel.ts` reads `VERCEL_TOKEN`, else the Vercel CLI's store;
+missing. `vercel.ts` reads `VERCEL_TOKEN`, else the Vercel CLI's store, and runs
+`vercel whoami` when that login has expired so the CLI renews it;
 `github-actions.ts` carries the device-flow `auth` example.
 
 ## Refresh, failure, and the rules of the road
 
-- **On demand:** `touch ~/.config/scuttler/triggers/widget.<id>` ticks a widget now —
+- **On demand:** the refresh button in the card's header, or
+  `touch ~/.config/scuttler/triggers/widget.<id>`, ticks a widget now —
   wire it to a git hook, a cron, a keybinding, anything.
 - **Live:** the dir is watched. Drop a widget in and its cell appears within a second;
   edit it and it re-ticks; delete it and the cell goes.
@@ -153,13 +155,13 @@ missing. `vercel.ts` reads `VERCEL_TOKEN`, else the Vercel CLI's store;
 
 ## Reference widgets
 
-| Widget              | Source                           | Cadence | Notes                                                                                                                                                                                                                                                                                     |
-| ------------------- | -------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `uptime.ts`         | Upptime `summary.json`           | 5 min   | Arrow up/down, down-count label, a row per site (opens it). Set `UPTIME_SUMMARY_URL`.                                                                                                                                                                                                     |
-| `github-actions.ts` | GitHub API, latest run per repo  | 2 min   | `gh auth token` (the CLI keeps it fresh) or a pasted token; your 10 most recently pushed repos (pin a list in the file); failing count, opens the run; dim + `gh auth login` when signed out.                                                                                             |
-| `vercel.ts`         | Vercel API `/v9/projects`        | 2 min   | The Vercel CLI's own login or a pasted `VERCEL_TOKEN` (Keychain); latest production deployment per project; dim + the fix when signed out or stale.                                                                                                                                       |
-| `trmnl.ts`          | TRMNL `/api/devices`             | 5 min   | Key via `TRMNL_API_KEY` or `secret shared/trmnl/api_key`; hidden without one.                                                                                                                                                                                                             |
-| `arr.ts`            | Radarr, Sonarr, Prowlarr, Bazarr | 1 min   | A URL and an API key per app, each app optional (keys in the Keychain); health issues, low disks, disabled indexers, then downloads, then a row per app. Optional `PIPELINE_STATUS_URL` for a post-processing status file. Dim with the fix when nothing is set or every key is rejected. |
+| Widget              | Source                              | Cadence | Notes                                                                                                                                                                                                                                                                                                              |
+| ------------------- | ----------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `uptime.ts`         | Upptime `summary.json`              | 5 min   | Arrow up/down, down-count label, a row per site (opens it). Set `UPTIME_SUMMARY_URL`.                                                                                                                                                                                                                              |
+| `github-actions.ts` | GitHub API, latest run per workflow | 2 min   | `gh auth token` (the CLI keeps it fresh) or a pasted token; the repos pinned in the `GITHUB_REPOS` setting plus your 10 most recently pushed, the latest run of every workflow in each (last 100 runs per repo); failing first, then running; failing count, opens the run; dim + `gh auth login` when signed out. |
+| `vercel.ts`         | Vercel API `/v9/projects`           | 2 min   | The Vercel CLI's own login or a pasted `VERCEL_TOKEN` (Keychain); latest production deployment per project; dim + the fix when signed out or stale.                                                                                                                                                                |
+| `trmnl.ts`          | TRMNL `/api/devices`                | 5 min   | Key via `TRMNL_API_KEY` or `secret shared/trmnl/api_key`; hidden without one.                                                                                                                                                                                                                                      |
+| `arr.ts`            | Radarr, Sonarr, Prowlarr, Bazarr    | 1 min   | A URL and an API key per app, each app optional (keys in the Keychain); health issues, low disks, disabled indexers, then downloads, then a row per app. Optional `PIPELINE_STATUS_URL` for a post-processing status file. Dim with the fix when nothing is set or every key is rejected.                          |
 
 Install one: `cp apps/desktop/widgets/uptime.ts ~/.config/scuttler/widgets/` (or
 Settings → Widgets → add file) — then it's yours to edit in place.

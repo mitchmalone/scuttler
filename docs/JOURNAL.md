@@ -6,6 +6,85 @@
 
 ---
 
+### 2026-11-26 · The root-owned copy of mas was a wrapper script: exit 127
+
+With "allow admin" fixed (2026-11-25) the rule and the copy were written, and the first
+App Store upgrade died: `/usr/local/libexec/scuttler/mas:106: no such file or directory:
+/usr/local/libexec/scuttler/../libexec/bin/mas`. mas 7's `bin/mas` is a zsh wrapper that
+execs `../libexec/bin/mas`; scuttler copied the wrapper alone. Both doors now copy the
+real binary when the wrapper's sibling exists (`sudoers.rs::real_mas`,
+`sc_sudoers_mas_bin`). Skipping the wrapper loses nothing for `upgrade`/`update`: it
+only reformats `list`, `outdated` and `search`, which the panel runs unprivileged from
+Homebrew's path. An existing copy must be rewritten: "allow admin" again.
+
+### 2026-11-26 · One hung `aerospace` call froze the whole bar for 17 hours
+
+Mitch saw a stale GitHub Actions card, a workspace 7 that no longer existed, and thought
+the app had crashed. It was alive: `sample` showed the bar's push thread
+(`bar::run_push` → `snapshot_with` → `bar::aerospace`) blocked in `Command::output()` on
+`aerospace list-workspaces`, started 2026-11-25 16:19:38 and still running the next
+morning. The CLI is a socket client and waits forever when the server does not answer;
+nothing bounded it, so every later bar push (widgets, workspaces, everything) queued
+behind it. Widgets kept ticking; their results never reached the webview. Why AeroSpace
+stopped answering at 16:19 is unknown. Fix: every aerospace call runs under a 3 s
+deadline (`bar::run_bounded`, the widgets' timed runner), logs a breadcrumb on a kill,
+and reads as "no answer". Lesson: no child process on a push path without a deadline.
+
+### 2026-11-26 · The GitHub Actions widget said "all green" over two failing workflows
+
+Compared against Mitch's Glance board before he retired it. The widget read one run per
+repo (`?per_page=1`) from the ten most recently pushed repos, so a failing scheduled
+workflow hid behind any newer green run in the same repo, and a repo that only runs on a
+schedule was not watched at all. Now: the latest run of every workflow (first seen per
+`workflow_id` in the last 100 runs), pinned repos via the `GITHUB_REPOS` setting on top
+of the recent ten, failing first then running, counts in the subtitle. Not copied from
+Glance: the per-workflow history strip (needs a new card row type).
+
+### 2026-11-25 · "allow admin" never ran as root: `/bin/sh` dropped the privilege
+
+The updates panel's "allow admin" took the password and then logged
+`mktemp: mkstemp failed on /etc/sudoers.d/.scuttler.XXXXXX: Permission denied`, so the
+rule was never rewritten, `/usr/local/libexec/scuttler/mas` never existed, and every App
+Store upgrade was skipped ("no sudoers rule"). `AuthorizationExecuteWithPrivileges` runs
+the tool with effective uid 0 and the user's real uid. `/usr/bin/env` keeps that;
+`/bin/sh` is bash, and bash started with euid != ruid resets the effective uid unless
+given `-p`. The 2026-11-07 spike ran `/usr/bin/id -u` directly, which prints the
+effective uid, so it read 0 and hid this; the shell wrapper arrived a day later (B3)
+and was never run through the dialog. Fix: `/bin/bash -p -c` (`sudoers.rs::root_argv`).
+Lesson: a root spike must run the same interpreter the shipped step uses.
+
+### 2026-11-25 · brew exited 0 and left six formulae with links to kegs that were never installed
+
+"Upgrade everything" in the panel failed all 36 rows with `Error:
+/opt/homebrew/Cellar/docker-buildx/0.39.1 is not a directory`. The Cellar held only
+0.39.0; `opt/docker-buildx` and `var/homebrew/linked/docker-buildx` pointed at 0.39.1.
+Five more formulae (luajit, mole, ruby, wireshark, powerlevel10k) were the same, all
+written 2026-11-22 15:34. `scuttler.log` shows that was the panel's own `brew upgrade`:
+started 15:31:30, **exit 0** at 15:34:28, not cancelled, not stalled, and the re-check a
+second later still listed six. So brew reported success and left them half-upgraded;
+why is unknown, because the tail kept forty lines in memory and they are gone. brew
+aborts a whole run on the first dangling link it resolves, so fixing one reveals the
+next, and with dismissals in play the panel runs one job per package, hence 36
+identical failures. `brew outdated` does not trip on it, which is why the check stayed
+green. The fix by hand: remove both links for each formula; brew then sees the old keg
+as outdated and upgrades it. Only `opt/` and `var/homebrew/linked/` dangle, never
+`bin`, `lib` or `share`.
+
+### 2026-11-25 · The Vercel CLI's token lives eight hours, and scuttler's PATH can't find the CLI
+
+The Vercel cell went dim most mornings with "the Vercel CLI login went stale (403)".
+`auth.json` carries `expiresAt` exactly eight hours after the last refresh (CLI 66.6),
+and only a CLI command that needs the account renews it; an expired token answers 403
+`{"invalidToken": true}` on every endpoint, not 401. `vercel whoami` does renew it (store
+rewritten, the tick passes straight after), but the cell then waited out its two-minute
+interval with nothing to say it was coming back. The widget now renews for itself: when
+`expiresAt` is within a minute, or the API rejects a CLI token, it runs `vercel whoami`
+and reads the store again. It has to go through `$SHELL -lic`: the app's PATH is
+`/usr/bin:/bin:/usr/sbin:/sbin` and the CLI here is a pnpm shim that needs mise's node,
+so no list of absolute paths finds it (0.8 s, once per eight hours). A dead login the
+CLI can't renew still reads `setup` with `vercel login`. Given a token it can't refresh,
+the CLI empties `auth.json`, so that case reads "no Vercel credentials".
+
 ### 2026-11-24 · Radarr's import history omits the movie file; an empty calendar is normal
 
 Read off Mitch's live stack (a read-only probe of every endpoint the arr widget uses).

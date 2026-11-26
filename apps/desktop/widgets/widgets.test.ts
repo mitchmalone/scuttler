@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import * as actions from './github-actions'
 import * as trmnl from './trmnl'
@@ -67,7 +67,10 @@ describe('github-actions', () => {
     const m = actions.manifest()
     // Sign-in is offered only with a client id baked in (none in test env).
     expect(m.auth).toBeUndefined()
-    expect(m.settings.map((s) => s.key)).toEqual(['GITHUB_TOKEN'])
+    expect(m.settings.map((s) => s.key)).toEqual([
+      'GITHUB_TOKEN',
+      'GITHUB_REPOS',
+    ])
     expect(m.settings[0]).toMatchObject({ secret: true })
     expect('required' in m.settings[0]!).toBe(false)
     expect(m.requires[0]).toMatchObject({
@@ -75,14 +78,12 @@ describe('github-actions', () => {
     })
   })
 
-  it('sorts newest first, tones by state, and counts failures', () => {
+  it('tones by state and counts failures', () => {
     const v = actions.view(items, 'https://gh', NOW)
     expect(v).toMatchObject({ tone: 'error', icon: 'monitor-x', label: '1' })
     expect(v.click).toEqual({ type: 'open', value: 'https://gh' })
-    expect(v.card?.rows?.map((r) => r.text)).toEqual([
-      'x/b · Deploy',
-      'x/a · CI',
-    ])
+    expect(v.card?.subtitle).toBe('1 failing · 1 healthy')
+    expect(v.card?.rows?.map((r) => r.text)).toEqual(['b · Deploy', 'a · CI'])
     expect(v.card?.rows?.[0]).toMatchObject({ dot: 'error', hint: '30m' })
     expect(v.card?.rows?.[1]).toMatchObject({ dot: 'ok', hint: '1h' })
   })
@@ -109,6 +110,92 @@ describe('github-actions', () => {
     expect(actions.view([], 'https://gh', NOW).card?.subtitle).toBe('no runs')
   })
 
+  it('puts failing first, then running, then newest', () => {
+    const run = (workflow: string, state: string, createdAt: string) => ({
+      repo: 'x/r',
+      workflow,
+      state,
+      url: '',
+      createdAt,
+    })
+    const v = actions.view(
+      [
+        run('new green', 'success', '2026-08-19T11:50:00Z'),
+        run('old red', 'failure', '2026-08-10T00:00:00Z'),
+        run('running', 'in_progress', '2026-08-19T11:00:00Z'),
+        run('old green', 'success', '2026-08-01T00:00:00Z'),
+      ],
+      'https://gh',
+      NOW,
+    )
+    expect(v.card?.rows?.map((r) => r.text)).toEqual([
+      'r · old red',
+      'r · running',
+      'r · new green',
+      'r · old green',
+    ])
+    expect(v.card?.subtitle).toBe('1 failing · 1 running · 2 healthy')
+  })
+
+  it('says how many rows the card left out', () => {
+    const many = Array.from({ length: 15 }, (_, i) => ({
+      repo: 'x/r',
+      workflow: `w${i}`,
+      state: 'success',
+      url: '',
+      createdAt: '',
+    }))
+    const card = actions.view(many, 'https://gh', NOW).card
+    expect(card?.rows).toHaveLength(12)
+    expect(card?.hint).toBe('3 more not shown · click a run to open it')
+  })
+
+  it('keeps the latest run of every workflow, not one per repo', () => {
+    const items = actions.latestPerWorkflow('x/peekay', [
+      {
+        workflow_id: 1,
+        name: 'Deploy',
+        status: 'completed',
+        conclusion: 'success',
+        created_at: 't3',
+      },
+      {
+        workflow_id: 2,
+        name: 'RSS',
+        status: 'completed',
+        conclusion: 'failure',
+        created_at: 't2',
+      },
+      {
+        workflow_id: 1,
+        name: 'Deploy',
+        status: 'completed',
+        conclusion: 'failure',
+        created_at: 't1',
+      },
+      { workflow_id: 3, name: 'Sync', status: 'in_progress', conclusion: null },
+    ])
+    expect(items.map((i) => [i.workflow, i.state])).toEqual([
+      ['Deploy', 'success'],
+      ['RSS', 'failure'],
+      ['Sync', 'in_progress'],
+    ])
+    expect(items[2]?.url).toBe('https://github.com/x/peekay/actions')
+  })
+
+  it('finds the active workflows a full page of runs left out', () => {
+    expect(
+      actions.missingWorkflows(
+        [
+          { id: 1, state: 'active' },
+          { id: 2, state: 'active' },
+          { id: 3, state: 'disabled_manually' },
+        ],
+        [{ workflow_id: 1 }],
+      ),
+    ).toEqual([2])
+  })
+
   it('parses the repo list setting', () => {
     expect(actions.parseRepos('a/b, c/d\n a/b')).toEqual(['a/b', 'c/d'])
     expect(actions.parseRepos('not a repo')).toEqual([])
@@ -130,6 +217,105 @@ describe('vercel', () => {
     expect(m.settings[0]).toMatchObject({ secret: true })
     expect('required' in m.settings[0]!).toBe(false)
     expect(m.requires[0]).toMatchObject({ fix: 'vercel login' })
+  })
+
+  describe('renewing the CLI login', () => {
+    const T = 1_795_000_000_000
+    const cli = (token: string, expiresAt: number | null) => ({
+      token,
+      team: null,
+      cli: true,
+      expiresAt,
+    })
+    const rejected = () => new vercel.SetupNeeded('rejected', 'vercel login')
+
+    it('renews an expired CLI token before the first request', async () => {
+      let stored = cli('old', T / 1000 - 10)
+      const renew = vi.fn(async () => {
+        stored = cli('new', T / 1000 + 28800)
+      })
+      const load = vi.fn(async (c: vercel.Credentials) => c.token)
+      await expect(
+        vercel.withRenewal(() => stored, renew, load, T),
+      ).resolves.toBe('new')
+      expect(renew).toHaveBeenCalledTimes(1)
+      expect(load).toHaveBeenCalledTimes(1)
+    })
+
+    it('leaves a live token alone', async () => {
+      const renew = vi.fn(async () => {})
+      await expect(
+        vercel.withRenewal(
+          () => cli('live', T / 1000 + 3600),
+          renew,
+          async (c) => c.token,
+          T,
+        ),
+      ).resolves.toBe('live')
+      expect(renew).not.toHaveBeenCalled()
+    })
+
+    it('renews once and retries when the API rejects a token with no known expiry', async () => {
+      let stored = cli('old', null)
+      const renew = vi.fn(async () => {
+        stored = cli('new', null)
+      })
+      const load = vi.fn(async (c: vercel.Credentials) => {
+        if (c.token === 'old') throw rejected()
+        return c.token
+      })
+      await expect(
+        vercel.withRenewal(() => stored, renew, load, T),
+      ).resolves.toBe('new')
+      expect(renew).toHaveBeenCalledTimes(1)
+      expect(load).toHaveBeenCalledTimes(2)
+    })
+
+    it('asks for a fresh login when the CLI cannot renew, without a doomed request', async () => {
+      const load = vi.fn(async () => 'never')
+      await expect(
+        vercel.withRenewal(
+          () => cli('old', T / 1000 - 10),
+          async () => {},
+          load,
+          T,
+        ),
+      ).rejects.toMatchObject({ fix: 'vercel login' })
+      expect(load).not.toHaveBeenCalled()
+    })
+
+    it('renews at most once when the renewed token is rejected too', async () => {
+      let stored = cli('old', T / 1000 - 10)
+      const renew = vi.fn(async () => {
+        stored = cli('new', T / 1000 + 28800)
+      })
+      await expect(
+        vercel.withRenewal(
+          () => stored,
+          renew,
+          async () => {
+            throw rejected()
+          },
+          T,
+        ),
+      ).rejects.toMatchObject({ fix: 'vercel login' })
+      expect(renew).toHaveBeenCalledTimes(1)
+    })
+
+    it('never runs the CLI for a pasted token', async () => {
+      const renew = vi.fn(async () => {})
+      await expect(
+        vercel.withRenewal(
+          () => ({ token: 'pasted', team: null, cli: false, expiresAt: null }),
+          renew,
+          async () => {
+            throw rejected()
+          },
+          T,
+        ),
+      ).rejects.toMatchObject({ message: 'rejected' })
+      expect(renew).not.toHaveBeenCalled()
+    })
   })
 
   it('picks the newest production deployment per project and links its inspector', () => {

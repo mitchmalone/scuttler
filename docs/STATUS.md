@@ -4,12 +4,30 @@
 > history lives in git, `plans/done/`, `releases/` and `JOURNAL.md`; the backlog with its
 > triggers lives in `ROADMAP.md`.
 >
-> Last updated: 2026-11-24 (0.9 work on `feat/settings-redesign`: the arr widget merged
+> Last updated: 2026-11-25 (the Vercel widget renews its CLI login; 0.9 work on `feat/settings-redesign`: the arr widget merged
 > in, widget cards gained sections, and the arr card does not yet match Mitch's mock;
 > v0.8.8 is the latest release, the tap still on 0.8.6)
 
 ## Where we are
 
+- **Built 2026-11-25, for 0.9, live run open: the updates panel handles Homebrew's
+  broken links** (`plans/active/2026-11-25-brew-broken-links.md`, DECISIONS and JOURNAL
+  2026-11-25). The brew check finds formulae whose links point at a keg that was never
+  installed; the panel and the card ask for the fix above the packages, Enter removes
+  only those links. Homebrew is held out of a batch until then, one failure stops the
+  brew queue, brew's error is explained, and every run's output is kept on disk. Why
+  brew exited 0 on 2026-11-22 is still unknown.
+- **Done 2026-11-25, for 0.9: widget cards and the updates card have a refresh
+  button.** The updates card's asks its service to check again (the panel's `r`). A small button in
+  every widget card's header ticks that widget now (a `refresh` action through the
+  existing `script_action`, DECISIONS 2026-11-25). `pnpm verify` green; the look and the
+  click are unchecked in the installed app.
+- **Done 2026-11-25, for 0.9: the Vercel widget renews its own CLI login.** The CLI's
+  token lasts eight hours, so the cell went dim daily; it now runs `vercel whoami`
+  through the login shell when the token has expired and only asks for `vercel login`
+  when the CLI can't renew (DECISIONS and JOURNAL 2026-11-25). Bundled widgets are
+  copied by hand, so an installed `~/.config/scuttler/widgets/vercel.ts` needs the new
+  file.
 - **In flight: 0.9** (`plans/active/2026-11-23-0.9-light-dark-and-wallpaper.md`,
   DECISIONS 2026-11-23), on the same branch: Match System / Light / Dark with seven new
   themes, Wallpaper (light and dark images), Focus mode wallpaper behind a Full Disk

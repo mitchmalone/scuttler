@@ -510,6 +510,8 @@ pub fn script_action(app: AppHandle, action: crate::scripts::ScriptAction) -> Cm
             Command::new("open").arg(&target).spawn()?;
         }
         ScriptAction::Settings(page) => crate::settings_window::open_tab(&app, Some(&page))?,
+        // Unknown ids are ignored; the scheduler picks the tick up within a second.
+        ScriptAction::Refresh(id) => crate::widgets::poke(&id),
         ScriptAction::None => {}
     }
     Ok(())
