@@ -17,6 +17,16 @@ real binary when the wrapper's sibling exists (`sudoers.rs::real_mas`,
 only reformats `list`, `outdated` and `search`, which the panel runs unprivileged from
 Homebrew's path. An existing copy must be rewritten: "allow admin" again.
 
+### 2026-11-26 · The GitHub Actions widget said "all green" over two failing workflows
+
+Compared against Mitch's Glance board before he retired it. The widget read one run per
+repo (`?per_page=1`) from the ten most recently pushed repos, so a failing scheduled
+workflow hid behind any newer green run in the same repo, and a repo that only runs on a
+schedule was not watched at all. Now: the latest run of every workflow (first seen per
+`workflow_id` in the last 100 runs), pinned repos via the `GITHUB_REPOS` setting on top
+of the recent ten, failing first then running, counts in the subtitle. Not copied from
+Glance: the per-workflow history strip (needs a new card row type).
+
 ### 2026-11-25 · "allow admin" never ran as root: `/bin/sh` dropped the privilege
 
 The updates panel's "allow admin" took the password and then logged
