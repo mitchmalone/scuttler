@@ -18,7 +18,9 @@ import {
   widgetHealth,
   widgetToneClass,
   wifiBars,
+  wifiMeterLit,
   wifiSignalLabel,
+  wifiTitle,
   wifiTone,
 } from './format'
 import type { AgentSession, BatteryDetail } from './types'
@@ -392,6 +394,30 @@ describe('wifi strength', () => {
     expect(wifiSignalLabel(null)).toBe('')
     expect(wifiSignalLabel(-66)).toBe('-66 dBm · good')
     expect(wifiSignalLabel(-85)).toBe('-85 dBm · poor')
+  })
+  it('titles the card by what is known, never "hidden"', () => {
+    // macOS withholds the name without Location Services; that is not a
+    // hidden network, so the card just says it is connected.
+    expect(wifiTitle(true, 'RamenAmok')).toBe('Connected to RamenAmok')
+    expect(wifiTitle(true, null)).toBe('Connected')
+    expect(wifiTitle(false, null)).toBe('Wi-Fi offline')
+    expect(wifiTitle(false, 'RamenAmok')).toBe('Wi-Fi offline')
+  })
+  it('lights the meter so each quarter is one bar of the glyph', () => {
+    expect(wifiMeterLit(-95, 16)).toBe(1)
+    expect(wifiMeterLit(-81, 16)).toBe(4)
+    expect(wifiMeterLit(-80, 16)).toBe(5)
+    expect(wifiMeterLit(-70, 16)).toBe(9)
+    expect(wifiMeterLit(-60, 16)).toBe(13)
+    expect(wifiMeterLit(-56, 16)).toBe(14)
+    expect(wifiMeterLit(-50, 16)).toBe(16)
+    expect(wifiMeterLit(-30, 16)).toBe(16)
+    for (const rssi of [-95, -85, -80, -75, -70, -65, -60, -40]) {
+      expect(Math.ceil(wifiMeterLit(rssi, 16) / 4)).toBe(wifiBars(rssi))
+    }
+  })
+  it('leaves the meter dark when the strength is unknown', () => {
+    expect(wifiMeterLit(null, 16)).toBe(0)
   })
 })
 
