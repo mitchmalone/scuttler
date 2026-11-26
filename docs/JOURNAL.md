@@ -6,6 +6,21 @@
 
 ---
 
+### 2026-11-25 · The Vercel CLI's token lives eight hours, and scuttler's PATH can't find the CLI
+
+The Vercel cell went dim most mornings with "the Vercel CLI login went stale (403)".
+`auth.json` carries `expiresAt` exactly eight hours after the last refresh (CLI 66.6),
+and only a CLI command that needs the account renews it; an expired token answers 403
+`{"invalidToken": true}` on every endpoint, not 401. `vercel whoami` does renew it (store
+rewritten, the tick passes straight after), but the cell then waited out its two-minute
+interval with nothing to say it was coming back. The widget now renews for itself: when
+`expiresAt` is within a minute, or the API rejects a CLI token, it runs `vercel whoami`
+and reads the store again. It has to go through `$SHELL -lic`: the app's PATH is
+`/usr/bin:/bin:/usr/sbin:/sbin` and the CLI here is a pnpm shim that needs mise's node,
+so no list of absolute paths finds it (0.8 s, once per eight hours). A dead login the
+CLI can't renew still reads `setup` with `vercel login`. Given a token it can't refresh,
+the CLI empties `auth.json`, so that case reads "no Vercel credentials".
+
 ### 2026-11-24 · Radarr's import history omits the movie file; an empty calendar is normal
 
 Read off Mitch's live stack (a read-only probe of every endpoint the arr widget uses).
