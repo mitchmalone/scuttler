@@ -9,12 +9,15 @@ import {
   Fingerprint,
   Loader,
   Package,
+  Unlink,
 } from 'lucide-react'
 import type { KeyboardEvent, ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 
 import {
   ADMIN_RULE_MESSAGE,
+  BLOCKED_LINE,
+  BROKEN_ACTION,
   NEEDS_ADMIN_LINE,
   type PanelRow,
   STATUS_LABEL,
@@ -27,8 +30,12 @@ import {
   batchHeadline,
   batchLine,
   batchProgress,
+  brewBlocked,
+  brokenDetail,
+  brokenTitle,
   checkedAgo,
   dismissedLeft,
+  explainFailure,
   failedRun,
   headline,
   lastLine,
@@ -69,6 +76,7 @@ function StatusIcon({ status }: { status: UpgradeStatus }) {
     case 'done':
       return <Check {...ICON} />
     case 'failed':
+    case 'unchanged':
       return <AlertTriangle {...ICON} />
     default:
       return <Download {...ICON} />
@@ -151,6 +159,7 @@ function Band({
   const status = upgradeStatus(report, source.id)
   const clean = source.error == null && source.items.length === 0
   const setup = !clean && needsRule(source)
+  const blocked = !clean && brewBlocked(source)
   const chip =
     status !== 'idle' ? (
       <span className={`tui-updates-chip tui-updates-chip-${status}`}>
@@ -176,12 +185,14 @@ function Band({
           ? 'up to date'
           : setup
             ? NEEDS_ADMIN_LINE
-            : source.upgradeCommand}
+            : blocked
+              ? BLOCKED_LINE
+              : source.upgradeCommand}
       </span>
       {!clean && (
         <Button
           keyHint="u"
-          disabled={status === 'running' || status === 'queued'}
+          disabled={blocked || status === 'running' || status === 'queued'}
           onClick={onUpgrade}
         >
           {setup ? 'allow' : source.error != null ? 'retry' : 'upgrade all'}
@@ -226,6 +237,8 @@ export default function UpdatesPanel({
       setExpanded((prev) => new Set(prev).add(row.source.id))
       return
     }
+    // Removing links under a running brew is refused in Rust too.
+    if (row.kind === 'broken' && upgradeBusy(state)) return
     const message = rowUpgradeMessage(row)
     if (message) host.send(message)
   }
@@ -290,14 +303,14 @@ export default function UpdatesPanel({
       if (total > 0) host.send({ upgrade: UPDATES_ALL })
     } else if (e.key === 'u') {
       e.preventDefault()
-      upgradeGroup(selectedRow?.source)
+      if (selectedRow?.kind !== 'broken') upgradeGroup(selectedRow?.source)
     } else if (e.key === 'd') {
       e.preventDefault()
       const message = selectedRow && rowDismissMessage(selectedRow)
       if (message) host.send(message)
     } else if (e.key === 't') {
       e.preventDefault()
-      if (selectedRow) {
+      if (selectedRow && selectedRow.kind !== 'broken') {
         host.send({
           upgradeInTerminal: selectedRow.source.id,
           ...(selectedRow.kind === 'item' || selectedRow.kind === 'dismissed'
@@ -318,11 +331,13 @@ export default function UpdatesPanel({
     {
       keys: '↵',
       label:
-        selectedRow && needsRule(selectedRow.source)
-          ? 'allow'
-          : busy
-            ? 'queue'
-            : 'upgrade',
+        selectedRow?.kind === 'broken'
+          ? BROKEN_ACTION[selectedRow.group.class]
+          : selectedRow && needsRule(selectedRow.source)
+            ? 'allow'
+            : busy
+              ? 'queue'
+              : 'upgrade',
     },
     { keys: 'u', label: 'group' },
     { keys: 'a', label: 'all' },
@@ -343,13 +358,16 @@ export default function UpdatesPanel({
 
   // Group the flat rows by source so each group gets its gutter.
   const groups: {
+    id: string
     source: UpdateSource
     rows: { row: PanelRow; i: number }[]
   }[] = []
   rows.forEach((row, i) => {
+    // The fix rows sit above every source, in a group of their own.
+    const id = row.kind === 'broken' ? 'broken' : row.source.id
     const last = groups[groups.length - 1]
-    if (last && last.source.id === row.source.id) last.rows.push({ row, i })
-    else groups.push({ source: row.source, rows: [{ row, i }] })
+    if (last && last.id === id) last.rows.push({ row, i })
+    else groups.push({ id, source: row.source, rows: [{ row, i }] })
   })
 
   // Meter: finished jobs over the batch, the live one counting as a half.
@@ -436,13 +454,14 @@ export default function UpdatesPanel({
                 key={`${f.source}-${f.item ?? ''}-${f.finishedAt}`}
                 className="tui-updates-tail tui-updates-error"
               >
-                {upgradeTarget(state, f)}: {lastLine(f) || 'no output'}
+                {upgradeTarget(state, f)}:{' '}
+                {explainFailure(lastLine(f)) || 'no output'}
               </div>
             ))}
         </div>
       )}
       {groups.map((group) => (
-        <div key={group.source.id} className="tui-updates-group">
+        <div key={group.id} className="tui-updates-group">
           {group.rows.map(({ row, i }) => {
             const selected = i === selectedIndex
             const hover = () => {
@@ -454,6 +473,27 @@ export default function UpdatesPanel({
               activate(row)
             }
             switch (row.kind) {
+              case 'broken':
+                return (
+                  <ListRow
+                    key={`broken-${row.group.class}`}
+                    icon={<Unlink {...ICON} />}
+                    label={
+                      <span className="tui-updates-error">
+                        {brokenTitle(row.group)}
+                      </span>
+                    }
+                    sub={brokenDetail(row.group)}
+                    right={
+                      <Button keyHint="↵" disabled={busy} onClick={click}>
+                        {BROKEN_ACTION[row.group.class]}
+                      </Button>
+                    }
+                    selected={selected}
+                    onHover={hover}
+                    onClick={click}
+                  />
+                )
               case 'band':
               case 'clean':
                 return (
@@ -482,11 +522,18 @@ export default function UpdatesPanel({
                     sub={
                       fail ? (
                         <span className="tui-updates-error">
-                          {lastLine(fail) || 'failed'} · t to retry in the
-                          terminal
+                          {explainFailure(lastLine(fail)) || 'failed'} · t to
+                          retry in the terminal
+                        </span>
+                      ) : status === 'unchanged' ? (
+                        <span className="tui-updates-error">
+                          the upgrade finished but this is still outdated · t to
+                          retry in the terminal
                         </span>
                       ) : needsRule(row.source) ? (
                         `${row.item.upgradeCommand} · needs admin once`
+                      ) : brewBlocked(row.source) ? (
+                        `${row.item.upgradeCommand} · ${BLOCKED_LINE}`
                       ) : (
                         row.item.upgradeCommand
                       )

@@ -23,6 +23,7 @@ mod bar_constrain;
 mod bar_modules;
 mod battery;
 mod bookmarks;
+mod brewlinks;
 mod clipboard;
 mod colorpicker;
 mod commands;

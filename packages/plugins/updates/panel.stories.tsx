@@ -163,6 +163,44 @@ export const updatesPanelStories = defineStories('UpdatesPanel (plugin)', [
     },
   },
   {
+    name: 'broken Homebrew links',
+    render: () => {
+      const r = idleUpdatesReportAt(nowSecs())
+      const half = (name: string, missing: string, keg: string) => ({
+        name,
+        missing,
+        kegs: [keg],
+        links: [
+          `/opt/homebrew/opt/${name}`,
+          `/opt/homebrew/var/homebrew/linked/${name}`,
+        ],
+      })
+      return panel({
+        ...r,
+        sources: r.sources.map((s) =>
+          s.id === 'brew'
+            ? {
+                ...s,
+                broken: [
+                  half('docker-buildx', '0.39.1', '0.39.0'),
+                  half('luajit', '2.1.1795119671', '2.1.1794386141'),
+                  half('mole', '1.31.0', '1.30.2'),
+                  half('ruby', '4.0.1', '4.0.0'),
+                  half('wireshark', '4.6.2', '4.6.1'),
+                  {
+                    name: 'powerlevel10k',
+                    missing: '1.21.0',
+                    kegs: [],
+                    links: ['/opt/homebrew/var/homebrew/linked/powerlevel10k'],
+                  },
+                ],
+              }
+            : s,
+        ),
+      })
+    },
+  },
+  {
     name: 'refreshing',
     render: () =>
       panel({ ...idleUpdatesReportAt(nowSecs()), refreshing: true }),

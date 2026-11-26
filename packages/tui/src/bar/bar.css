@@ -1106,6 +1106,7 @@
   color: var(--good, #3fb950);
 }
 .bar-card .bar-updates-failed,
+.bar-card .bar-updates-unchanged,
 .bar-card .bar-updates-error {
   color: var(--danger, #f85149);
 }
@@ -1131,6 +1132,49 @@
 .bar-updates-run-line {
   color: var(--fg, #dde1f0);
   font-weight: 700;
+}
+
+/* Broken Homebrew links: above the sources, what is wrong and its fix. */
+.bar-updates-broken {
+  border-top: 1px solid var(--border, #34364a);
+  padding: 14px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bar-updates-broken > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.bar-updates-broken .bar-updates-note {
+  white-space: normal;
+}
+
+.bar-updates-broken-title {
+  color: var(--danger, #f85149);
+  font-weight: 700;
+}
+
+.bar-updates-fix {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--fg, #dde1f0);
+  background: none;
+  border: 1px solid var(--border, #34364a);
+  cursor: pointer;
+}
+
+.bar-updates-fix:hover:not(:disabled) {
+  border-color: var(--fg, #dde1f0);
+}
+
+.bar-updates-fix:disabled {
+  color: var(--dim, #7f86a5);
+  cursor: default;
 }
 
 .bar-updates-source {

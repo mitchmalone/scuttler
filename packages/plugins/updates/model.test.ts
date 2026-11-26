@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   ADMIN_RULE_MESSAGE,
+  type BrokenFormula,
   DECLINED_SHOWN_SECS,
   GROUP_CAP,
   type UpdateSource,
@@ -12,6 +13,11 @@ import {
   batchHeadline,
   batchLine,
   batchProgress,
+  brewBlocked,
+  brokenCommand,
+  brokenDetail,
+  brokenGroups,
+  brokenTitle,
   cappedItems,
   cellTone,
   cellVisible,
@@ -20,6 +26,7 @@ import {
   dismissedItems,
   dismissedLeft,
   duration,
+  explainFailure,
   failedRun,
   hasErrors,
   headline,
@@ -433,7 +440,14 @@ describe('updates model', () => {
       const rechecked = report({
         upgrade: failed,
         recent: [done],
-        sources: [{ ...brewSource, checkedAt: T + 30 }],
+        // The re-check no longer lists gcc: the upgrade took.
+        sources: [
+          {
+            ...brewSource,
+            checkedAt: T + 30,
+            items: brewSource.items.filter((i) => i.name !== 'gcc'),
+          },
+        ],
       })
       expect(upgradeStatus(rechecked, 'brew', 'gcc')).toBe('idle')
       expect(upgradeStatus(rechecked, 'brew', 'vips')).toBe('failed')
@@ -651,6 +665,129 @@ describe('updates model', () => {
         text: 'up to date',
         status: 'clean',
       })
+    })
+  })
+
+  describe('broken Homebrew links', () => {
+    const half = (name: string): BrokenFormula => ({
+      name,
+      missing: '2.0',
+      kegs: ['1.0'],
+      links: [
+        `/opt/homebrew/opt/${name}`,
+        `/opt/homebrew/var/homebrew/linked/${name}`,
+      ],
+    })
+    const stale: BrokenFormula = {
+      name: 'powerlevel10k',
+      missing: '1.21.0',
+      kegs: [],
+      links: ['/opt/homebrew/var/homebrew/linked/powerlevel10k'],
+    }
+    const names = ['luajit', 'mole', 'ruby', 'wireshark', 'docker-buildx']
+    const brokenBrew: UpdateSource = {
+      ...brewSource,
+      broken: [...names.map(half), stale],
+    }
+    const broken = report({ sources: [brokenBrew, masSource, cleanSource] })
+
+    it('splits into what a fix repairs and what is only debris, repairable first', () => {
+      const groups = brokenGroups(broken)
+      expect(groups.map((g) => g.class)).toEqual(['repairable', 'stale'])
+      expect(groups[0]!.formulae).toHaveLength(5)
+      expect(groups[1]!.formulae).toEqual([stale])
+      expect(brokenGroups(report())).toEqual([])
+    })
+
+    it('says how many, names a few, and why it matters', () => {
+      const [fix, debris] = brokenGroups(broken)
+      expect(brokenTitle(fix!)).toBe('5 formulae half-upgraded')
+      expect(brokenDetail(fix!)).toBe(
+        'luajit, mole, ruby, wireshark +1 · Homebrew upgrades fail until this is fixed',
+      )
+      expect(brokenTitle(debris!)).toBe('1 leftover Homebrew link')
+      expect(brokenDetail(debris!)).toBe(
+        'powerlevel10k · not installed any more',
+      )
+      const one = brokenGroups(
+        report({ sources: [{ ...brewSource, broken: [half('luajit')] }] }),
+      )[0]!
+      expect(brokenTitle(one)).toBe('1 formula half-upgraded')
+    })
+
+    it('copies the exact removal, links quoted for a shell', () => {
+      const [, debris] = brokenGroups(broken)
+      expect(brokenCommand(debris!)).toBe(
+        "rm '/opt/homebrew/var/homebrew/linked/powerlevel10k'",
+      )
+      const [fix] = brokenGroups(
+        report({ sources: [{ ...brewSource, broken: [half('luajit')] }] }),
+      )
+      expect(brokenCommand(fix!)).toBe(
+        "rm '/opt/homebrew/opt/luajit' '/opt/homebrew/var/homebrew/linked/luajit'",
+      )
+    })
+
+    it('puts the fix rows above every package, selectable, sending the repair', () => {
+      const rows = ledgerRows(broken)
+      expect(rows.slice(0, 2).map((r) => r.kind)).toEqual(['broken', 'broken'])
+      expect(rows[2]!.kind).toBe('band')
+      expect(rowSelectable(rows[0]!)).toBe(true)
+      expect(rowUpgradeMessage(rows[0]!)).toEqual({ repairLinks: 'repairable' })
+      expect(rowUpgradeMessage(rows[1]!)).toEqual({ repairLinks: 'stale' })
+      expect(rowDismissMessage(rows[0]!)).toBeNull()
+      expect(rowCommand(rows[1]!)).toContain('rm ')
+    })
+
+    it('shows the cell, in the warn tone, even with nothing to upgrade', () => {
+      const only = report({
+        sources: [{ ...cleanSource, id: 'brew', broken: [half('luajit')] }],
+      })
+      expect(cellVisible(only)).toBe(true)
+      expect(cellTone(only)).toBe('warn')
+    })
+
+    it('blocks Homebrew upgrades only while something repairable is broken', () => {
+      expect(brewBlocked(brokenBrew)).toBe(true)
+      expect(brewBlocked({ ...brewSource, broken: [stale] })).toBe(false)
+      expect(brewBlocked(brewSource)).toBe(false)
+    })
+
+    it("explains brew's error line and passes anything else through", () => {
+      expect(
+        explainFailure(
+          'Error: /opt/homebrew/Cellar/docker-buildx/0.39.1 is not a directory',
+        ),
+      ).toBe(
+        'docker-buildx is half-upgraded: its links point at 0.39.1, which was never installed',
+      )
+      expect(explainFailure('Error: no bottle available')).toBe(
+        'Error: no bottle available',
+      )
+    })
+  })
+
+  describe('a run that exits 0 but leaves the package outdated', () => {
+    const finished = run({ finishedAt: T + 100, exitCode: 0 })
+
+    it('reads not upgraded once the re-check still lists it', () => {
+      const r = report({
+        sources: [{ ...brewSource, checkedAt: T + 101 }],
+        recent: [finished],
+      })
+      expect(upgradeStatus(r, 'brew', 'gcc')).toBe('unchanged')
+      // The band speaks for the source, not for one package.
+      expect(upgradeStatus(r, 'brew')).toBe('idle')
+    })
+
+    it('reads upgraded until the re-check lands, and lets go after an hour', () => {
+      const before = report({ recent: [finished] })
+      expect(upgradeStatus(before, 'brew', 'gcc')).toBe('done')
+      const later = report({
+        sources: [{ ...brewSource, checkedAt: T + 100 + 3601 }],
+        recent: [finished],
+      })
+      expect(upgradeStatus(later, 'brew', 'gcc')).toBe('idle')
     })
   })
 })
