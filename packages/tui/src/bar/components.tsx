@@ -5,10 +5,11 @@ import {
   BatteryMedium,
   BatteryWarning,
   Coffee,
+  RefreshCw,
   WifiOff,
 } from 'lucide-react'
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic'
-import type { ReactNode } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 
 import { ClaudeIcon, CodexIcon } from '../components/brand-icons'
 import {
@@ -1169,6 +1170,41 @@ function WidgetRows({
 }
 
 /**
+ * The small refresh button a card's header carries: dim until hovered,
+ * spinning (and inert) while the refresh it asked for is in flight. Shared by
+ * widget cards and plugin cards so every card refreshes the same way.
+ */
+export function BarRefreshButton({
+  label,
+  spinning,
+  onRefresh,
+}: {
+  label: string
+  spinning: boolean
+  onRefresh: () => void
+}) {
+  return (
+    <button
+      type="button"
+      className={`bar-refresh${spinning ? ' bar-refreshing' : ''}`}
+      aria-label={label}
+      title="Refresh"
+      disabled={spinning}
+      onClick={(e) => {
+        // The cell under the card has its own click (open the panel).
+        e.stopPropagation()
+        onRefresh()
+      }}
+    >
+      <RefreshCw {...ICON_PROPS} size={13} />
+    </button>
+  )
+}
+
+/** Past the widget timeout clamp (60 s), a refresh that showed nothing stops spinning. */
+const REFRESH_GIVE_UP_MS = 65_000
+
+/**
  * A widget's card: the tick's title/subtitle, untitled rows, titled sections,
  * a split footer, a hint, and — when the last tick failed — the health line.
  * Purely what the widget said, styled once here (docs/PLUGINS.md, WidgetView).
@@ -1197,6 +1233,16 @@ export function BarWidgetCard({
   const rows = card?.rows ?? []
   const sections = card?.sections ?? []
   const footer = card?.footer
+  // The tick the button was pressed on: it spins until a newer one lands.
+  const [askedAt, setAskedAt] = useState<number | null | undefined>(undefined)
+  const refreshing = askedAt !== undefined && askedAt === widget.updatedAt
+  // `updatedAt` is whole seconds, so a tick landing inside the same second
+  // looks like no tick: give up spinning after the longest a tick may take.
+  useEffect(() => {
+    if (askedAt === undefined) return
+    const timer = setTimeout(() => setAskedAt(undefined), REFRESH_GIVE_UP_MS)
+    return () => clearTimeout(timer)
+  }, [askedAt])
   return (
     <BarCard variant="widget" cardRef={cardRef}>
       <div className="bar-widget-head">
@@ -1207,6 +1253,16 @@ export function BarWidgetCard({
             <div className="bar-card-dim bar-widget-sub">{card.subtitle}</div>
           )}
         </div>
+        {onAction && (
+          <BarRefreshButton
+            label={`Refresh ${widget.name}`}
+            spinning={refreshing}
+            onRefresh={() => {
+              setAskedAt(widget.updatedAt)
+              onAction({ type: 'refresh', value: widget.id })
+            }}
+          />
+        )}
       </div>
       {health && (
         <div

@@ -2,6 +2,7 @@ import {
   BarCard,
   BarCell,
   BarHoverCell,
+  BarRefreshButton,
   ICON_PROPS,
   toneClass,
 } from '@scuttler/tui'
@@ -112,9 +113,10 @@ function CardSource({
  * The updates cell: the Linux `apt`-indicator convention — hidden while
  * every present source is clean and healthy, otherwise the package glyph
  * and a total count, `warn` toned when a source errored. Hover opens a card
- * shaped like the usage card: glyph, title and status line, a badge for the
- * state, a ruled block per source listing its packages (dismissed ones as a
- * one-line note), the live run's last line while one goes. Click opens
+ * shaped like the usage card: glyph, title and status line, a badge only
+ * while a run goes or a check failed, a ruled block per source listing its packages (dismissed ones as a
+ * one-line note), the live run's last line while one goes. The refresh
+ * button in the head asks the service to check again. Click opens
  * `updates ⏎`, where the upgrades are.
  */
 export default function UpdatesCell({
@@ -155,9 +157,8 @@ export default function UpdatesCell({
       }
     : report.sources.some((s) => s.error != null)
       ? { text: 'check failed', cls: 'error' }
-      : total > 0
-        ? { text: `${total} pending`, cls: 'pending' }
-        : { text: 'up to date', cls: 'clean' }
+      : // The count is already in the status line: no badge for it.
+        null
   return (
     <BarHoverCell
       id={`plugin:${plugin.id}`}
@@ -175,12 +176,22 @@ export default function UpdatesCell({
             <div>
               <div className="bar-updates-title">Updates</div>
               <div className="bar-updates-sub">
-                {countLine(total)} · {checkedAgo(report.generatedAt, nowSecs)}
+                {countLine(total)} ·{' '}
+                {report.refreshing
+                  ? 'checking…'
+                  : checkedAgo(report.generatedAt, nowSecs)}
               </div>
             </div>
-            <span className={`bar-updates-badge bar-updates-${badge.cls}`}>
-              {badge.text}
-            </span>
+            {badge && (
+              <span className={`bar-updates-badge bar-updates-${badge.cls}`}>
+                {badge.text}
+              </span>
+            )}
+            <BarRefreshButton
+              label="Check for updates"
+              spinning={report.refreshing}
+              onRefresh={() => host.send({ refresh: true })}
+            />
           </div>
           {report.upgrade && (
             <div className="bar-updates-run">

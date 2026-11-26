@@ -10,6 +10,11 @@
 
 ## Where we are
 
+- **Done 2026-11-25, for 0.9: widget cards and the updates card have a refresh
+  button.** The updates card's asks its service to check again (the panel's `r`). A small button in
+  every widget card's header ticks that widget now (a `refresh` action through the
+  existing `script_action`, DECISIONS 2026-11-25). `pnpm verify` green; the look and the
+  click are unchecked in the installed app.
 - **Done 2026-11-25, for 0.9: the Vercel widget renews its own CLI login.** The CLI's
   token lasts eight hours, so the cell went dim daily; it now runs `vercel whoami`
   through the login shell when the token has expired and only asks for `vercel login`

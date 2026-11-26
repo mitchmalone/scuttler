@@ -5,6 +5,19 @@
 
 ---
 
+### 2026-11-25 · A `refresh` action: every widget card gets a refresh button
+
+- **Context.** A widget ticks on its interval; the only way to ask sooner was
+  `touch ~/.config/scuttler/triggers/widget.<id>`. Mitch wanted a button in the card.
+- **Decision.** The scripts action vocabulary gains `{"type": "refresh", "value":
+"<widget id>"}`, run by the existing `script_action` through `widgets::poke`, the same
+  call the trigger file makes. `BarWidgetCard` shows a small refresh button in its
+  header wherever actions can run; it spins until a newer tick lands. No new command
+  (invariant 3: still 84), no per-widget opt-in, nothing for a widget to implement.
+- **Consequences.** A widget row or cell click may also carry `refresh`. Plugin cards are
+  not widget cards: one that wants the button renders the shared `BarRefreshButton` and
+  sends its own service message, as the updates card does with `{ refresh: true }`.
+
 ### 2026-11-25 · The Vercel widget asks the CLI to renew its own login
 
 - **Context.** The CLI's token lasts eight hours (JOURNAL 2026-11-25), so the widget

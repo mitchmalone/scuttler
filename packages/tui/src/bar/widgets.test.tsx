@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { BarWidgetCard, BarWidgetCell } from './components'
+import { BarRefreshButton, BarWidgetCard, BarWidgetCell } from './components'
 import type { BarHoverApi, BarWidget } from './types'
 
 /** Structural checks on the SSR markup for a user widget (docs/WIDGETS.md). */
@@ -105,6 +105,19 @@ describe('BarWidgetCard', () => {
     expect(html.match(/class="bar-widget-row[ "]/g)?.length).toBe(2)
   })
 
+  it('offers a refresh button in the header only where actions can run', () => {
+    const live = renderToStaticMarkup(
+      <BarWidgetCard widget={uptime} now={now} onAction={() => {}} />,
+    )
+    expect(live).toContain('class="bar-refresh"')
+    expect(live).toContain('aria-label="Refresh Uptime"')
+    expect(live).not.toContain('bar-refreshing')
+    const still = renderToStaticMarkup(
+      <BarWidgetCard widget={uptime} now={now} />,
+    )
+    expect(still).not.toContain('bar-refresh')
+  })
+
   it('renders sections, a progress bar, a toned badge and a split footer', () => {
     const media: BarWidget = {
       ...uptime,
@@ -158,5 +171,28 @@ describe('BarWidgetCard', () => {
     )
     expect(html).toContain('waiting for the first tick')
     expect(html).toContain('Uptime')
+  })
+})
+
+describe('BarRefreshButton', () => {
+  it('spins and goes inert while its refresh is in flight', () => {
+    const idle = renderToStaticMarkup(
+      <BarRefreshButton
+        label="Refresh updates"
+        spinning={false}
+        onRefresh={() => {}}
+      />,
+    )
+    expect(idle).toContain('aria-label="Refresh updates"')
+    expect(idle).not.toContain('disabled')
+    const busy = renderToStaticMarkup(
+      <BarRefreshButton
+        label="Refresh updates"
+        spinning
+        onRefresh={() => {}}
+      />,
+    )
+    expect(busy).toContain('bar-refresh bar-refreshing')
+    expect(busy).toContain('disabled')
   })
 })
