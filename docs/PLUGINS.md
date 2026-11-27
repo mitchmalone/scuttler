@@ -185,9 +185,9 @@ variables**. The plugin never touches a store (DECISIONS 2026-08-19;
   `{"message": …}` (progress, dim; a non-JSON line counts as a message),
   `{"settings": {"GITHUB_TOKEN": "gho_…"}}` (stored; only keys declared `secret` may be
   set this way). Exit 0 = signed in and tick now; non-zero = the stderr tail is the error.
-  When a token expires the plugin answers `setup`, not `error`. The GitHub device flow in
-  `apps/desktop/widgets/github-actions.ts` is the worked example, dormant until a
-  scuttler OAuth App client id exists.
+  When a token expires the plugin answers `setup`, not `error`. The GitHub device flow that
+  `apps/desktop/widgets/github-actions.ts` carried is the worked example, in git history
+  before 9daa1d1 (that widget became `jobs.ts`, DECISIONS 2026-11-27).
 
 ## `cell.tsx` and `panel.tsx` — the UI
 

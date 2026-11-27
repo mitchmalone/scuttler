@@ -22,6 +22,14 @@
     workflows switched off on GitHub, and reads a moved repo once under its new name
     (a pinned `RamenAmok/peekay`, now `mitchmalone/peekay`, doubled its stale rows).
   - The wifi card says "Connected" and shows a signal meter (DECISIONS 2026-11-25).
+- **Built 2026-11-27 on `feat/widget-services`, live run open: widget services and the
+  jobs widget** (`plans/active/2026-11-27-jobs-widget-and-services.md`, DECISIONS
+  2026-11-27). Every widget gets a configure screen; services (GitHub Actions, Dagu,
+  Vercel for `jobs.ts`; Radarr, Sonarr, Prowlarr, Bazarr for `arr.ts`) stack under an add
+  service dropdown. `jobs.ts` replaces `github-actions.ts` and `vercel.ts`; a one-time
+  migration moves their bar slot, pinned repos and arr's URLs and keys. `pnpm verify`
+  green; needs an installed build, `jobs.ts` and the new `arr.ts` copied in, and a Dagu
+  API key pasted.
 - **Done 2026-11-26, for 0.9, checked live by Mitch** (JOURNAL 2026-11-26):
   - The bar's usage cell is a robot (lucide `Bot`); the card's head keeps the meter.
   - The uptime widget reads an Uptime Kuma status page (`UPTIME_KUMA_URL`, required);

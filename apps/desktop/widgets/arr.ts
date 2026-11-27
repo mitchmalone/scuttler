@@ -127,6 +127,13 @@ const NAMES: Record<AppId, string> = {
   bazarr: 'Bazarr',
   pipeline: 'Pipeline',
 }
+/** lucide glyphs for each app's service in Settings. */
+const ICONS: Record<ArrId, string> = {
+  radarr: 'film',
+  sonarr: 'tv',
+  prowlarr: 'search',
+  bazarr: 'captions',
+}
 const SETTINGS_PATH = 'Settings → Widgets'
 /** A row that opens Settings at the Widgets page, where the keys go. */
 const CONFIGURE: WidgetAction = { type: 'settings', value: 'widgets' }
@@ -158,19 +165,29 @@ const REASONS: Record<string, string> = {
 }
 
 export function manifest() {
-  const app = (id: ArrId, port: number) => [
-    {
-      key: `${id.toUpperCase()}_URL`,
-      label: `${NAMES[id]} URL`,
-      hint: `e.g. http://beebee:${port}`,
-    },
-    {
-      key: `${id.toUpperCase()}_API_KEY`,
-      label: `${NAMES[id]} API key`,
-      hint: `${NAMES[id]} → Settings → General → Security (the API key, not your login)`,
-      secret: true,
-    },
-  ]
+  // Each app is a service (Settings → Widgets → Media stack, DECISIONS
+  // 2026-11-27): its URL and API key, delivered in SCUTTLER_SERVICES.
+  const app = (id: ArrId, port: number) => ({
+    type: id,
+    name: NAMES[id],
+    icon: ICONS[id],
+    settings: [
+      {
+        key: `${id.toUpperCase()}_URL`,
+        label: 'URL',
+        hint: `e.g. http://beebee:${port}`,
+        required: true,
+      },
+      {
+        key: `${id.toUpperCase()}_API_KEY`,
+        label: 'API key',
+        hint: `${NAMES[id]} → Settings → General → Security (the API key, not your login)`,
+        secret: true,
+        required: true,
+      },
+    ],
+    requires: [],
+  })
   return {
     id: 'arr',
     name: 'Media stack',
@@ -178,11 +195,13 @@ export function manifest() {
     zone: 'right',
     icon: 'clapperboard',
     timeout: 20,
+    services: [
+      app('radarr', 7878),
+      app('sonarr', 8989),
+      app('prowlarr', 9696),
+      app('bazarr', 6767),
+    ],
     settings: [
-      ...app('radarr', 7878),
-      ...app('sonarr', 8989),
-      ...app('prowlarr', 9696),
-      ...app('bazarr', 6767),
       {
         key: 'PIPELINE_STATUS_URL',
         label: 'Pipeline status URL (optional)',
@@ -190,6 +209,36 @@ export function manifest() {
       },
     ],
   }
+}
+
+/**
+ * One app's URL and key: the first service of its type in SCUTTLER_SERVICES,
+ * else the flat env settings older builds sent. Pure over its inputs.
+ */
+export function appSettings(
+  id: ArrId,
+  services: string | undefined,
+  env: Record<string, string | undefined>,
+): { url: string; key: string } {
+  const U = id.toUpperCase()
+  let parsed: unknown = []
+  try {
+    parsed = JSON.parse(services ?? '[]')
+  } catch {
+    parsed = []
+  }
+  const svc = list(parsed).find((s) => s.type === id)
+  // Delivered services are the whole truth: no fallback to flat keys then.
+  const from =
+    services === undefined ? null : isRecord(svc?.settings) ? svc.settings : {}
+  const pick = (k: string) =>
+    (from
+      ? typeof from[k] === 'string'
+        ? from[k]
+        : ''
+      : (env[k] ?? '')
+    ).trim()
+  return { url: pick(`${U}_URL`), key: pick(`${U}_API_KEY`) }
 }
 
 /* ---- pure helpers ---------------------------------------------------- */
@@ -1113,8 +1162,11 @@ function limiter(max: number) {
 }
 
 function settings(id: ArrId): { url: string; key: string } | AppSnapshot {
-  const rawUrl = (process.env[`${id.toUpperCase()}_URL`] ?? '').trim()
-  const key = (process.env[`${id.toUpperCase()}_API_KEY`] ?? '').trim()
+  const { url: rawUrl, key } = appSettings(
+    id,
+    process.env.SCUTTLER_SERVICES,
+    process.env,
+  )
   if (!rawUrl && !key) return { app: id, state: 'unconfigured' }
   if (!rawUrl) return { app: id, state: 'misconfigured', reason: 'URL missing' }
   if (!key) {

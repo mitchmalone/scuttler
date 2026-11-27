@@ -587,7 +587,7 @@ fn services_env(app: &AppHandle, id: &str, types: &[WidgetServiceType]) -> Strin
         })
         .unwrap_or_default();
     let resolved = resolve_services(id, types, &instances, &|sid, key| {
-        crate::widget_secrets::get(sid, key)
+        service_secret(id, sid, key)
     });
     serde_json::to_string(&resolved).unwrap_or_else(|_| "[]".into())
 }
@@ -620,7 +620,28 @@ pub fn service_secret_keys_present(id: &str, service: &WidgetService) -> Vec<Str
                 .collect()
         })
         .unwrap_or_default();
-    crate::widget_secrets::present(&service_secret_id(id, &service.id), &keys)
+    let sid = service_secret_id(id, &service.id);
+    keys.into_iter()
+        .filter(|k| service_secret(id, &sid, k).is_some())
+        .collect()
+}
+
+/// A service's secret from the Keychain. A widget whose settings moved into
+/// services (arr, 2026-11-27) had them under `widget/<id>/<KEY>`; the first
+/// service of a type (id = type, as the migration names it) reads that old item
+/// when its own is missing and copies it forward. The old item stays: it's the
+/// user's (the same rule as widget_secrets' rename fallback).
+fn service_secret(widget: &str, sid: &str, key: &str) -> Option<String> {
+    if let Some(v) = crate::widget_secrets::get(sid, key) {
+        return Some(v);
+    }
+    let service = sid.strip_prefix(&format!("{widget}/"))?;
+    if !key.to_ascii_lowercase().starts_with(&format!("{service}_")) {
+        return None;
+    }
+    let old = crate::widget_secrets::get(widget, key)?;
+    let _ = crate::widget_secrets::set(sid, key, &old);
+    Some(old)
 }
 
 /// A tick's stdout must be one `WidgetView` object.

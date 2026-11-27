@@ -14,6 +14,13 @@ import { useWidgets, widgetStatus } from './widget-kit'
 type WidgetSource =
   { kind: 'url'; url: string } | { kind: 'file'; name: string; content: string }
 
+/** Widgets another widget took over (DECISIONS 2026-11-27): the inventory
+ * says so once the successor is installed, so the old file can go. */
+const REPLACED_BY: Record<string, string> = {
+  'github-actions': 'jobs',
+  vercel: 'jobs',
+}
+
 /** What a widget's configure screen holds, in one line for the inventory. */
 function widgetSummary(w: BarWidget, config: PageProps['config']): string {
   const services = config.widgetServices?.[w.id] ?? []
@@ -143,7 +150,16 @@ export function WidgetsPage({ config, set }: PageProps) {
                 remove
               </button>
             </div>
-            <div className="entry-desc">{widgetSummary(w, config)}</div>
+            {REPLACED_BY[w.id] &&
+            widgets.some((o) => o.id === REPLACED_BY[w.id]) ? (
+              <div className="entry-desc replaced">
+                replaced by{' '}
+                {widgets.find((o) => o.id === REPLACED_BY[w.id])?.name}: its
+                settings moved there. Remove the old file.
+              </div>
+            ) : (
+              <div className="entry-desc">{widgetSummary(w, config)}</div>
+            )}
           </div>
         ))}
       </Section>

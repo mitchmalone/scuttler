@@ -552,6 +552,64 @@ pub fn migrate_jobs_widget(raw: &mut serde_json::Value, jobs_installed: bool) ->
     true
 }
 
+/// One-time, on load, once the arr widget is installed: each app whose URL is
+/// in `widgets.arr` becomes a service named after it (id = type, so its API
+/// key is found under the old Keychain item and copied forward, widgets.rs
+/// `service_secret`). Runs only while arr has no services; the old keys stay.
+/// Returns whether `raw` changed.
+pub fn migrate_arr_services(raw: &mut serde_json::Value, arr_installed: bool) -> bool {
+    use serde_json::{json, Value};
+    const APPS: [(&str, &str); 4] = [
+        ("radarr", "Radarr"),
+        ("sonarr", "Sonarr"),
+        ("prowlarr", "Prowlarr"),
+        ("bazarr", "Bazarr"),
+    ];
+    if !arr_installed {
+        return false;
+    }
+    let Some(root) = raw.as_object_mut() else {
+        return false;
+    };
+    if root
+        .get("widgetServices")
+        .and_then(|w| w.get("arr"))
+        .is_some()
+    {
+        return false;
+    }
+    let Some(flat) = root
+        .get("widgets")
+        .and_then(|w| w.get("arr"))
+        .and_then(Value::as_object)
+        .cloned()
+    else {
+        return false;
+    };
+    let services: Vec<Value> = APPS
+        .iter()
+        .filter_map(|(id, name)| {
+            let key = format!("{}_URL", id.to_ascii_uppercase());
+            let url = flat
+                .get(&key)
+                .and_then(Value::as_str)
+                .filter(|u| !u.trim().is_empty())?;
+            Some(json!({ "id": id, "type": id, "label": name, "values": { key: url } }))
+        })
+        .collect();
+    if services.is_empty() {
+        return false;
+    }
+    if let Some(map) = root
+        .entry("widgetServices")
+        .or_insert_with(|| json!({}))
+        .as_object_mut()
+    {
+        map.insert("arr".into(), Value::Array(services));
+    }
+    true
+}
+
 pub fn config_dir() -> PathBuf {
     // ~/.config/scuttler — XDG-style, deliberate: a terminal-nerd path, not ~/Library.
     // Briefly ~/.launcharr on 2026-08-10, reversed same day (see DECISIONS); migrate_home
@@ -657,8 +715,10 @@ fn load_or_create_at(path: &std::path::Path) -> CmdResult<(Config, bool)> {
     // Nothing is written back on that path.
     let parsed = serde_json::from_str::<serde_json::Value>(&raw).and_then(|mut value| {
         let jobs_installed = crate::widgets::installed("jobs");
-        let migrated =
-            migrate_defaults(&mut value) | migrate_jobs_widget(&mut value, jobs_installed);
+        let arr_installed = crate::widgets::installed("arr");
+        let migrated = migrate_defaults(&mut value)
+            | migrate_jobs_widget(&mut value, jobs_installed)
+            | migrate_arr_services(&mut value, arr_installed);
         let cfg = Config::deserialize(&value)?;
         Ok((cfg, migrated.then_some(value)))
     });
@@ -977,6 +1037,29 @@ mod tests {
         let mut raw = serde_json::json!({ "bar": { "layout": { "right": [] } } });
         assert!(!migrate_jobs_widget(&mut raw, true));
         assert!(raw.get("widgetServices").is_none());
+    }
+
+    #[test]
+    fn arr_apps_become_services_once() {
+        let mut raw = serde_json::json!({
+            "widgets": { "arr": {
+                "RADARR_URL": "http://beebee:7878",
+                "SONARR_URL": "",
+                "BAZARR_URL": "http://beebee:6767",
+                "PIPELINE_STATUS_URL": "http://p"
+            }}
+        });
+        assert!(!migrate_arr_services(&mut raw.clone(), false));
+        assert!(migrate_arr_services(&mut raw, true));
+        let arr = raw["widgetServices"]["arr"].as_array().unwrap();
+        let ids: Vec<&str> = arr.iter().map(|s| s["id"].as_str().unwrap()).collect();
+        assert_eq!(ids, ["radarr", "bazarr"]);
+        assert_eq!(arr[0]["values"]["RADARR_URL"], "http://beebee:7878");
+        assert_eq!(raw["widgets"]["arr"]["PIPELINE_STATUS_URL"], "http://p");
+        assert!(
+            !migrate_arr_services(&mut raw, true),
+            "second pass is a no-op"
+        );
     }
 
     #[test]

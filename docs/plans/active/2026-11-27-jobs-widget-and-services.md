@@ -107,20 +107,34 @@ that's already running out.
 
 ## Steps
 
-- [ ] Mitch creates a viewer API key (REST only) and pastes it once the screen exists;
-      the first real call confirms `fileName` (with or without `.yaml`)
-- [ ] Look: mock `05 Widget services` on the settings-redesign canvas (2026-11-27);
-      Mitch picks 5b or 5c and every-row vs folded before the UI is built
-- [ ] Contract: `services` in `WidgetManifest` (Rust + `@scuttler/tui` type), validation,
-      tests; `config.widgetServices` + resolution into `SCUTTLER_SERVICES`, tests first
-- [ ] Secrets keyed per service; `widget_secret_set` / `_keys` take `service`; DECISIONS
-- [ ] `jobs.ts`: source modules (github from the fix branch, dagu new, vercel from
-      `vercel.ts`), sectioned view, pure and unit-tested; fixtures for each source
-- [ ] Settings: configure screen (generic), add/remove/rename service, fields, status
-- [ ] Migration of layout ids, the repos value and the tokens; tests
-- [ ] Remove `github-actions.ts` and `vercel.ts` from `apps/desktop/widgets/`; update
-      WIDGETS.md, PLUGINS.md, Bar stories and fixtures
-- [ ] Live checklist on an installed build
+- [x] Look: mock `05 Widget services` on the settings-redesign canvas; Mitch picked 5b,
+      Add service in the Services header, type names only, every row
+- [x] Contract: `services` in `WidgetManifest` (Rust + `@scuttler/tui`), validation,
+      `config.widgetServices`, `SCUTTLER_SERVICES` with complete services only; tests
+- [x] Secrets keyed per service; `widget_secret_set` / `_keys` take `service`; DECISIONS
+- [x] `jobs.ts`: github, dagu, vercel sources, sectioned view; `jobs.test.ts`
+- [x] Settings: configure screen for every widget, add/remove/rename service, fields,
+      status; Widgets page is the inventory
+- [x] arr: its four apps are services; `appSettings` reads them
+- [x] Migrations (config load, once the widget file is installed): github-actions and
+      vercel slots and repos to jobs; arr URLs to services; arr keys copied forward
+      from the old Keychain items on first read; tests
+- [x] Remove `github-actions.ts` and `vercel.ts`; WIDGETS.md, PLUGINS.md, DECISIONS
+- [ ] Live checklist on an installed build (below)
+- [ ] Mitch creates a Dagu viewer API key (REST only) and pastes it; the first real call
+      confirms `fileName` (with or without `.yaml`)
+
+### Live checklist
+
+- [ ] Copy `jobs.ts` and the new `arr.ts` into `~/.config/scuttler/widgets/`; relaunch
+- [ ] Bar: one `activity` cell where GitHub Actions sat; the Vercel slot is gone
+- [ ] Settings → Widgets: GitHub Actions and Vercel say "replaced by Jobs"; remove them
+- [ ] Jobs → configure: GitHub Actions (pinned repos carried over) and Vercel services
+- [ ] Add service → Dagu; URL and key pasted; the card gets a Dagu section with rss and
+      twitter red and peekay-sync hidden once listed in Hide
+- [ ] Media stack → configure: four services, each "ready" (keys copied forward), card
+      unchanged
+- [ ] Remove a service: its section leaves the card on the next tick
 
 ## Acceptance criteria
 

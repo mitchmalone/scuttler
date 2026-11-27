@@ -1549,3 +1549,7 @@ input[type='range'] {
   font-size: 11px;
   color: var(--accent);
 }
+
+.entry-desc.replaced {
+  color: var(--warn);
+}
