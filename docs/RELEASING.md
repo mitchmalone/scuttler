@@ -68,7 +68,7 @@ Each fan-out job no-ops with a `::notice` when its variable/secret isn't configu
 honest skips, never silent failures. The website needs no fan-out job: Vercel deploys
 `apps/www` on the release commit's push to main.
 
-Post-release (human): watch the fan-out run (`gh run watch`), update `docs/STATUS.md`;
+Post-release (human): watch the fan-out run (`gh run watch`), update the backlog;
 announcing anywhere is a deliberate, separate decision.
 
 ## Install methods (decision 2026-08-10)

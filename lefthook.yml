@@ -1,6 +1,8 @@
-# Public-layer variant of the jig base lefthook.yml — adds secret scanning.
+# Layers add hooks as fragments under .lefthook/ (gitleaks from +public).
 # .lefthookrc puts brew's rustup proxies on PATH so the cargo hooks resolve.
 rc: .lefthookrc
+extends:
+  - .lefthook/*.yml
 
 pre-commit:
   parallel: true
@@ -17,8 +19,6 @@ pre-commit:
       glob: 'apps/desktop/src-tauri/**/*.rs'
       run: cargo fmt --manifest-path apps/desktop/src-tauri/Cargo.toml
       stage_fixed: true
-    gitleaks:
-      run: gitleaks protect --staged --verbose
 
 commit-msg:
   commands:

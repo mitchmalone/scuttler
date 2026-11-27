@@ -6,7 +6,7 @@
 > a glyph and a card; move to `PLUGINS.md` when the card isn't enough. The field
 > reference (`WidgetView`, `settings`, `requires`, `auth`) lives in PLUGINS.md and is not
 > repeated here. **Direction:** `widgets.rs` folds into `plugins.rs` as the first-party
-> panels move to plugins (ROADMAP "Plugins slice G"); the file format stays, this doc
+> panels move to plugins (Backlog: "Plugins slice G"); the file format stays, this doc
 > then becomes a section of PLUGINS.md.
 
 Widgets are the bar's scripts: drop a **TypeScript file** into

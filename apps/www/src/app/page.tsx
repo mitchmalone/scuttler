@@ -627,7 +627,7 @@ export default function Home() {
               search, no snippets, no granted permissions, nothing that phones
               home. What&rsquo;s open, and what would start each item, is the
               repo&rsquo;s{' '}
-              <a href={`${GITHUB_URL}/blob/main/docs/ROADMAP.md`}>ROADMAP</a>.
+              <a href={`${GITHUB_URL}/blob/v0.8.8/docs/ROADMAP.md`}>ROADMAP</a>.
             </p>
           </div>
           <div className="grid gap-3 rounded-xl border border-(--hair) bg-(--bg) px-6 py-[22px] text-[13px]">

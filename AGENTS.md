@@ -19,21 +19,17 @@ homes across both hops.
 
 ## Standard
 
-This project follows the jig standard, vendored at `docs/STANDARDS.md`. This file carries
-**deltas only** — identity, stack, invariants, and the Rust rules the standard doesn't cover.
-Divergences live in `DEVIATIONS.md`, never silently.
+This project follows the [jig](https://github.com/mitchmalone/jig) standard, vendored **in this repo** at `docs/STANDARDS.md` (refreshed by re-stamp; `.jig.json` records the jig commit and composition: `www-next` + `desktop-tauri`, layers `ci` + `public`). That copy governs; do not consult or "upgrade to" the jig's current version mid-task. This file carries **deltas only** — identity, stack, invariants, and the Rust rules the standard doesn't cover (`docs/RUST.md` is the jig's flavor baseline; the section below is this repo's stricter delta). Divergences live in `DEVIATIONS.md`, never silently. Refreshing `docs/STANDARDS.md` from the jig is a deliberate reconciliation, done as its own change.
 
-## Docs system
+## Sessions
 
-Stable rules live here; volatile state lives in `docs/`. **Docs link, never duplicate —
-single source of truth per fact.** `docs/STATUS.md` is the cursor, `docs/ROADMAP.md` carries
-milestones with triggers, `docs/JOURNAL.md` (append-only) dated gotchas, `docs/DECISIONS.md`
-(append-only) lightweight ADRs, `docs/plans/` per-task plans (`_TEMPLATE.md` → `active/` →
-`done/`), `LEARNINGS.md` the pruned per-topic reference promoted from JOURNAL.
+Working state lives outside the repo — see the standard ("Working State") for roles and discipline. Start every session with `/session-start` and end it with `/session-end`; both drive `scripts/session.mjs`, and `session.config.json` holds the pointers below.
 
-Session protocol: read `STATUS.md` + `plans/active/` at start; plan before non-trivial work;
-record decisions/gotchas as they happen; at close update `STATUS.md` and move the plan to
-`done/` — **in the same commit as the code**.
+- **Backlog:** Notion, The Backlog, `Project` = `Scuttler`. Live-run checklists for native behaviour live in the item's body.
+- **Handoffs and learnings:** Vercel Board, team `ramenamok`, channel `scuttler`. Contributor-relevant learnings are also curated into `docs/LEARNINGS.md` (public repo).
+- **Decisions:** `docs/DECISIONS.md`, in the commit that makes them.
+- **This session's copy and plan:** `local/session/` (gitignored).
+- **Kept in the repo, reviewed with code:** `docs/PRD.md` (product truth), `docs/RELEASING.md` + `docs/releases/`, `docs/reviews/`, and the reference docs (`PLUGINS`, `WIDGETS`, `THEMES`, `SCRIPTS`, `SETUP`).
 
 ## Repository shape
 
@@ -183,8 +179,8 @@ on` in a terminal; the text is identical either way. The app only runs `sudo -n`
 | Full index rebuild (~300 apps)             | **< 500 ms**              |
 
 A budget miss cuts or flags the offending feature. Changes touching summon, matching, or
-launch paths must not regress these — measure before claiming; record numbers in the plan
-file or JOURNAL. Idle memory is **the receipt** (DECISIONS 2026-11-01): `scripts/mem.sh
+launch paths must not regress these — measure before claiming; record numbers in the PR
+and as a learning. Idle memory is **the receipt** (DECISIONS 2026-11-01): `scripts/mem.sh
 --receipt` on a release build under the reference config (bar on, agents monitor off, no
 plugin services, Desktop rung off, one display, a minute after launch). Release notes
 carry it beside an unbudgeted daily-footprint line; nothing else is compared with 120. No
@@ -211,8 +207,8 @@ Same spirit as the TypeScript rules: strict, minimal, boring.
   keep the pair adjacent in naming (`AppItem` ↔ `AppItem`).
 - TDD applies to Rust wherever the code is testable in-process (index parsing, frecency SQL,
   config parsing). Native AppKit behavior (panel focus, activation, AppleScript hand-off)
-  is verified manually against a written checklist in the task's plan file; quirks go to
-  `docs/JOURNAL.md`.
+  is verified manually against a written checklist in the backlog item; quirks go to the
+  Board as learnings.
 - Every crate is a liability: prefer std, keep the tree shallow. `cargo audit` at release
   milestones.
 
@@ -228,13 +224,16 @@ Same spirit as the TypeScript rules: strict, minimal, boring.
 | `scripts/release.sh X.Y.Z`                  | The only way to release (see `docs/RELEASING.md`)                                      |
 | `scripts/mem.sh [--watch\|--receipt]`       | Resident memory of the app and its helpers; `--receipt` is the budget number           |
 
+Local ports: the panel's Vite dev server binds **1420** (HMR 1421), fixed by Tauri (`devUrl`, `strictPort`); the site uses Next's default **3000**. Only one scuttler dev stack runs per machine (the app is a singleton), so no offset.
+
 ## Definition of done
 
 - `pnpm verify` green (typecheck, lint, format:check, Vitest, cargo test, clippy `-D warnings`).
 - New pure logic (matcher, ranking, grammar) has unit tests written first.
 - Performance budgets not regressed. A change that adds something resident (a process, a
   window, a watcher, a cache) records `scripts/mem.sh --receipt` before and after in its
-  plan file; every other change is covered by the release receipt.
+  PR; every other change is covered by the release receipt.
 - A ranking complaint becomes a case in `packages/core/src/corpus.json` first; the scorer
   changes second, and every earlier case still holds.
-- `docs/STATUS.md` (and the task's plan file) updated in the same commit; pushed, CI green.
+- Decisions in `docs/DECISIONS.md` in the same commit; pushed, CI green; the backlog item
+  `In Review` with its PR link (`/session-end` closes the session out).
