@@ -347,6 +347,19 @@ pub fn snapshot() -> Vec<WidgetState> {
         .collect()
 }
 
+/// Whether a widget file named `id` (any extension) sits in the widgets
+/// folder — what a config migration can know before the registry runs.
+pub fn installed(id: &str) -> bool {
+    let Ok(entries) = fs::read_dir(widgets_dir()) else {
+        return false;
+    };
+    entries.flatten().any(|e| {
+        let path = e.path();
+        path.file_stem().and_then(|s| s.to_str()) == Some(id)
+            && crate::runtime::is_plugin_file(&path)
+    })
+}
+
 /// Whether `id`'s manifest declares `key` as a secret setting (the only keys
 /// the secret-set command will write).
 pub fn declares_secret(id: &str, key: &str) -> bool {

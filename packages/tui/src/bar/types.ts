@@ -246,6 +246,20 @@ export interface BarWidget {
   requires?: WidgetRequire[]
   /** Required settings still unset — the widget isn't ticked while non-empty. */
   needs?: string[]
+  /** Kinds of service the user can add (manifest `services`). */
+  services?: WidgetServiceType[]
+}
+
+/** Mirrors WidgetServiceType in widgets.rs: one kind of service a widget can
+ * watch, with its own settings. The user's instances live in
+ * `config.widgetServices` (desktop) and reach the widget as SCUTTLER_SERVICES. */
+export interface WidgetServiceType {
+  type: string
+  name: string
+  /** lucide icon name (kebab-case). */
+  icon?: string | null
+  settings: WidgetSetting[]
+  requires: WidgetRequire[]
 }
 
 /** One 1 Hz push from bar.rs. */

@@ -458,6 +458,100 @@ pub fn migrate_defaults(raw: &mut serde_json::Value) -> bool {
     true
 }
 
+/// One-time, on load, once the jobs widget is installed: the github-actions and
+/// vercel widgets it replaces hand over (DECISIONS 2026-11-27). Their bar slot
+/// becomes one `widget:jobs` slot where the first of them sat, and each becomes
+/// a jobs service: GitHub Actions keeps its pinned repos. Runs only while jobs
+/// has no services, so it never touches a list the user made. Their old
+/// `widgets` keys stay (adopt, never overwrite). Returns whether `raw` changed.
+pub fn migrate_jobs_widget(raw: &mut serde_json::Value, jobs_installed: bool) -> bool {
+    use serde_json::{json, Map, Value};
+    const OLD: [&str; 2] = ["widget:github-actions", "widget:vercel"];
+    if !jobs_installed {
+        return false;
+    }
+    let Some(root) = raw.as_object_mut() else {
+        return false;
+    };
+    if root
+        .get("widgetServices")
+        .and_then(|w| w.get("jobs"))
+        .is_some()
+    {
+        return false;
+    }
+    let has_widget = |root: &Map<String, Value>, id: &str| {
+        root.get("widgets")
+            .and_then(Value::as_object)
+            .is_some_and(|w| w.contains_key(id))
+    };
+    let mut in_layout = [false, false];
+    for key in ["layout", "notchedLayout"] {
+        let Some(zones) = root
+            .get_mut("bar")
+            .and_then(|b| b.get_mut(key))
+            .and_then(Value::as_object_mut)
+        else {
+            continue;
+        };
+        let mut placed_here = false;
+        for zone in zones.values_mut() {
+            let Some(mods) = zone.as_array_mut() else {
+                continue;
+            };
+            let mut out = Vec::with_capacity(mods.len());
+            for m in mods.drain(..) {
+                let id = m.get("id").and_then(Value::as_str).unwrap_or("");
+                match OLD.iter().position(|o| *o == id) {
+                    Some(i) => {
+                        in_layout[i] = true;
+                        let on = m.get("enabled").and_then(Value::as_bool).unwrap_or(true);
+                        if !placed_here {
+                            placed_here = true;
+                            out.push(json!({ "id": "widget:jobs", "enabled": on }));
+                        }
+                    }
+                    None => out.push(m),
+                }
+            }
+            *mods = out;
+        }
+    }
+    let github = in_layout[0] || has_widget(root, "github-actions");
+    let vercel = in_layout[1] || has_widget(root, "vercel");
+    if !github && !vercel {
+        return false;
+    }
+    let repos = root
+        .get("widgets")
+        .and_then(|w| w.get("github-actions"))
+        .and_then(|g| g.get("GITHUB_REPOS"))
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_string();
+    let mut services = Vec::new();
+    if github {
+        let values = if repos.is_empty() {
+            json!({})
+        } else {
+            json!({ "GITHUB_REPOS": repos })
+        };
+        services.push(json!({
+            "id": "github", "type": "github", "label": "GitHub Actions", "values": values
+        }));
+    }
+    if vercel {
+        services.push(json!({
+            "id": "vercel", "type": "vercel", "label": "Vercel", "values": {}
+        }));
+    }
+    let all = root.entry("widgetServices").or_insert_with(|| json!({}));
+    if let Some(map) = all.as_object_mut() {
+        map.insert("jobs".into(), Value::Array(services));
+    }
+    true
+}
+
 pub fn config_dir() -> PathBuf {
     // ~/.config/scuttler — XDG-style, deliberate: a terminal-nerd path, not ~/Library.
     // Briefly ~/.launcharr on 2026-08-10, reversed same day (see DECISIONS); migrate_home
@@ -562,7 +656,9 @@ fn load_or_create_at(path: &std::path::Path) -> CmdResult<(Config, bool)> {
     // but say so, or a typo silently reverts every setting (found 2026-08-15).
     // Nothing is written back on that path.
     let parsed = serde_json::from_str::<serde_json::Value>(&raw).and_then(|mut value| {
-        let migrated = migrate_defaults(&mut value);
+        let jobs_installed = crate::widgets::installed("jobs");
+        let migrated =
+            migrate_defaults(&mut value) | migrate_jobs_widget(&mut value, jobs_installed);
         let cfg = Config::deserialize(&value)?;
         Ok((cfg, migrated.then_some(value)))
     });
@@ -834,6 +930,53 @@ mod tests {
         let (cfg, _) = load_or_create_at(&path).unwrap();
         assert!(cfg.bar.enabled);
         fs::remove_dir_all(path.parent().unwrap()).unwrap();
+    }
+
+    #[test]
+    fn jobs_takes_over_the_github_and_vercel_slots_once() {
+        let mut raw = serde_json::json!({
+            "bar": { "layout": {
+                "left": [],
+                "center": [],
+                "right": [
+                    { "id": "wifi", "enabled": true },
+                    { "id": "widget:github-actions", "enabled": true },
+                    { "id": "widget:trmnl", "enabled": true },
+                    { "id": "widget:vercel", "enabled": false }
+                ]
+            }},
+            "widgets": { "github-actions": { "GITHUB_REPOS": "a/b, c/d" } }
+        });
+        assert!(
+            !migrate_jobs_widget(&mut raw.clone(), false),
+            "not before jobs is installed"
+        );
+        assert!(migrate_jobs_widget(&mut raw, true));
+        let right: Vec<&str> = raw["bar"]["layout"]["right"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|m| m["id"].as_str().unwrap())
+            .collect();
+        assert_eq!(right, ["wifi", "widget:jobs", "widget:trmnl"]);
+        let jobs = &raw["widgetServices"]["jobs"];
+        assert_eq!(jobs[0]["type"], "github");
+        assert_eq!(jobs[0]["values"]["GITHUB_REPOS"], "a/b, c/d");
+        assert_eq!(jobs[1]["type"], "vercel");
+        assert_eq!(raw["widgets"]["github-actions"]["GITHUB_REPOS"], "a/b, c/d");
+        let cfg = Config::deserialize(&raw).unwrap();
+        assert_eq!(cfg.widget_services["jobs"].len(), 2);
+        assert!(
+            !migrate_jobs_widget(&mut raw, true),
+            "second pass is a no-op"
+        );
+    }
+
+    #[test]
+    fn jobs_migration_leaves_a_config_without_the_old_widgets_alone() {
+        let mut raw = serde_json::json!({ "bar": { "layout": { "right": [] } } });
+        assert!(!migrate_jobs_widget(&mut raw, true));
+        assert!(raw.get("widgetServices").is_none());
     }
 
     #[test]

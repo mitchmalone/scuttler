@@ -1,30 +1,42 @@
 import type { BarWidget } from '@scuttler/tui'
 import { invoke } from '@tauri-apps/api/core'
+import { ChevronRight } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import { widgetModuleId } from '../../lib/config'
 import { pageDef } from '../pages'
 import type { PageProps } from '../types'
 import { Block, Note, Page, Section } from '../ui'
+import { WidgetConfigure } from './WidgetConfigure'
 import { PAGE_ICONS } from './icons'
-import {
-  WidgetPrereqs,
-  WidgetSettings,
-  useWidgets,
-  widgetStatus,
-} from './widget-kit'
+import { useWidgets, widgetStatus } from './widget-kit'
 
 type WidgetSource =
   { kind: 'url'; url: string } | { kind: 'file'; name: string; content: string }
+
+/** What a widget's configure screen holds, in one line for the inventory. */
+function widgetSummary(w: BarWidget, config: PageProps['config']): string {
+  const services = config.widgetServices?.[w.id] ?? []
+  if (w.services?.length) {
+    if (!services.length) return 'no services yet'
+    const names = services.map((s) => s.label || s.type).join(', ')
+    return `${services.length} ${services.length === 1 ? 'service' : 'services'}: ${names}`
+  }
+  const n = w.settings?.length ?? 0
+  return n ? `${n} ${n === 1 ? 'setting' : 'settings'}` : 'nothing to configure'
+}
 
 /**
  * Settings → Widgets: what's installed and how it's doing, plus add (a picked
  * file — read in the webview, no dialog plugin — or a URL, one user-initiated
  * fetch) and remove. Layout lives on the Bar page; this is the inventory.
+ * Each widget's settings and services live on its own configure screen
+ * (WidgetConfigure, DECISIONS 2026-11-27).
  */
 export function WidgetsPage({ config, set }: PageProps) {
   const def = pageDef('widgets')
   const widgets = useWidgets()
+  const [configuring, setConfiguring] = useState<string | null>(null)
   const [url, setUrl] = useState('')
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState<string | null>(null)
@@ -57,6 +69,18 @@ export function WidgetsPage({ config, set }: PageProps) {
   }
   const tick = (w: BarWidget) =>
     invoke('widget_tick', { id: w.id }).catch(console.error)
+
+  const open = widgets.find((w) => w.id === configuring)
+  if (open) {
+    return (
+      <WidgetConfigure
+        widget={open}
+        config={config}
+        set={set}
+        onBack={() => setConfiguring(null)}
+      />
+    )
+  }
 
   return (
     <Page
@@ -96,6 +120,14 @@ export function WidgetsPage({ config, set }: PageProps) {
               </div>
               <button
                 type="button"
+                className="btn pri"
+                onClick={() => setConfiguring(w.id)}
+              >
+                configure
+                <ChevronRight size={12} strokeWidth={1.8} aria-hidden />
+              </button>
+              <button
+                type="button"
                 className="btn"
                 title="run the widget now"
                 onClick={() => tick(w)}
@@ -111,8 +143,7 @@ export function WidgetsPage({ config, set }: PageProps) {
                 remove
               </button>
             </div>
-            <WidgetPrereqs widget={w} />
-            <WidgetSettings widget={w} config={config} set={set} />
+            <div className="entry-desc">{widgetSummary(w, config)}</div>
           </div>
         ))}
       </Section>
