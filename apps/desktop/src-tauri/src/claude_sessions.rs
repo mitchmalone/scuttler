@@ -38,6 +38,8 @@ pub struct ClaudeSession {
     pub pid: u32,
     pub session_id: String,
     pub cwd: String,
+    /// The session's name as Claude shows it (`/rename`, or its own), when set.
+    pub name: Option<String>,
     pub status: Option<Status>,
     /// Unix seconds `status` was last set; 0 when the file doesn't say.
     pub status_at: u64,
@@ -52,6 +54,7 @@ struct RawSession {
     session_id: Option<String>,
     #[serde(default)]
     cwd: String,
+    name: Option<String>,
     status: Option<String>,
     status_updated_at: Option<u64>,
     tmux: Option<String>,
@@ -69,6 +72,10 @@ pub fn parse_session(json: &str) -> Option<ClaudeSession> {
         pid: raw.pid?,
         session_id: raw.session_id.filter(|s| !s.is_empty())?,
         cwd: raw.cwd,
+        name: raw
+            .name
+            .map(|n| n.trim().to_owned())
+            .filter(|n| !n.is_empty()),
         status,
         status_at: raw.status_updated_at.map_or(0, |ms| ms / 1000),
         pane: raw.tmux.as_deref().and_then(pane_of),
@@ -337,6 +344,14 @@ mod tests {
         assert_eq!(s.status, Some(Status::Busy));
         assert_eq!(s.status_at, 1_795_755_550);
         assert_eq!(s.pane.as_deref(), Some("%208"));
+        assert_eq!(s.name, None);
+        let named = r#"{"pid":1,"sessionId":"a","name":"  Scuttler "}"#;
+        assert_eq!(
+            parse_session(named).unwrap().name.as_deref(),
+            Some("Scuttler")
+        );
+        let blank = r#"{"pid":1,"sessionId":"a","name":"  "}"#;
+        assert_eq!(parse_session(blank).unwrap().name, None);
 
         let idle = r#"{"pid":1,"sessionId":"a","status":"idle"}"#;
         let s = parse_session(idle).unwrap();

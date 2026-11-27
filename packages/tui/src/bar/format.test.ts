@@ -19,6 +19,7 @@ import {
   sessionHoverKey,
   sessionTiles,
   tileAge,
+  tileName,
   tileStatus,
   timeLeft,
   toneClass,
@@ -466,6 +467,16 @@ describe('session card', () => {
       ]),
     ).toEqual(['1 needs you', '2 working', '2 idle', '1 other'])
     expect(sessionCounts([])).toEqual([])
+  })
+
+  it('names a tile by the session, not the prompt', () => {
+    expect(
+      tileName(
+        agent({ name: 'Scuttler', muxLabel: 'main', title: 'Looks like…' }),
+      ),
+    ).toBe('Scuttler')
+    expect(tileName(agent({ name: ' ', muxLabel: 'release' }))).toBe('release')
+    expect(tileName(agent({ agent: 'codex' }))).toBe('codex')
   })
 
   it('says what a tile is doing in one line', () => {

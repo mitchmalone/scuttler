@@ -38,6 +38,7 @@ import {
   sessionHoverKey,
   sessionTiles,
   tileAge,
+  tileName,
   tileStatus,
   timeLeft,
   toneClass,
@@ -434,7 +435,7 @@ export function BarAgentSessionCard({
               <span className={`bar-agent-${a.state}`}>
                 <AgentStateIcon state={a.state} />
               </span>
-              <span className="bar-agenttile-title">{a.title || a.agent}</span>
+              <span className="bar-agenttile-title">{tileName(a)}</span>
               <span className="bar-agenttile-age">{tileAge(a, now)}</span>
             </span>
             <span className="bar-agenttile-status">{tileStatus(a)}</span>

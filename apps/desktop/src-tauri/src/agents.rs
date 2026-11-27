@@ -115,6 +115,10 @@ pub struct AgentSession {
     /// (Claude only: claude_sessions.rs). None means unknown, not empty.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub context_pct: Option<u8>,
+    /// The session's own name when its agent reports one (Claude's session
+    /// file); the card titles a tile with it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
 }
 
 /// Incoming wire event: an `AgentSession` minus the timestamp, all fields
@@ -991,6 +995,8 @@ struct ClaudeReport {
     tail: Option<crate::claude_sessions::Tail>,
     /// Context used, 0–100, from the transcript's last usage.
     context: Option<u8>,
+    /// Claude's name for the session.
+    name: Option<String>,
 }
 
 /// The session files matched to our sessions: by Claude's session id (hook
@@ -1053,6 +1059,7 @@ fn claude_reports(sessions: &[AgentSession]) -> Vec<ClaudeReport> {
                 pane: f.pane.clone(),
                 tail: state.tail,
                 context: state.tokens.map(crate::claude_sessions::context_pct),
+                name: f.name.clone(),
             }
         })
         .collect();
@@ -1113,6 +1120,10 @@ fn reconcile_claude(sessions: &mut [AgentSession], reports: &[ClaudeReport], now
             changed |= reconcile(s, r, now);
             if r.context.is_some() && s.context_pct != r.context {
                 s.context_pct = r.context;
+                changed = true;
+            }
+            if r.name.is_some() && s.name != r.name {
+                s.name = r.name.clone();
                 changed = true;
             }
         }
@@ -1549,6 +1560,7 @@ mod tests {
             pid,
             session_id: id.into(),
             cwd: "/x".into(),
+            name: None,
             status: None,
             status_at: 0,
             pane: pane.map(str::to_owned),
@@ -1568,6 +1580,7 @@ mod tests {
             pane: None,
             tail,
             context: None,
+            name: None,
         }
     }
 
@@ -1700,8 +1713,11 @@ mod tests {
             "unchanged"
         );
         r.context = None;
-        assert!(!reconcile_claude(&mut sessions, &[r], 12));
+        assert!(!reconcile_claude(&mut sessions, &[r.clone()], 12));
         assert_eq!(sessions[0].context_pct, Some(48));
+        r.name = Some("Scuttler".into());
+        assert!(reconcile_claude(&mut sessions, &[r], 13));
+        assert_eq!(sessions[0].name.as_deref(), Some("Scuttler"));
     }
 
     #[test]

@@ -415,6 +415,13 @@ export function sessionCounts(list: AgentSession[]): string[] {
   return other ? [...parts, `${other} other`] : parts
 }
 
+/** A tile's title: the session's own name (Claude's), else its tmux window
+ * or herdr tab label, else the agent. Never the prompt-derived `title`, which
+ * reads as a truncated sentence (Mitch, 2026-11-27). */
+export function tileName(a: AgentSession): string {
+  return a.name?.trim() || a.muxLabel?.trim() || a.agent
+}
+
 /** A tile's one status line: what it's doing, or what it's waiting on. */
 export function tileStatus(a: AgentSession): string {
   switch (a.state) {

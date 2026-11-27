@@ -1290,7 +1290,9 @@
  * Claude Design `06 Agents session card`, round 2. One card per group box: a
  * 4-column grid of tiles. State reads before text: attention a solid warn
  * fill, working an accent border, done (unread) stripes, read and idle dim.
- * Theme tokens only. */
+ * Theme tokens only. Tiles are buttons: their rules double the class (0,2,0)
+ * to outrank the `.bar button` reset (0,1,1) without needing `.bar` above
+ * them, since the site's spotlight renders the card outside a bar. */
 
 .bar-agent-group {
   cursor: default;
@@ -1344,7 +1346,7 @@
   gap: 6px;
 }
 
-.bar-agenttile {
+.bar-agenttile.bar-agenttile {
   all: unset;
   box-sizing: border-box;
   min-width: 0;
@@ -1360,8 +1362,8 @@
   --tile-ink: var(--fg, #dde1f0);
 }
 
-.bar-agenttile:hover,
-.bar-agenttile:focus-visible {
+.bar-agenttile.bar-agenttile:hover,
+.bar-agenttile.bar-agenttile:focus-visible {
   outline: 1px solid var(--fg, #dde1f0);
   outline-offset: 1px;
 }
@@ -1438,17 +1440,17 @@
 }
 
 /* States */
-.bar-agenttile-working {
+.bar-agenttile.bar-agenttile-working {
   border: 2px solid var(--accent, #9db2ff);
   padding: 6px 7px;
 }
 
-.bar-agenttile-attention {
+.bar-agenttile.bar-agenttile-attention {
   background: var(--warn, #d29922);
   border-color: var(--warn, #d29922);
 }
 
-.bar-agenttile-attention,
+.bar-agenttile.bar-agenttile-attention,
 .bar-agenttile-attention .bar-agent-attention,
 .bar-agenttile-attention .bar-agenttile-status,
 .bar-agenttile-attention .bar-agenttile-age,
@@ -1469,7 +1471,7 @@
   background: var(--bg, #1c1d2a);
 }
 
-.bar-agenttile-done {
+.bar-agenttile.bar-agenttile-done {
   background: repeating-linear-gradient(
     135deg,
     color-mix(in srgb, var(--fg, #dde1f0) 13%, var(--bg, #1c1d2a)) 0 5px,
@@ -1477,8 +1479,8 @@
   );
 }
 
-.bar-agenttile-read,
-.bar-agenttile-idle {
+.bar-agenttile.bar-agenttile-read,
+.bar-agenttile.bar-agenttile-idle {
   background: transparent;
   border-color: color-mix(in srgb, var(--dim, #7f86a5) 30%, transparent);
 }
@@ -1488,7 +1490,7 @@
   color: var(--dim, #7f86a5);
 }
 
-.bar-agenttile-more {
+.bar-agenttile.bar-agenttile-more {
   cursor: default;
   border-style: dashed;
   justify-content: center;

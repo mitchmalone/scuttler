@@ -136,6 +136,7 @@ export {
   sessionCounts,
   sessionTiles,
   sessionCardHeight,
+  tileName,
   tileStatus,
   tileAge,
   contextTone,
