@@ -4,6 +4,7 @@ import {
   type AppSnapshot,
   type Download,
   type Issue,
+  appSettings,
   calendarItems,
   diskIssues,
   englishGaps,
@@ -55,24 +56,56 @@ const dl = (title: string, extra: Partial<Download> = {}): Download => ({
 })
 
 describe('arr manifest', () => {
-  it('declares a URL and a secret key per app, none required', () => {
+  it('declares each app as a service with a required URL and secret key', () => {
     const m = manifest()
     expect(m.id).toBe('arr')
-    expect(m.settings.map((s) => s.key)).toEqual([
-      'RADARR_URL',
-      'RADARR_API_KEY',
-      'SONARR_URL',
-      'SONARR_API_KEY',
-      'PROWLARR_URL',
-      'PROWLARR_API_KEY',
-      'BAZARR_URL',
-      'BAZARR_API_KEY',
-      'PIPELINE_STATUS_URL',
+    expect(m.services.map((s) => s.type)).toEqual([
+      'radarr',
+      'sonarr',
+      'prowlarr',
+      'bazarr',
     ])
-    for (const s of m.settings) {
-      expect('secret' in s && s.secret === true).toBe(s.key.endsWith('_KEY'))
-      expect(s).not.toHaveProperty('required')
+    for (const svc of m.services) {
+      const U = svc.type.toUpperCase()
+      expect(
+        svc.settings.map((s) => [s.key, s.required, 'secret' in s]),
+      ).toEqual([
+        [`${U}_URL`, true, false],
+        [`${U}_API_KEY`, true, true],
+      ])
     }
+    expect(m.settings.map((s) => s.key)).toEqual(['PIPELINE_STATUS_URL'])
+  })
+
+  it('reads an app from its first service, else the old flat env', () => {
+    const services = JSON.stringify([
+      {
+        id: 'radarr',
+        type: 'radarr',
+        label: 'Radarr',
+        settings: { RADARR_URL: ' http://a ', RADARR_API_KEY: 'k1' },
+      },
+      {
+        id: 'radarr-2',
+        type: 'radarr',
+        label: 'Radarr 2',
+        settings: { RADARR_URL: 'http://b', RADARR_API_KEY: 'k2' },
+      },
+    ])
+    expect(appSettings('radarr', services, {})).toEqual({
+      url: 'http://a',
+      key: 'k1',
+    })
+    expect(appSettings('sonarr', services, { SONARR_URL: 'http://s' })).toEqual(
+      { url: '', key: '' },
+    )
+    expect(
+      appSettings('sonarr', undefined, {
+        SONARR_URL: 'http://s',
+        SONARR_API_KEY: 'k',
+      }),
+    ).toEqual({ url: 'http://s', key: 'k' })
+    expect(appSettings('bazarr', 'not json', {})).toEqual({ url: '', key: '' })
   })
 })
 

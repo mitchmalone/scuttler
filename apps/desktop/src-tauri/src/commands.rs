@@ -726,31 +726,84 @@ pub fn widget_tick(id: String) {
     crate::widgets::poke(&id)
 }
 
-/// Settings → Menubar → Custom widgets → a secret setting: store (or clear
-/// with null/empty) one Keychain value. The key must be one the widget's
-/// manifest declares `secret` — plain settings go through `config.widgets`.
+/// Settings → Widgets → configure → a secret setting: store (or clear with
+/// null/empty) one Keychain value. The key must be one the widget's manifest
+/// declares `secret` — plain settings go through `config.widgets`. With
+/// `service`, the key belongs to that configured service (its type declares
+/// it) and is stored under `widget/<id>/<service>/<KEY>` (DECISIONS 2026-11-27).
 #[tauri::command]
-pub fn widget_secret_set(id: String, key: String, value: Option<String>) -> CmdResult<()> {
+pub fn widget_secret_set(
+    id: String,
+    key: String,
+    value: Option<String>,
+    service: Option<String>,
+    state: State<'_, AppState>,
+) -> CmdResult<()> {
     if !crate::widgets::valid_id(&id) || !crate::widgets::valid_setting_key(&key) {
         return Err(CmdError::Internal(format!("bad widget secret {id}/{key}")));
     }
-    if !crate::widgets::declares_secret(&id, &key) && !crate::plugins::declares_secret(&id, &key) {
-        return Err(CmdError::Internal(format!("{id} declares no secret {key}")));
-    }
-    crate::widget_secrets::set(&id, &key, value.as_deref().unwrap_or(""))
+    let store_id = match service {
+        Some(sid) => {
+            let svc = configured_service(&state, &id, &sid)?;
+            if !crate::widgets::service_declares_secret(&id, &svc, &key) {
+                return Err(CmdError::Internal(format!(
+                    "{id} service {sid} declares no secret {key}"
+                )));
+            }
+            crate::widgets::service_secret_id(&id, &sid)
+        }
+        None => {
+            if !crate::widgets::declares_secret(&id, &key)
+                && !crate::plugins::declares_secret(&id, &key)
+            {
+                return Err(CmdError::Internal(format!("{id} declares no secret {key}")));
+            }
+            id.clone()
+        }
+    };
+    crate::widget_secrets::set(&store_id, &key, value.as_deref().unwrap_or(""))
         .map_err(CmdError::Internal)?;
     crate::widgets::poke(&id);
     crate::plugins::poke(&id);
     Ok(())
 }
 
-/// Which of a widget's secret settings are set — never the values.
-#[tauri::command]
-pub fn widget_secret_keys(id: String) -> Vec<String> {
-    if crate::plugins::has(&id) {
-        return crate::plugins::secret_keys_present(&id);
+/// The service `sid` of widget `id` as config holds it; an unknown one is an
+/// error, so a secret is never written for a service that doesn't exist.
+fn configured_service(
+    state: &State<'_, AppState>,
+    id: &str,
+    sid: &str,
+) -> CmdResult<crate::widgets::WidgetService> {
+    if !crate::widgets::valid_id(sid) {
+        return Err(CmdError::Internal(format!("bad service id {sid:?}")));
     }
-    crate::widgets::secret_keys_present(&id)
+    state
+        .config
+        .read()
+        .map_err(|_| CmdError::Internal("config lock poisoned".into()))?
+        .widget_services
+        .get(id)
+        .and_then(|list| list.iter().find(|s| s.id == sid).cloned())
+        .ok_or_else(|| CmdError::Internal(format!("{id} has no service {sid}")))
+}
+
+/// Which of a widget's secret settings are set — never the values. With
+/// `service`, that configured service's secrets instead.
+#[tauri::command]
+pub fn widget_secret_keys(
+    id: String,
+    service: Option<String>,
+    state: State<'_, AppState>,
+) -> CmdResult<Vec<String>> {
+    if let Some(sid) = service {
+        let svc = configured_service(&state, &id, &sid)?;
+        return Ok(crate::widgets::service_secret_keys_present(&id, &svc));
+    }
+    if crate::plugins::has(&id) {
+        return Ok(crate::plugins::secret_keys_present(&id));
+    }
+    Ok(crate::widgets::secret_keys_present(&id))
 }
 
 /// Start the widget's own sign-in (`<widget> auth`); progress arrives as

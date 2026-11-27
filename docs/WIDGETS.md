@@ -14,7 +14,7 @@ Widgets are the bar's scripts: drop a **TypeScript file** into
 short label, a tone, a click, and a hover card of rows. No build, no shebang, no chmod,
 no restart: `.ts` runs under **Bun** (or Node when Bun is absent — DECISIONS 2026-08-19).
 Any other executable in any language works too. The reference widgets in
-`apps/desktop/widgets/` (`uptime.ts`, `github-actions.ts`, `vercel.ts`, `trmnl.ts`,
+`apps/desktop/widgets/` (`uptime.ts`, `jobs.ts`, `trmnl.ts`,
 `arr.ts`) are
 yours to copy and edit; the shape is deliberately the same as `docs/SCRIPTS.md`.
 
@@ -113,9 +113,34 @@ Every field is optional; `{}` is a valid blank cell. The fields — `icon`, `lab
 `settings`, `requires` and `auth` are defined in [PLUGINS.md](PLUGINS.md) ("Settings and
 sign-in") and mean the same here: declared settings are collected in **Settings → Widgets** and arrive as environment variables on every `tick`; secrets go to the
 Keychain; piggyback on the provider CLI's own login first and answer `setup` when it is
-missing. `vercel.ts` reads `VERCEL_TOKEN`, else the Vercel CLI's store, and runs
-`vercel whoami` when that login has expired so the CLI renews it;
-`github-actions.ts` carries the device-flow `auth` example.
+missing. `jobs.ts`'s Vercel service reads its token, else the Vercel CLI's store, and runs
+`vercel whoami` when that login has expired so the CLI renews it.
+
+Each widget's settings live on its own **configure** screen (Settings → Widgets →
+configure).
+
+### Services
+
+A widget that watches several things of a kind declares `services` in its manifest:
+the types the user can add, each with its own `settings` and `requires`.
+
+```json
+"services": [
+  { "type": "dagu", "name": "Dagu", "icon": "workflow",
+    "settings": [
+      { "key": "DAGU_URL", "label": "URL", "required": true },
+      { "key": "DAGU_TOKEN", "label": "API key", "secret": true, "required": true }
+    ] }
+]
+```
+
+The configure screen lists the user's services under an **add service** dropdown; the same
+type can be added more than once. Instances are stored in `config.widgetServices[<id>]`,
+secrets in the Keychain per service. Every tick gets `SCUTTLER_SERVICES`, a JSON array of
+the complete ones (`[{ "id", "type", "label", "settings": { KEY: value } }]`); a service
+missing a required value is left out, so the widget never sees it. Render one card
+section per service. `jobs.ts` and `arr.ts` are the worked examples (DECISIONS
+2026-11-27).
 
 ## Refresh, failure, and the rules of the road
 
@@ -155,13 +180,12 @@ missing. `vercel.ts` reads `VERCEL_TOKEN`, else the Vercel CLI's store, and runs
 
 ## Reference widgets
 
-| Widget              | Source                              | Cadence | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| ------------------- | ----------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `uptime.ts`         | Uptime Kuma status page             | 2 min   | Arrow up/down, down-count label, a row per monitor with its 24 h uptime and latest ping (opens the site when the page shares its URL), grouped as the page is. Set `UPTIME_KUMA_URL` to the status page's address; required.                                                                                                                                                                                                            |
-| `github-actions.ts` | GitHub API, latest run per workflow | 2 min   | `gh auth token` (the CLI keeps it fresh) or a pasted token; the repos pinned in the `GITHUB_REPOS` setting plus your 10 most recently pushed, the latest run of every active workflow in each (last 100 runs per repo; disabled workflows drop out, a renamed or transferred repo is read once under its new name); every run listed, failing first, then running; failing count, opens the run; dim + `gh auth login` when signed out. |
-| `vercel.ts`         | Vercel API `/v9/projects`           | 2 min   | The Vercel CLI's own login or a pasted `VERCEL_TOKEN` (Keychain); latest production deployment per project; dim + the fix when signed out or stale.                                                                                                                                                                                                                                                                                     |
-| `trmnl.ts`          | TRMNL `/api/devices`                | 5 min   | Key via `TRMNL_API_KEY` or `secret shared/trmnl/api_key`; hidden without one.                                                                                                                                                                                                                                                                                                                                                           |
-| `arr.ts`            | Radarr, Sonarr, Prowlarr, Bazarr    | 1 min   | A URL and an API key per app, each app optional (keys in the Keychain); health issues, low disks, disabled indexers, then downloads, then a row per app. Optional `PIPELINE_STATUS_URL` for a post-processing status file. Dim with the fix when nothing is set or every key is rejected.                                                                                                                                               |
+| Widget      | Source                           | Cadence | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ----------- | -------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `uptime.ts` | Uptime Kuma status page          | 2 min   | Arrow up/down, down-count label, a row per monitor with its 24 h uptime and latest ping (opens the site when the page shares its URL), grouped as the page is. Set `UPTIME_KUMA_URL` to the status page's address; required.                                                                                                                                                                                                                                                                                                           |
+| `jobs.ts`   | GitHub, Dagu, Vercel APIs        | 2 min   | Services: GitHub Actions (the latest run of every active workflow in your 10 most recently pushed repos plus pinned ones; `gh auth token` or a pasted token), Dagu (latest run per DAG from `/api/v1/dags` with an API key; suspended, never-run and hidden DAGs left out), Vercel (latest production deployment per project; the CLI's login, renewed by the CLI, or a pasted token). One section per service, every row, failing first; one service failing is a grey row in its section. `activity` icon, failing count across all. |
+| `trmnl.ts`  | TRMNL `/api/devices`             | 5 min   | Key via `TRMNL_API_KEY` or `secret shared/trmnl/api_key`; hidden without one.                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `arr.ts`    | Radarr, Sonarr, Prowlarr, Bazarr | 1 min   | Each app is a service: a URL and an API key (Keychain), each app optional; health issues, low disks, disabled indexers, then downloads, then a row per app. Optional `PIPELINE_STATUS_URL` for a post-processing status file. Dim with the fix when nothing is set or every key is rejected.                                                                                                                                                                                                                                           |
 
 Install one: `cp apps/desktop/widgets/uptime.ts ~/.config/scuttler/widgets/` (or
 Settings → Widgets → add file) — then it's yours to edit in place.

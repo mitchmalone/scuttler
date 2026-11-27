@@ -5,6 +5,38 @@
 
 ---
 
+### 2026-11-27 · Widget services, a configure screen per widget, and the jobs widget
+
+- **Context.** The Notion card "GitHub Actions monitor becomes a generalized job monitor":
+  watch GitHub Actions, Dagu (peekay's jobs moved there on 2026-11-27) and Vercel builds
+  from one cell, each under its own header. Widget settings were one flat list of env
+  vars per widget, rendered inline on the Widgets page: no way to add two Dagu servers,
+  and arr's eight fields already crowded the page.
+- **Decision.** A manifest may declare `services`: service types, each with its own
+  `settings` (same shape and rules) and `requires`. The user's instances live in a new
+  config key, `widgetServices` (widget id → `{ id, type, label, values }[]`), with
+  secrets in the Keychain under `widget/<widget>/<service>/<KEY>`. Each tick gets
+  `SCUTTLER_SERVICES`, a JSON array of the **complete** instances only: one missing a
+  required value is never delivered, so nothing is fetched for it (invariant 12). Every
+  widget opens its own configure screen from Settings → Widgets (Claude Design
+  `05 Widget services`, layout 5b, Mitch's pick): services stacked and collapsible, Add
+  service in the Services header as a dropdown of type names, then the widget's plain
+  settings. The Widgets page becomes an inventory. `jobs.ts` (`activity` icon) replaces
+  `github-actions.ts` and `vercel.ts`; arr's four apps become services. Card: every row
+  in every section, failing first.
+- **IPC.** No new command. `widget_secret_set` and `widget_secret_keys` take an optional
+  `service`, checked against the configured instance and its type's declared secrets.
+- **Migration.** One-time, on config load, only once the new widget file is installed
+  and only while that widget has no services: the github-actions and vercel bar slots
+  become one `widget:jobs` slot and two jobs services (GitHub keeps `GITHUB_REPOS`); arr's
+  URLs become services named after each app, and a service whose id is its type reads
+  its key from the old `widget/<widget>/<KEY>` Keychain item when its own is missing,
+  copying it forward. Old keys and items stay.
+- **Lost.** `github-actions.ts` carried the only example of the dormant OAuth device
+  flow (`auth`); it is in git history (before 9daa1d1) and the contract is unchanged.
+- **Alternatives.** A jobs-only settings page: solves one widget and leaves arr and the
+  rest on the list that was already running out (Mitch: roll it out to the others).
+
 ### 2026-11-25 · The wifi card says "Connected", and a signal meter replaces its subtitle
 
 - **Context.** On macOS 27.2.1 every unprivileged source of the network name is

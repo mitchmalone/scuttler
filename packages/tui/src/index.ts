@@ -151,6 +151,7 @@ export type {
   UsageBarState,
   WidgetAuth,
   WidgetSetting,
+  WidgetServiceType,
   BarZones,
   BatteryDetail,
   WidgetAction,
