@@ -1,9 +1,8 @@
 # Learnings
 
-Distilled, per-topic project knowledge — the pruned reference promoted from `docs/JOURNAL.md`
-once a gotcha proves durable. One or two lines per entry with the JOURNAL date for the
-story; link a DECISIONS entry or plan file if it needs more. Never duplicate global
-AGENTS.md rules here.
+Hard-won knowledge a contributor needs, by topic: symptom → cause → fix. Curated, not a log: an entry earns its place when someone outside the project would otherwise lose time to it. Prune what goes stale.
+
+Dates in parentheses name the original log entry. Code comments that cite `JOURNAL <date>` or a `plans/…` file point at the per-session log and plan files that lived in `docs/` until v0.8.8: read them with `git show v0.8.8:docs/JOURNAL.md` (plans: `git show v0.8.8:docs/plans/done/<file>`, or `active/`).
 
 ## macOS / AppKit / TCC
 
@@ -103,9 +102,6 @@ AGENTS.md rules here.
 - Any listener that resets `panelMode` must spare the owed first-launch setup (2026-10-20).
 - A fixture of five apps proves the scorer's shape; only a dense corpus proves its judgement
   (`packages/core/src/corpus.json`, 2026-09-16).
-- Agent worktrees branch from a stale `origin/main` when `git fetch` over SSH fails in agent
-  shells; refresh the ref over the gh HTTPS helper first, or pass the plan in the prompt
-  (2026-10-19).
 
 ## Scripts and widgets (user code under Bun)
 
@@ -139,9 +135,9 @@ AGENTS.md rules here.
 - Vercel's Ignored Build Step: `ignoreCommand` is capped at 256 characters (hence
   `apps/www/scripts/ignore-build.sh`), and `$VERCEL_GIT_PREVIOUS_SHA` can sit outside the
   shallow clone (git exits 128) — build when in doubt (2026-10-18, 2026-11-01).
-- The Claude Design MCP cannot serve binary files; the site logo is a `sips` downscale of
-  `apps/desktop/design/menubar-icon-source.png` (the repo copy is the source of truth).
-  Favicons in `apps/www/src/app/` use the ⌘-on-black artwork Mitch supplied verbatim.
+- The site logo is a `sips` downscale of `apps/desktop/design/menubar-icon-source.png` (the
+  repo copy is the source of truth; the design tool cannot serve binaries). Favicons in
+  `apps/www/src/app/` are supplied artwork, used verbatim.
 - Vercel CLI 61 moved its credential store to `~/.local/share/com.vercel.cli/auth.json`;
   read both locations and take the later-expiring token (2026-10-01).
 
@@ -151,5 +147,3 @@ AGENTS.md rules here.
   `.lefthookrc` exports it for hooks. `rustup run stable cargo fmt` does NOT work here.
 - pnpm 11 hard-fails on unapproved postinstall scripts; approve via `allowBuilds:` in
   `pnpm-workspace.yaml`.
-- Agent shells: Node comes from mise, pnpm from corepack; the `~/.local/bin/pnpm` shim points
-  at mise's alias dir so a node bump does not dangle it (2026-10-31).
