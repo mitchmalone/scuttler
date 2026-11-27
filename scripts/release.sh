@@ -283,4 +283,4 @@ gh release create "$TAG" "$DIST/$ZIP" "$DIST/$DMG" "$DIST/SHA256SUMS" \
 echo
 echo "✔ scuttler $TAG released. Fan-out (tap, Notion, deploy hook) is CI's job now:"
 echo "  gh run watch --repo $REPO \$(gh run list --repo $REPO --workflow release --limit 1 --json databaseId --jq '.[0].databaseId')"
-echo "  Post-release: update docs/STATUS.md; announce (deliberate, optional)."
+echo "  Post-release: update the backlog; announce (deliberate, optional)."
