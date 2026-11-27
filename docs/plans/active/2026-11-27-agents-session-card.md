@@ -1,6 +1,6 @@
 ---
 title: Agents per-session hover card (a tile grid per tmux session / herdr workspace)
-status: planned
+status: active
 created: 2026-11-27
 updated: 2026-11-27
 links:
@@ -54,16 +54,18 @@ text. The last feature for 0.9.
 
 ## Steps
 
-- [ ] Mock: page `06 Agents session card` on the settings-redesign canvas, the strip
-      with boxes and the card open, 3, 7 and 16 agents, every state; Mitch approves
-- [ ] Pure helpers in `format.ts`, tests first: `sessionCounts`, `tileStatus`,
-      `sessionTiles` (cap and `+N more`), `sessionCardHeight`
-- [ ] `BarAgents`: box-level hover, `BarAgentSessionCard` with tiles and footer; CSS in
-      `bar.css` with theme tokens only
-- [ ] Stories in `Bar.stories.tsx`: 3 agents mixed, 16 agents, loose box, herdr group
-- [ ] Site demo renders the same component (it already imports `BarAgents`; check its
-      fixtures cover several states in one group)
-- [ ] `pnpm verify`; STATUS; live check on an installed build
+- [x] Mock: `06 Agents session card`, three rounds. Mitch kept the state treatments,
+      dropped illustrations (animations later) and the tab line, kept a neutral age
+      chip, asked for context that goes red
+- [x] Helpers in `format.ts`, tests first: `sessionHoverKey`, `sessionCounts`,
+      `tileStatus`, `tileAge`, `contextTone`, `sessionTiles`, `sessionCardHeight`
+- [x] `contextPct` on `AgentSession` (Rust + TS), from the transcript tail; tests
+- [x] `BarAgents`: box-level hover; `BarAgentSessionCard`; CSS with theme tokens only
+- [x] Stories: scuttler and www sessions, 20 agents capped at 16
+- [x] Site spotlight opens the session card (same component)
+- [x] `pnpm verify` green
+- [ ] Live check on an installed build: hover a box, tiles and states right, click
+      jumps, done becomes read, context bars on Claude tiles
 
 ## Acceptance criteria
 
@@ -79,5 +81,6 @@ text. The last feature for 0.9.
 
 ## Risks / open questions
 
-- Mitch's design inspiration image on the Notion card couldn't be downloaded here; the
-  mock follows the card text until he shares it.
+- The context window is guessed (200k, then 1M past it): a 1M session reads high until
+  it passes 200k.
+- Rendered in Storybook and the site only by the build; not looked at by the agent.

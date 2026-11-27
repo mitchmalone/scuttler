@@ -11,8 +11,15 @@ import {
   agentStateLabel,
   batteryLook,
   batteryState,
+  contextTone,
   formatBarClock,
   groupAgents,
+  sessionCardHeight,
+  sessionCounts,
+  sessionHoverKey,
+  sessionTiles,
+  tileAge,
+  tileStatus,
   timeLeft,
   toneClass,
   widgetHealth,
@@ -438,5 +445,76 @@ describe('widgets', () => {
     expect(widgetHealth('exit 1: boom', 1_000_000 - 180, now)).toBe(
       'exit 1: boom · last ok 3m ago',
     )
+  })
+})
+
+describe('session card', () => {
+  it('keys a box by its group, the loose box by nothing', () => {
+    expect(sessionHoverKey('gogogo')).toBe('agents:gogogo')
+    expect(sessionHoverKey(null)).toBe('agents:')
+  })
+
+  it('counts with what needs you first, read folded into idle', () => {
+    expect(
+      sessionCounts([
+        agent({ state: 'working' }),
+        agent({ state: 'idle' }),
+        agent({ state: 'attention' }),
+        agent({ state: 'read' }),
+        agent({ state: 'working' }),
+        agent({ state: 'mystery' }),
+      ]),
+    ).toEqual(['1 needs you', '2 working', '2 idle', '1 other'])
+    expect(sessionCounts([])).toEqual([])
+  })
+
+  it('says what a tile is doing in one line', () => {
+    expect(
+      tileStatus(agent({ state: 'working', detail: 'Edit agents.rs' })),
+    ).toBe('editing agents.rs')
+    expect(tileStatus(agent({ state: 'working', detail: '' }))).toBe('working')
+    expect(
+      tileStatus(agent({ state: 'attention', detail: 'allow Bash?' })),
+    ).toBe('allow Bash?')
+    expect(tileStatus(agent({ state: 'attention' }))).toBe('needs you')
+    expect(tileStatus(agent({ state: 'done' }))).toBe('done, unread')
+    expect(tileStatus(agent({ state: 'read' }))).toBe('done')
+    expect(tileStatus(agent({ state: 'idle' }))).toBe('idle')
+  })
+
+  it('ages a tile by how long its state has held', () => {
+    const now = new Date(1_000_000 * 1000)
+    expect(
+      tileAge(agent({ stateSince: 1_000_000 - 240, updatedAt: 1 }), now),
+    ).toBe('4m')
+    expect(
+      tileAge(agent({ stateSince: 0, updatedAt: 1_000_000 - 7200 }), now),
+    ).toBe('2h')
+  })
+
+  it('warms the context bar at 60 % and heats it at 80 %', () => {
+    expect([10, 59, 60, 79, 80, 100].map(contextTone)).toEqual([
+      '',
+      '',
+      'warm',
+      'warm',
+      'hot',
+      'hot',
+    ])
+  })
+
+  it('caps at 16 tiles, the last one standing for the rest', () => {
+    const many = (n: number) =>
+      Array.from({ length: n }, (_, i) => agent({ session: `s${i}` }))
+    expect(sessionTiles(many(16))).toEqual({ tiles: many(16), more: 0 })
+    const capped = sessionTiles(many(20))
+    expect(capped.tiles).toHaveLength(15)
+    expect(capped.more).toBe(5)
+  })
+
+  it('guesses the card height by rows', () => {
+    expect(sessionCardHeight(1)).toBe(sessionCardHeight(4))
+    expect(sessionCardHeight(5) - sessionCardHeight(4)).toBe(84)
+    expect(sessionCardHeight(30)).toBe(sessionCardHeight(16))
   })
 })

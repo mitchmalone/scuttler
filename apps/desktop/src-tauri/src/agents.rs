@@ -111,6 +111,10 @@ pub struct AgentSession {
     /// the card can say why; `None` until the pane has been looked at.
     #[serde(default)]
     pub rule: Option<String>,
+    /// How full the agent's context is, 0–100, when its transcript says
+    /// (Claude only: claude_sessions.rs). None means unknown, not empty.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context_pct: Option<u8>,
 }
 
 /// Incoming wire event: an `AgentSession` minus the timestamp, all fields
@@ -983,8 +987,10 @@ struct ClaudeReport {
     /// Unix seconds Claude last set `status`; 0 when unknown.
     status_at: u64,
     pane: Option<String>,
-    /// The transcript's verdict, read only while the session is working.
+    /// The transcript's turn verdict.
     tail: Option<crate::claude_sessions::Tail>,
+    /// Context used, 0–100, from the transcript's last usage.
+    context: Option<u8>,
 }
 
 /// The session files matched to our sessions: by Claude's session id (hook
@@ -1037,18 +1043,16 @@ fn claude_reports(sessions: &[AgentSession]) -> Vec<ClaudeReport> {
         .into_iter()
         .map(|(i, j)| {
             let (s, f) = (&sessions[i], &files[j]);
-            let tail = (s.state == "working").then(|| {
-                let path = transcript_path(&config, &f.cwd, &f.session_id);
-                let tail = tails.read(&path);
-                read.push(path);
-                tail
-            });
+            let path = transcript_path(&config, &f.cwd, &f.session_id);
+            let state = tails.read(&path).unwrap_or_default();
+            read.push(path);
             ClaudeReport {
                 session: s.session.clone(),
                 status: f.status,
                 status_at: f.status_at,
                 pane: f.pane.clone(),
-                tail: tail.flatten(),
+                tail: state.tail,
+                context: state.tokens.map(crate::claude_sessions::context_pct),
             }
         })
         .collect();
@@ -1107,6 +1111,10 @@ fn reconcile_claude(sessions: &mut [AgentSession], reports: &[ClaudeReport], now
     for r in reports {
         if let Some(s) = sessions.iter_mut().find(|s| s.session == r.session) {
             changed |= reconcile(s, r, now);
+            if r.context.is_some() && s.context_pct != r.context {
+                s.context_pct = r.context;
+                changed = true;
+            }
         }
     }
     changed
@@ -1559,6 +1567,7 @@ mod tests {
             status_at,
             pane: None,
             tail,
+            context: None,
         }
     }
 
@@ -1677,6 +1686,22 @@ mod tests {
             "held past the lag: the file wins"
         );
         assert_eq!(s.state, "done");
+    }
+
+    #[test]
+    fn context_lands_on_the_session_and_unknown_keeps_the_last() {
+        let mut sessions = vec![paned("a", "%1")];
+        let mut r = report("a", None, 0, None);
+        r.context = Some(48);
+        assert!(reconcile_claude(&mut sessions, &[r.clone()], 10));
+        assert_eq!(sessions[0].context_pct, Some(48));
+        assert!(
+            !reconcile_claude(&mut sessions, &[r.clone()], 11),
+            "unchanged"
+        );
+        r.context = None;
+        assert!(!reconcile_claude(&mut sessions, &[r], 12));
+        assert_eq!(sessions[0].context_pct, Some(48));
     }
 
     #[test]

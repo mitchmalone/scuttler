@@ -48,6 +48,8 @@ export function agents(): AgentSession[] {
       detail: 'Edit launcher.tsx',
       updatedAt: t - 12,
       stateSince: t - 160,
+      contextPct: 64,
+      rule: 'seen: session file busy',
     }),
     agent({
       session: 'a2',
@@ -58,6 +60,7 @@ export function agents(): AgentSession[] {
       muxIndex: 2,
       muxLabel: 'release',
       updatedAt: t - 47,
+      contextPct: 86,
     }),
     agent({
       session: 'a3',
@@ -81,6 +84,34 @@ export function agents(): AgentSession[] {
       updatedAt: t - 900,
     }),
   ]
+}
+
+/** One tmux session with 20 agents in every state: the session card's 4 × 4
+ * cap and its "+N more" tile. */
+export function bigSession(): AgentSession[] {
+  const t = nowSecs()
+  const states = ['working', 'attention', 'done', 'read', 'idle']
+  const tools = [
+    'Edit agents.rs',
+    'Read bar.css',
+    'Bash cargo test',
+    'Grep rules',
+  ]
+  return Array.from({ length: 20 }, (_, i) => {
+    const state = states[i % states.length]!
+    return agent({
+      session: `big-${i}`,
+      state,
+      title: `task ${i + 1}`,
+      detail: state === 'working' ? tools[i % tools.length]! : '',
+      muxTarget: `%${100 + i}`,
+      muxGroup: 'gogogo',
+      muxIndex: i + 1,
+      muxLabel: `w${i + 1}`,
+      stateSince: t - 60 * (i + 1),
+      contextPct: state === 'read' ? null : (i * 13) % 100,
+    })
+  })
 }
 
 const AWAKE_SPEC: AwakeSpec = {
