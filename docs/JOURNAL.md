@@ -6,6 +6,19 @@
 
 ---
 
+### 2026-11-27 · Claude Code's session files and transcript, as observed on 2.1.332
+
+`~/.claude/sessions/<pid>.json` per running session: `pid`, `sessionId`, `cwd`,
+`startedAt`, `version`, `kind` (`interactive`), `tmux` (`gogogo:@208.%208`: session,
+window id, pane id), `name`, `status` (`busy` | `idle` | `shell`), `statusUpdatedAt` and
+`updatedAt` (ms), plus peer-messaging fields. A `<pid>.<hash>.key` file sits beside each:
+scuttler never opens it. The hook's `session_id` is the file's `sessionId`, and the hook's
+pid is the file's `pid`. Transcript lines in a working session are mostly not messages
+(`attachment`, `api-request`, `ai-title`, `mode`, `permission-mode`, `last-prompt`, …);
+only `user`/`assistant` lines that aren't `isSidechain`/`isMeta` count. API errors are
+assistant lines with `isApiErrorMessage: true`; Esc writes a user line `[Request
+interrupted by user]` or `[Request interrupted by user for tool use]`.
+
 ### 2026-11-26 · The uptime widget reads Uptime Kuma, not Upptime
 
 Mitch is retiring the Upptime repo (`RamenAmok/uptime`) for Uptime Kuma on his NAS.

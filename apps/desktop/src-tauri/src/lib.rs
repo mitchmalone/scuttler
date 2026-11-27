@@ -24,6 +24,7 @@ mod bar_modules;
 mod battery;
 mod bookmarks;
 mod brewlinks;
+mod claude_sessions;
 mod clipboard;
 mod colorpicker;
 mod commands;

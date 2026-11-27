@@ -5,6 +5,31 @@
 
 ---
 
+### 2026-11-27 · Agents: Claude Code's own session state is the second signal
+
+- **Context.** Since 2026-11-06 the screen decides agent state (rule files over
+  `capture-pane`). It breaks when Claude Code redraws its UI. Claude Code keeps
+  `~/.claude/sessions/<pid>.json` (`status`: `busy` | `idle` | `shell`, `tmux` pane, ids)
+  and a transcript that says when a turn ended; agents-deck trusts those first.
+- **Decision.** The signal order for Claude sessions: (1) the screen's **attention** is
+  final (neither the file nor the transcript shows a permission prompt or question for
+  an interactive session); (2) otherwise the session file's `busy`/`idle` settles working
+  vs not where it disagrees with the screen, at once when the file changed after our
+  last state change, or after 5 s of disagreement when it is older (Claude rewrites the
+  file a moment after a hook); (3) a transcript whose last real message ended the turn
+  (`end_turn`, an API error, `[Request interrupted by user`) settles working → done once
+  the screen has said working for 30 s (Esc emits no hook); (4) `shell`, unknown, missing
+  is no opinion and the screen rules. The file's pane id fills a session whose
+  `TMUX_PANE` was scrubbed; a Claude pane whose file says idle and that isn't in
+  attention is not read with `capture-pane`. The card's `rule` names the source (`seen:
+session file busy`, `seen: transcript end_turn`).
+- **How.** `claude_sessions.rs`, plain functions on the existing 2 s tick: stat the
+  `*.json` files (never the `.key` files beside them), reparse on size/mtime change, read
+  only appended transcript bytes (first read: the last 64 KB). `CLAUDE_CONFIG_DIR` is
+  honoured. No watcher, no process, no new IPC.
+- **Alternatives.** `claude agents --json` (a spawn, ~0.25 s CPU each); the files as the
+  only source (they are private and undocumented, and can't show attention).
+
 ### 2026-11-27 · Widget services, a configure screen per widget, and the jobs widget
 
 - **Context.** The Notion card "GitHub Actions monitor becomes a generalized job monitor":
