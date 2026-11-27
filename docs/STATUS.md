@@ -22,7 +22,12 @@
     workflows switched off on GitHub, and reads a moved repo once under its new name
     (a pinned `RamenAmok/peekay`, now `mitchmalone/peekay`, doubled its stale rows).
   - The wifi card says "Connected" and shows a signal meter (DECISIONS 2026-11-25).
-- **Built 2026-11-27 on `feat/widget-services`, live run open: widget services and the
+- **Built 2026-11-27 on `feat/agents-session-files`, live run open: Claude's own
+  session state as a second signal** (`plans/active/2026-11-27-agents-claude-session-files.md`,
+  DECISIONS 2026-11-27). Session files settle working vs idle, a transcript turn end
+  settles working to done after 30 s, the screen keeps attention. Installed; matches the
+  screen on every session so far; the Esc case wants a live try.
+- **Merged into `release/0.9` 2026-11-27, live run open: widget services and the
   jobs widget** (`plans/active/2026-11-27-jobs-widget-and-services.md`, DECISIONS
   2026-11-27). Every widget gets a configure screen; services (GitHub Actions, Dagu,
   Vercel for `jobs.ts`; Radarr, Sonarr, Prowlarr, Bazarr for `arr.ts`) stack under an add

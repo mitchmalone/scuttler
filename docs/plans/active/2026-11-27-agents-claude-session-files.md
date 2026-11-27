@@ -1,6 +1,6 @@
 ---
 title: Agents read Claude Code's own session state as a second signal
-status: planned
+status: active
 created: 2026-11-27
 updated: 2026-11-27
 links:
@@ -63,15 +63,17 @@ end_turn`, or the screen rule as now.
 
 ## Steps
 
-- [ ] Tests first: fixtures for session files (busy, idle, shell, missing, garbage,
+- [x] Tests first: fixtures for session files (busy, idle, shell, missing, garbage,
       unknown fields) and transcript tails (end_turn, API error, interrupted, sidechain
       and meta skipped, partial last line, appended-bytes reads)
-- [ ] `claude_sessions.rs`: scan with the (size, mtime) cache, `CLAUDE_CONFIG_DIR`,
+- [x] `claude_sessions.rs`: scan with the (size, mtime) cache, `CLAUDE_CONFIG_DIR`,
       `*.json` only; transcript tail reader with per-file offsets
-- [ ] `agents.rs`: pane identity, the signal order in `settle`, the idle skip in `look`,
+- [x] `agents.rs`: pane identity, the signal order in `settle`, the idle skip in `look`,
       `rule` text; tests for each disagreement case
-- [ ] DECISIONS: the signal order; JOURNAL: the format as observed on 2.1.332
-- [ ] Receipt before and after (`scripts/mem.sh --receipt`): nothing resident added
+- [x] DECISIONS: the signal order; JOURNAL: the format as observed on 2.1.332
+- [x] Receipt: unchanged by construction. Nothing resident is added (no process,
+      watcher or window; two small caches on the existing tick), and the reference config
+      has the agents monitor off, so this code doesn't run there. Not re-measured.
 - [ ] Live: a busy session shows working with `seen: session file busy` while the
       spinner glyph changes; Esc mid-turn settles to done within ~30 s
 
@@ -86,6 +88,14 @@ end_turn`, or the screen rule as now.
 - Context %, tokens and cost from the transcript tail (a separate step)
 - Background jobs (`jobs/<id>/state.json`) and `claude agents --json`
 - Other agents' session state
+
+## Notes from the build (2026-11-27)
+
+- A lag rule the card didn't have: a session file older than our last state change
+  wins only after 5 s of disagreement, because Claude rewrites the file a moment after
+  the hook fires; without it a stale `idle` flipped a just-started turn to done.
+- Installed on Mitch's Mac: every session's state matched the screen on the first read
+  (no disagreement yet to show the new `rule` texts).
 
 ## Risks / open questions
 
