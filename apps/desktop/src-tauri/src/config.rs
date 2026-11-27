@@ -290,6 +290,10 @@ pub struct Config {
     /// each widget's manifest `settings` (docs/WIDGETS.md). Secrets never land here —
     /// they're in the Keychain (widget_secrets.rs). Delivered to the widget as env.
     pub widgets: std::collections::HashMap<String, std::collections::HashMap<String, String>>,
+    /// Services the user added to widgets that declare them (manifest
+    /// `services`): widget id → instances, in order. Secrets are Keychain-only
+    /// (`widget/<widget>/<service>/<KEY>`); delivered as `SCUTTLER_SERVICES`.
+    pub widget_services: std::collections::HashMap<String, Vec<crate::widgets::WidgetService>>,
     /// Plugins: disabled ids (docs/PLUGINS.md).
     pub plugins: PluginsConfig,
     /// The desktop picture (Settings → Wallpaper): a light and a dark image swapped
@@ -401,6 +405,7 @@ impl Default for Config {
             color_loupe_zoom: 8,
             color_loupe_size: 264,
             widgets: std::collections::HashMap::new(),
+            widget_services: std::collections::HashMap::new(),
             plugins: PluginsConfig::default(),
             wallpaper: WallpaperConfig::default(),
             focus_wallpaper: FocusWallpaperConfig::default(),
