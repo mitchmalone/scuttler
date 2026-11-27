@@ -18,7 +18,9 @@
     the real mas binary. The copy on this Mac is still the broken wrapper until "allow
     admin" is pressed again; no App Store upgrade has succeeded yet.
   - The GitHub Actions widget tracks every workflow, with pinned repos (`GITHUB_REPOS`)
-    and failing rows first.
+    and failing rows first. Since 2026-11-27 it lists every row (no cap), skips
+    workflows switched off on GitHub, and reads a moved repo once under its new name
+    (a pinned `RamenAmok/peekay`, now `mitchmalone/peekay`, doubled its stale rows).
   - The wifi card says "Connected" and shows a signal meter (DECISIONS 2026-11-25).
 - **Done 2026-11-26, for 0.9, checked live by Mitch** (JOURNAL 2026-11-26):
   - The bar's usage cell is a robot (lucide `Bot`); the card's head keeps the meter.

@@ -233,8 +233,8 @@ describe('github-actions', () => {
     expect(v.card?.subtitle).toBe('1 failing · 1 running · 2 healthy')
   })
 
-  it('says how many rows the card left out', () => {
-    const many = Array.from({ length: 15 }, (_, i) => ({
+  it('lists every run, none held back', () => {
+    const many = Array.from({ length: 40 }, (_, i) => ({
       repo: 'x/r',
       workflow: `w${i}`,
       state: 'success',
@@ -242,8 +242,50 @@ describe('github-actions', () => {
       createdAt: '',
     }))
     const card = actions.view(many, 'https://gh', NOW).card
-    expect(card?.rows).toHaveLength(12)
-    expect(card?.hint).toBe('3 more not shown · click a run to open it')
+    expect(card?.rows).toHaveLength(40)
+    expect(card?.hint).toBe('click a run to open it')
+  })
+
+  it('drops runs of workflows that are switched off', () => {
+    const active = actions.activeWorkflows([
+      { id: 1, state: 'active' },
+      { id: 2, state: 'disabled_manually' },
+    ])
+    const items = actions.latestPerWorkflow(
+      'x/peekay',
+      [
+        {
+          workflow_id: 2,
+          name: 'RSS',
+          status: 'completed',
+          conclusion: 'failure',
+        },
+        {
+          workflow_id: 1,
+          name: 'Deploy',
+          status: 'completed',
+          conclusion: 'success',
+        },
+        { name: 'no id', status: 'completed', conclusion: 'failure' },
+      ],
+      active,
+    )
+    expect(items.map((i) => i.workflow)).toEqual(['Deploy'])
+  })
+
+  it('names a moved repo as GitHub does now, and shows its runs once', () => {
+    const run = {
+      workflow_id: 1,
+      name: 'CI',
+      status: 'completed',
+      conclusion: 'failure',
+      html_url: 'https://github.com/new/peekay/actions/runs/9',
+      repository: { full_name: 'new/peekay' },
+    }
+    const old = actions.latestPerWorkflow('old/peekay', [run])
+    const now = actions.latestPerWorkflow('new/peekay', [run])
+    expect(old[0]?.repo).toBe('new/peekay')
+    expect(actions.dedupeRuns([...old, ...now])).toHaveLength(1)
   })
 
   it('keeps the latest run of every workflow, not one per repo', () => {
