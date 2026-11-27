@@ -15,14 +15,16 @@ out/
 .env
 .env.*
 !.env.*.example
+.envrc
 
 # claude/agent personal state
 .claude/settings.local.json
 .claude/*.local.json
 .claude/worktrees/
 
-# private notes escape hatch
-local/
+# local working state: session copies (local/session/) and private notes
+local/*
+!local/README.md
 
 # vercel project link (apps/www)
 .vercel/

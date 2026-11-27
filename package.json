@@ -7,7 +7,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "prepare": "lefthook install",
+    "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && lefthook install || true",
     "dev": "pnpm --filter \"./apps/*\" --parallel dev",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",

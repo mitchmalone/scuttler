@@ -183,4 +183,14 @@ export default tseslint.config(
     languageOptions: { globals: { module: 'readonly' } },
   },
   prettier,
+  {
+    files: ['scripts/**/*.mjs'],
+    // Node scripts, not app code (scripts/session.mjs is the jig's): the two
+    // globals they use, without pulling in the `globals` package for them.
+    languageOptions: { globals: { process: 'readonly', console: 'readonly' } },
+    rules: {
+      // Operational scripts talk to a human via stdout.
+      'no-console': 'off',
+    },
+  },
 )
