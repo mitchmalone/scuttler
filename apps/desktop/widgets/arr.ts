@@ -1012,20 +1012,10 @@ export function toView(snaps: AppSnapshot[], now: number): WidgetView {
   ].filter(Boolean)
   return {
     icon: anyError ? 'triangle-alert' : 'clapperboard',
-    label: problems
-      ? String(problems)
-      : active
-        ? String(active)
-        : fresh
-          ? String(fresh)
-          : null,
-    tone: anyError
-      ? 'error'
-      : problems
-        ? 'warn'
-        : downloads.length || fresh
-          ? 'accent'
-          : 'ok',
+    // A quiet cell (Mitch, 2026-11-28): no count, and colour only when
+    // something is wrong. Downloads and new arrivals live in the card.
+    label: null,
+    tone: anyError ? 'error' : problems ? 'warn' : 'ok',
     click: open(target ? urls.get(target) : undefined),
     card: {
       title: 'Media stack',
