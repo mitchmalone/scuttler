@@ -22,7 +22,11 @@
     workflows switched off on GitHub, and reads a moved repo once under its new name
     (a pinned `RamenAmok/peekay`, now `mitchmalone/peekay`, doubled its stale rows).
   - The wifi card says "Connected" and shows a signal meter (DECISIONS 2026-11-25).
-- **Built 2026-11-27 on `feat/agents-session-files`, live run open: Claude's own
+- **Built 2026-11-27 on `feat/agents-session-card`, live run open: one hover card per
+  agent session** (`plans/active/2026-11-27-agents-session-card.md`, DECISIONS
+  2026-11-27): a tile grid per tmux session / herdr workspace, a neutral age chip, and a
+  context bar for Claude sessions. The last feature for 0.9.
+- **Merged into `release/0.9` 2026-11-27, live run open: Claude's own
   session state as a second signal** (`plans/active/2026-11-27-agents-claude-session-files.md`,
   DECISIONS 2026-11-27). Session files settle working vs idle, a transcript turn end
   settles working to done after 30 s, the screen keeps attention. Installed; matches the

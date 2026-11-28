@@ -34,6 +34,11 @@ export interface AgentSession {
   /** The screen rule that last set the state (rules.rs), so a card can say
    * why; absent until the pane has been looked at. */
   rule?: string | null
+  /** How full the agent's context is, 0–100, when its transcript says
+   * (Claude only); absent means unknown. */
+  contextPct?: number | null
+  /** The session's own name when its agent reports one (Claude). */
+  name?: string | null
 }
 
 /** What the wifi hover card shows — mirrors WifiStatus in wifi.rs (the same

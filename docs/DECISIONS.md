@@ -5,6 +5,28 @@
 
 ---
 
+### 2026-11-27 · Agents: one hover card per session, a tile per agent, and context %
+
+- **Context.** The Notion card "Agents: per-session hover card": the bar boxes agent
+  cells by tmux session / herdr workspace, but the hover was per agent. Mitch reviewed
+  three rounds on the canvas (`06 Agents session card`): kept the state treatments,
+  removed the illustrations ("let's go in without illustration for now", animations
+  later), removed the tab line (it repeated the title and a pane number), kept a neutral
+  age chip, and asked for a context indicator that goes red as it fills.
+- **Decision.** Hovering a box (any cell or its padding, hover key `agents:<group>`,
+  `agents:` for the loose box) opens `BarAgentSessionCard` (packages/tui): a 4-column
+  grid sized for 16 tiles, the 16th becoming `+N more` past that; tab order. A tile has
+  the state glyph, title, a neutral age chip (how long the state has held), one status
+  line, and a context bar when known (amber 60 %, red 80 %). State reads without text:
+  attention a solid warn fill, working an accent border, done stripes, read and idle
+  dimmed; theme tokens only. The footer shows the pointed tile's crumbs, clock and
+  `rule`. The per-agent card is gone; click still jumps (done marks read).
+- **Context %.** A new optional field on the agent snapshot, `contextPct` (no new
+  command): the last real assistant message's input + cache tokens over the window,
+  from the transcript tail `claude_sessions.rs` already reads, for every Claude session.
+  The transcript doesn't name the window: 200k until the count passes it, then 1M, so a
+  1M session reads high below 200k. Other agents have none and show no bar.
+
 ### 2026-11-27 · Agents: Claude Code's own session state is the second signal
 
 - **Context.** Since 2026-11-06 the screen decides agent state (rule files over

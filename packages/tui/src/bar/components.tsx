@@ -26,14 +26,20 @@ import {
 } from '../components/usage'
 import { AgentStateIcon } from './agent-icons'
 import {
-  agentAge,
   agentCrumbs,
-  agentDoing,
   agentMeta,
   agentStateLabel,
   batteryLook,
   batteryState,
+  contextTone,
   groupAgents,
+  sessionCardHeight,
+  sessionCounts,
+  sessionHoverKey,
+  sessionTiles,
+  tileAge,
+  tileName,
+  tileStatus,
   timeLeft,
   toneClass,
   widgetHealth,
@@ -295,38 +301,42 @@ export function BarAgents({
   agents,
   now,
   hover,
-  cardHeight = 150,
   onJump,
 }: {
   agents: AgentSession[]
   now: Date
   hover: BarHoverApi
+  /** Unused since the per-session card: its height comes from the tile count. */
   cardHeight?: number
   onJump?: (session: string) => void
 }) {
   if (agents.length === 0) return null
 
   const { groups, loose } = groupAgents(agents)
-  const hoveredId = hover.hovered?.startsWith('agent:')
-    ? hover.hovered.slice('agent:'.length)
-    : null
-  const hovered = agents.find((a) => a.session === hoveredId) ?? null
-
-  const cell = (a: AgentSession) => (
-    <button
-      key={a.session}
-      type="button"
-      data-hover={`agent:${a.session}`}
-      data-hover-height={cardHeight}
-      className={`bar-agent bar-agent-${a.state}`}
-      onMouseEnter={() => hover.enter(`agent:${a.session}`, cardHeight)}
-      onClick={() => onJump?.(a.session)}
-    >
-      <AgentStateIcon state={a.state} />
-    </button>
-  )
-  const nowSecs = Math.floor(now.getTime() / 1000)
-  const doing = hovered ? agentDoing(hovered.state, hovered.detail) : null
+  const boxes: {
+    key: string
+    name: string
+    list: AgentSession[]
+    loose: boolean
+  }[] = [
+    ...groups.map(([name, list]) => ({
+      key: sessionHoverKey(name),
+      name,
+      list,
+      loose: false,
+    })),
+    ...(loose.length
+      ? [
+          {
+            key: sessionHoverKey(null),
+            name: 'outside a multiplexer',
+            list: loose,
+            loose: true,
+          },
+        ]
+      : []),
+  ]
+  const open = boxes.find((b) => b.key === hover.hovered) ?? null
 
   return (
     <div
@@ -334,70 +344,143 @@ export function BarAgents({
       onMouseEnter={hover.stay}
       onMouseLeave={hover.leave}
     >
-      {groups.map(([name, list]) => (
-        <div key={name} className="bar-agent-group">
-          {list.map(cell)}
-        </div>
-      ))}
-      {loose.length > 0 && (
-        <div className="bar-agent-group bar-agent-group-loose">
-          {loose.map(cell)}
-        </div>
-      )}
-      {hovered && (
-        <BarCard variant="agent" cardRef={hover.cardRef}>
-          <div className={`bar-agent-rule bar-agent-${hovered.state}`} />
-          <div className="bar-agent-head">
-            <div className={`bar-agent-swatch bar-agent-${hovered.state}`}>
-              <AgentStateIcon state={hovered.state} size={20} />
-            </div>
-            <div className="bar-agent-headtext">
-              <div className="bar-agent-stateline">
-                <span className={`bar-agent-state bar-agent-${hovered.state}`}>
-                  {agentStateLabel(hovered.state)}
-                </span>
-                <span className="bar-agent-age">
-                  {agentAge(hovered.updatedAt, now)}
-                </span>
-              </div>
-              <div className="bar-agent-title">
-                {hovered.title || hovered.agent}
-              </div>
-            </div>
-          </div>
-          {doing && (
-            <div className="bar-agent-doing">
-              {doing.icon && (
-                <DynamicIcon name={doing.icon as IconName} {...ICON_PROPS} />
-              )}
-              {doing.verb && (
-                <span className="bar-agent-verb">{doing.verb}</span>
-              )}
-              {doing.object && (
-                <span className="bar-agent-object">{doing.object}</span>
-              )}
-            </div>
-          )}
-          <div className="bar-agent-crumbs">
-            {agentCrumbs(hovered).map((crumb, i) => (
-              <span key={`${i}-${crumb}`} className="bar-agent-crumb">
-                {crumb}
-              </span>
+      {boxes.map((b) => {
+        const height = sessionCardHeight(b.list.length)
+        return (
+          <div
+            key={b.key}
+            data-hover={b.key}
+            data-hover-height={height}
+            className={`bar-agent-group${b.loose ? ' bar-agent-group-loose' : ''}${
+              open?.key === b.key ? ' bar-agent-group-open' : ''
+            }`}
+            onMouseEnter={() => hover.enter(b.key, height)}
+          >
+            {b.list.map((a) => (
+              <button
+                key={a.session}
+                type="button"
+                className={`bar-agent bar-agent-${a.state}`}
+                aria-label={`${a.title || a.agent}: ${agentStateLabel(a.state)}`}
+                onClick={() => onJump?.(a.session)}
+              >
+                <AgentStateIcon state={a.state} />
+              </button>
             ))}
           </div>
-          <div className="bar-agent-meta">
-            {agentMeta(hovered, nowSecs).map((m) => (
-              <span key={m}>{m}</span>
-            ))}
-          </div>
-          <BarCardHint>
-            {hovered.state === 'done'
-              ? 'click to jump · marks read'
-              : 'click to jump'}
-          </BarCardHint>
-        </BarCard>
+        )
+      })}
+      {open && (
+        <BarAgentSessionCard
+          key={open.key}
+          name={open.name}
+          agents={open.list}
+          now={now}
+          onJump={onJump}
+          cardRef={hover.cardRef}
+        />
       )}
     </div>
+  )
+}
+
+/**
+ * One tmux session's (or herdr workspace's, or the loose box's) agents as a
+ * grid of tiles (Claude Design `06 Agents session card`, round 2, DECISIONS
+ * 2026-11-27). State reads before text does: attention is a solid warn fill,
+ * working an accent border, done (unread) stripes, read and idle dimmed. Each
+ * tile has its state glyph, title, one status line, a neutral age chip and,
+ * when known, a context bar that warms at 60 % and heats at 80 %. The footer
+ * shows the tile under the pointer: where it is, its clock, and why scuttler
+ * thinks so. Exported for the site demo and stories.
+ */
+export function BarAgentSessionCard({
+  name,
+  agents,
+  now,
+  onJump,
+  cardRef,
+}: {
+  name: string
+  agents: AgentSession[]
+  now: Date
+  onJump?: (session: string) => void
+  cardRef?: (el: HTMLElement | null) => void
+}) {
+  const [pointed, setPointed] = useState<string | null>(null)
+  const { tiles, more } = sessionTiles(agents)
+  const focus = agents.find((a) => a.session === pointed) ?? null
+  const nowSecs = Math.floor(now.getTime() / 1000)
+  return (
+    <BarCard variant="agentsession" cardRef={cardRef}>
+      <div className="bar-agentsession-head">
+        <span className="bar-agentsession-name">{name}</span>
+        <span className="bar-agentsession-counts">
+          {sessionCounts(agents).map((c) => (
+            <span key={c}>{c}</span>
+          ))}
+        </span>
+      </div>
+      <div className="bar-agentsession-grid">
+        {tiles.map((a) => (
+          <button
+            key={a.session}
+            type="button"
+            className={`bar-agenttile bar-agenttile-${a.state}`}
+            onMouseEnter={() => setPointed(a.session)}
+            onMouseLeave={() => setPointed(null)}
+            onClick={() => onJump?.(a.session)}
+          >
+            <span className="bar-agenttile-top">
+              <span className={`bar-agent-${a.state}`}>
+                <AgentStateIcon state={a.state} />
+              </span>
+              <span className="bar-agenttile-title">{tileName(a)}</span>
+              <span className="bar-agenttile-age">{tileAge(a, now)}</span>
+            </span>
+            <span className="bar-agenttile-status">{tileStatus(a)}</span>
+            {a.contextPct != null && (
+              <span
+                className={`bar-agenttile-ctx ${contextTone(a.contextPct)}`}
+                title={`context ${a.contextPct}% used`}
+              >
+                <span className="bar-agenttile-ctxlabel">ctx</span>
+                <span className="bar-agenttile-ctxbar">
+                  <i style={{ width: `${a.contextPct}%` }} />
+                </span>
+                <span className="bar-agenttile-ctxpct">{a.contextPct}%</span>
+              </span>
+            )}
+          </button>
+        ))}
+        {more > 0 && (
+          <div className="bar-agenttile bar-agenttile-more">
+            <span className="bar-agenttile-title">+{more} more</span>
+            <span className="bar-agenttile-status">in the agents panel</span>
+          </div>
+        )}
+      </div>
+      <div className="bar-agentsession-foot">
+        {focus ? (
+          <>
+            {agentCrumbs(focus).map((c, i) => (
+              <span key={`${i}-${c}`} className="bar-agent-crumb">
+                {c}
+              </span>
+            ))}
+            <span>{agentMeta(focus, nowSecs)[0]}</span>
+            {focus.rule && (
+              <span className="bar-agentsession-rule">{focus.rule}</span>
+            )}
+          </>
+        ) : (
+          <span>
+            click a tile to jump
+            {agents.some((a) => a.state === 'done') ? ' · done marks read' : ''}
+          </span>
+        )}
+      </div>
+    </BarCard>
   )
 }
 

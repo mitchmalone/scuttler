@@ -17,6 +17,7 @@ import {
   BATTERY,
   WIFI,
   awakeStatus,
+  bigSession,
   held,
   noop,
   nowSecs,
@@ -215,12 +216,21 @@ export const barCardStories = defineStories('Bar hover cards (app)', [
     render: () => strip({ hovered: 'awake', room: 220 }),
   },
   {
-    name: 'agent card — working with a subagent',
-    render: () => strip({ hovered: 'agent:a1', room: 200 }),
+    name: 'session card — scuttler (working, needs you)',
+    render: () => strip({ hovered: 'agents:scuttler', room: 160 }),
   },
   {
-    name: 'agent card — needs attention',
-    render: () => strip({ hovered: 'agent:a2', room: 200 }),
+    name: 'session card — www (done, idle)',
+    render: () => strip({ hovered: 'agents:www', room: 160 }),
+  },
+  {
+    name: 'session card — 20 agents, capped at 16',
+    render: () =>
+      strip({
+        snap: { ...snapshot(), agents: bigSession() },
+        hovered: 'agents:gogogo',
+        room: 420,
+      }),
   },
   {
     name: 'usage card',

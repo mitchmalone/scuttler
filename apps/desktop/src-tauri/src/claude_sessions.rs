@@ -38,6 +38,8 @@ pub struct ClaudeSession {
     pub pid: u32,
     pub session_id: String,
     pub cwd: String,
+    /// The session's name as Claude shows it (`/rename`, or its own), when set.
+    pub name: Option<String>,
     pub status: Option<Status>,
     /// Unix seconds `status` was last set; 0 when the file doesn't say.
     pub status_at: u64,
@@ -52,6 +54,7 @@ struct RawSession {
     session_id: Option<String>,
     #[serde(default)]
     cwd: String,
+    name: Option<String>,
     status: Option<String>,
     status_updated_at: Option<u64>,
     tmux: Option<String>,
@@ -69,6 +72,10 @@ pub fn parse_session(json: &str) -> Option<ClaudeSession> {
         pid: raw.pid?,
         session_id: raw.session_id.filter(|s| !s.is_empty())?,
         cwd: raw.cwd,
+        name: raw
+            .name
+            .map(|n| n.trim().to_owned())
+            .filter(|n| !n.is_empty()),
         status,
         status_at: raw.status_updated_at.map_or(0, |ms| ms / 1000),
         pane: raw.tmux.as_deref().and_then(pane_of),
@@ -172,6 +179,51 @@ pub enum Tail {
     Open,
 }
 
+/// What a transcript has told us so far: the turn verdict and the context
+/// the last assistant message used (input + cache tokens).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct TailState {
+    pub tail: Option<Tail>,
+    pub tokens: Option<u64>,
+}
+
+/// Context used, as a percentage of the window. The transcript doesn't name
+/// the window, so it's 200k until the count passes that, then 1M: a 1M
+/// session reads high until it's past 200k (an approximation, documented).
+pub fn context_pct(tokens: u64) -> u8 {
+    let window = if tokens > 200_000 { 1_000_000 } else { 200_000 };
+    (tokens.saturating_mul(100) / window).min(100) as u8
+}
+
+/// Fold transcript lines into a tail state: the verdict (`fold_tail`) and the
+/// last real assistant message's context tokens.
+pub fn fold_state(prev: TailState, lines: &str) -> TailState {
+    let mut tokens = prev.tokens;
+    for line in lines.lines() {
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else {
+            continue;
+        };
+        if v.get("type").and_then(|t| t.as_str()) != Some("assistant")
+            || v.get("isSidechain").and_then(|b| b.as_bool()) == Some(true)
+        {
+            continue;
+        }
+        let Some(usage) = v.pointer("/message/usage") else {
+            continue;
+        };
+        let n = |k: &str| usage.get(k).and_then(|x| x.as_u64()).unwrap_or(0);
+        let total =
+            n("input_tokens") + n("cache_creation_input_tokens") + n("cache_read_input_tokens");
+        if total > 0 {
+            tokens = Some(total);
+        }
+    }
+    TailState {
+        tail: fold_tail(prev.tail, lines),
+        tokens,
+    }
+}
+
 /// Fold transcript lines into the tail verdict, starting from `prev`. Real
 /// messages are `user` and `assistant` lines that are neither sidechain nor
 /// meta; everything else (attachments, titles, summaries, api records) and any
@@ -235,18 +287,18 @@ const FIRST_READ: u64 = 64 * 1024;
 /// was appended. A partial last line is kept back until it's complete.
 #[derive(Default)]
 pub struct Tails {
-    files: HashMap<PathBuf, (u64, Option<Tail>)>,
+    files: HashMap<PathBuf, (u64, TailState)>,
 }
 
 impl Tails {
     /// The tail verdict for `path`, reading only new bytes. A file that shrank
     /// (rewritten) is read again from near its end.
-    pub fn read(&mut self, path: &Path) -> Option<Tail> {
+    pub fn read(&mut self, path: &Path) -> Option<TailState> {
         let mut file = fs::File::open(path).ok()?;
         let len = file.metadata().ok()?.len();
         let (mut pos, mut tail, fresh) = match self.files.get(path) {
             Some(&(p, t)) if p <= len => (p, t, false),
-            _ => (len.saturating_sub(FIRST_READ), None, true),
+            _ => (len.saturating_sub(FIRST_READ), TailState::default(), true),
         };
         if pos < len {
             file.seek(SeekFrom::Start(pos)).ok()?;
@@ -263,12 +315,12 @@ impl Tails {
             // Only whole lines: a partial last one waits for the next read.
             let end = buf.iter().rposition(|&b| b == b'\n').map_or(0, |i| i + 1);
             if end > start {
-                tail = fold_tail(tail, &String::from_utf8_lossy(&buf[start..end]));
+                tail = fold_state(tail, &String::from_utf8_lossy(&buf[start..end]));
             }
             pos += end.max(start) as u64;
         }
         self.files.insert(path.to_path_buf(), (pos, tail));
-        tail
+        Some(tail)
     }
 
     /// Forget transcripts no live session points at.
@@ -292,6 +344,14 @@ mod tests {
         assert_eq!(s.status, Some(Status::Busy));
         assert_eq!(s.status_at, 1_795_755_550);
         assert_eq!(s.pane.as_deref(), Some("%208"));
+        assert_eq!(s.name, None);
+        let named = r#"{"pid":1,"sessionId":"a","name":"  Scuttler "}"#;
+        assert_eq!(
+            parse_session(named).unwrap().name.as_deref(),
+            Some("Scuttler")
+        );
+        let blank = r#"{"pid":1,"sessionId":"a","name":"  "}"#;
+        assert_eq!(parse_session(blank).unwrap().name, None);
 
         let idle = r#"{"pid":1,"sessionId":"a","status":"idle"}"#;
         let s = parse_session(idle).unwrap();
@@ -397,6 +457,38 @@ mod tests {
         );
     }
 
+    #[test]
+    fn context_comes_from_the_last_assistant_usage() {
+        let used = |input: u64, cache: u64| {
+            line(
+                serde_json::json!({"type":"assistant","message":{"stop_reason":"tool_use",
+                "usage":{"input_tokens":input,"cache_creation_input_tokens":0,
+                "cache_read_input_tokens":cache,"output_tokens":300}}}),
+            )
+        };
+        let side = line(serde_json::json!({"type":"assistant","isSidechain":true,
+            "message":{"usage":{"input_tokens":190000}}}));
+        let st = fold_state(
+            TailState::default(),
+            &format!("{}{}{}", used(2, 50_000), used(2, 120_000), side),
+        );
+        assert_eq!(
+            st.tokens,
+            Some(120_002),
+            "the last real one, not the sidechain"
+        );
+        assert_eq!(st.tail, Some(Tail::Open));
+        assert_eq!(
+            fold_state(st, &user("next")).tokens,
+            Some(120_002),
+            "kept across lines without usage"
+        );
+        assert_eq!(context_pct(120_000), 60);
+        assert_eq!(context_pct(170_000), 85);
+        assert_eq!(context_pct(480_000), 48, "past 200k the window is 1M");
+        assert_eq!(context_pct(5_000_000), 100);
+    }
+
     fn tempdir(name: &str) -> PathBuf {
         let dir = std::env::temp_dir().join(format!(
             "scuttler-claude-{name}-{}-{:?}",
@@ -415,22 +507,28 @@ mod tests {
         let path = dir.join("s.jsonl");
         fs::write(&path, format!("{}{}", user("go"), assistant("tool_use"))).unwrap();
         let mut tails = Tails::default();
-        assert_eq!(tails.read(&path), Some(Tail::Open));
+        assert_eq!(tails.read(&path).and_then(|t| t.tail), Some(Tail::Open));
 
         // Half a line: not read yet.
         let done = assistant("end_turn");
         let (a, b) = done.split_at(10);
         let mut f = fs::OpenOptions::new().append(true).open(&path).unwrap();
         f.write_all(a.as_bytes()).unwrap();
-        assert_eq!(tails.read(&path), Some(Tail::Open));
+        assert_eq!(tails.read(&path).and_then(|t| t.tail), Some(Tail::Open));
         f.write_all(b.as_bytes()).unwrap();
-        assert_eq!(tails.read(&path), Some(Tail::Ended(TurnEnd::EndTurn)));
+        assert_eq!(
+            tails.read(&path).and_then(|t| t.tail),
+            Some(Tail::Ended(TurnEnd::EndTurn))
+        );
         // Nothing new: same verdict, no re-read.
-        assert_eq!(tails.read(&path), Some(Tail::Ended(TurnEnd::EndTurn)));
+        assert_eq!(
+            tails.read(&path).and_then(|t| t.tail),
+            Some(Tail::Ended(TurnEnd::EndTurn))
+        );
 
         // Rewritten shorter: read again.
         fs::write(&path, user("fresh")).unwrap();
-        assert_eq!(tails.read(&path), Some(Tail::Open));
+        assert_eq!(tails.read(&path).and_then(|t| t.tail), Some(Tail::Open));
 
         assert_eq!(tails.read(&dir.join("missing.jsonl")), None);
         tails.retain(&[]);
@@ -450,7 +548,10 @@ mod tests {
         body.push_str(&assistant("end_turn"));
         fs::write(&path, body).unwrap();
         let mut tails = Tails::default();
-        assert_eq!(tails.read(&path), Some(Tail::Ended(TurnEnd::EndTurn)));
+        assert_eq!(
+            tails.read(&path).and_then(|t| t.tail),
+            Some(Tail::Ended(TurnEnd::EndTurn))
+        );
         let _ = fs::remove_dir_all(&dir);
     }
 
