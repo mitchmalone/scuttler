@@ -570,16 +570,43 @@ fn root_command(command: &str, binary: &str, path: &Path) -> String {
 /// password-gated `ALL` too. A rule naming any other path (the pre-2026-11-08
 /// Homebrew one) is not access: the row asks for admin again, which rewrites
 /// it.
+///
+/// The path must also hold a real binary: a copy made before 0.9 is mas 7's
+/// zsh wrapper, which exits 127 under sudo's reset environment, so App Store
+/// upgrades failed while the row said ready (2026-11-28). A script means the
+/// rule is offered again; writing it copies the real binary.
 fn admin_access(bin: &Path) -> AdminAccess {
-    let ruled = bin.is_file()
-        && std::fs::read_to_string("/etc/sudoers.d/scuttler")
-            .map(|rule| rule_names(&rule, bin))
-            .unwrap_or(false);
-    if ruled {
+    let rule = std::fs::read_to_string("/etc/sudoers.d/scuttler").ok();
+    access_from(bin, rule.as_deref())
+}
+
+/// `admin_access` over an already-read rule file: testable without root.
+fn access_from(bin: &Path, rule: Option<&str>) -> AdminAccess {
+    let ruled = bin.is_file() && rule.is_some_and(|r| rule_names(r, bin));
+    let real = ruled && !file_head(bin).is_some_and(|head| is_script(&head));
+    if real {
         AdminAccess::Ready
     } else {
         AdminAccess::NeedsRule
     }
+}
+
+/// The first bytes of a file: enough to tell a script from a binary without
+/// reading a multi-megabyte executable.
+fn file_head(path: &Path) -> Option<Vec<u8>> {
+    use std::io::Read;
+    let mut head = Vec::with_capacity(2);
+    std::fs::File::open(path)
+        .ok()?
+        .take(2)
+        .read_to_end(&mut head)
+        .ok()?;
+    Some(head)
+}
+
+/// A file that starts `#!` is a script, not the binary the rule means.
+fn is_script(head: &[u8]) -> bool {
+    head.starts_with(b"#!")
 }
 
 /// A non-comment line of `sudoers` grants `<bin> upgrade`.
@@ -1830,6 +1857,37 @@ fn parse_mise(stdout: &str) -> Result<Vec<UpdateItem>, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_script_at_the_root_path_is_not_the_real_binary() {
+        // mas 7 ships a zsh wrapper; a copy of it cannot run under sudo's
+        // reset environment (exit 127), so the rule must be offered again.
+        assert!(is_script(b"#!/bin/zsh -Ndefgku\n# Copyright"));
+        assert!(
+            !is_script(&[0xcf, 0xfa, 0xed, 0xfe, 0x0c, 0x00]),
+            "Mach-O 64"
+        );
+        assert!(!is_script(&[0xca, 0xfe, 0xba, 0xbe]), "universal");
+        assert!(!is_script(b""));
+    }
+
+    #[test]
+    fn admin_access_refuses_a_ruled_script() {
+        let dir = std::env::temp_dir().join(format!("scuttler-mas-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let script = dir.join("mas");
+        std::fs::write(&script, "#!/bin/zsh\nexec mas \"$@\"\n").unwrap();
+        let rule = format!("u ALL=(root) NOPASSWD: {} upgrade\n", script.display());
+        assert_eq!(access_from(&script, Some(&rule)), AdminAccess::NeedsRule);
+        std::fs::write(&script, [0xcf, 0xfa, 0xed, 0xfe]).unwrap();
+        assert_eq!(access_from(&script, Some(&rule)), AdminAccess::Ready);
+        assert_eq!(
+            access_from(&script, None),
+            AdminAccess::NeedsRule,
+            "no rule file"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     /// Runner tests share the one static RUNNER; they take this in turn.
     static RUNNER_TEST_LOCK: Mutex<()> = Mutex::new(());
