@@ -9,7 +9,7 @@ const MODULE_LABELS: Record<string, string> = {
   agents: 'Agent monitors',
   frontApp: 'Active app',
   clock: 'Clock',
-  wifi: 'Wi-Fi',
+  wifi: 'Network',
   awake: 'Awake (keep-alive)',
   usage: 'Agent usage',
   battery: 'Battery',

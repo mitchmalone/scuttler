@@ -6,7 +6,10 @@ import {
   BatteryWarning,
   Bot,
   Coffee,
+  EthernetPort,
+  Network,
   RefreshCw,
+  Smartphone,
   WifiOff,
 } from 'lucide-react'
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic'
@@ -26,6 +29,7 @@ import {
 } from '../components/usage'
 import { AgentStateIcon } from './agent-icons'
 import {
+  type NetworkKind,
   agentCrumbs,
   agentMeta,
   agentStateLabel,
@@ -33,6 +37,9 @@ import {
   batteryState,
   contextTone,
   groupAgents,
+  networkKind,
+  networkTitle,
+  networkTone,
   sessionCardHeight,
   sessionCounts,
   sessionHoverKey,
@@ -47,8 +54,6 @@ import {
   wifiBars,
   wifiMeterLit,
   wifiSignalLabel,
-  wifiTitle,
-  wifiTone,
 } from './format'
 import type {
   AgentSession,
@@ -770,22 +775,32 @@ export function BarWifiCard({
   ssid,
   rssi = null,
   online,
+  kind: rawKind,
+  port = null,
   cardRef,
 }: {
   detail: WifiDetail | null
   ssid: string | null
   rssi?: number | null
   online: boolean
+  kind?: string
+  port?: string | null
   cardRef?: (el: HTMLElement | null) => void
 }) {
   const d = detail
+  const kind = networkKind(online, rawKind ?? d?.kind)
+  const adapter = port ?? d?.port ?? null
   return (
     <BarCard variant="wifi" cardRef={cardRef}>
       <div className="bar-wifi-head">
-        <WifiGlyph online={online} rssi={rssi} size={20} />
+        <NetworkGlyph kind={kind} rssi={rssi} size={20} />
         <div>
-          <BarCardTitle>{wifiTitle(online, ssid)}</BarCardTitle>
-          <WifiMeter rssi={online ? rssi : null} />
+          <BarCardTitle>{networkTitle(kind, ssid)}</BarCardTitle>
+          {kind === 'wifi' || kind === 'offline' ? (
+            <WifiMeter rssi={kind === 'wifi' ? rssi : null} />
+          ) : (
+            adapter && <div className="bar-card-dim">{adapter}</div>
+          )}
         </div>
       </div>
       <div className="bar-wifi-grid">
@@ -893,6 +908,31 @@ export function WifiStrengthIcon({
   )
 }
 
+/** The network glyph: Wi-Fi as a strength indicator, Ethernet a port, a
+ * tethered phone a phone, a VPN or bridge the generic network mark; offline
+ * is lucide's WifiOff. */
+function NetworkGlyph({
+  kind,
+  rssi,
+  size = WIDE_ICON_PROPS.size,
+}: {
+  kind: NetworkKind
+  rssi: number | null
+  size?: number
+}) {
+  const props = { ...ICON_PROPS, size }
+  switch (kind) {
+    case 'ethernet':
+      return <EthernetPort {...props} />
+    case 'tethered':
+      return <Smartphone {...props} />
+    case 'other':
+      return <Network {...props} />
+    default:
+      return <WifiGlyph online={kind !== 'offline'} rssi={rssi} size={size} />
+  }
+}
+
 /** The Wi-Fi glyph as a strength indicator; offline is lucide's WifiOff. */
 function WifiGlyph({
   online,
@@ -917,6 +957,8 @@ export function BarWifiCell({
   online,
   ssid,
   rssi = null,
+  kind: rawKind,
+  port = null,
   hover,
   detail = null,
   cardHeight = 190,
@@ -925,22 +967,27 @@ export function BarWifiCell({
   online: boolean
   ssid: string | null
   rssi?: number | null
+  /** What carries traffic (bar_modules.rs); absent means Wi-Fi. */
+  kind?: string
+  /** The adapter's name for a wired or tethered link. */
+  port?: string | null
   hover?: BarHoverApi
   detail?: WifiDetail | null
   cardHeight?: number
   onClick?: () => void
 }) {
+  const kind = networkKind(online, rawKind)
   const body = (
     <>
-      <WifiGlyph online={online} rssi={rssi} />
-      {!online && 'Offline'}
+      <NetworkGlyph kind={kind} rssi={rssi} />
+      {kind === 'offline' && 'Offline'}
     </>
   )
   if (!hover) {
     return (
       <BarCell
-        className={toneClass(wifiTone(online, rssi))}
-        title={online ? (ssid ?? undefined) : undefined}
+        className={toneClass(networkTone(kind, rssi))}
+        title={kind === 'wifi' ? (ssid ?? undefined) : (port ?? undefined)}
       >
         {body}
       </BarCell>
@@ -951,7 +998,7 @@ export function BarWifiCell({
       id="wifi"
       cardHeight={cardHeight}
       hover={hover}
-      className={toneClass(wifiTone(online, rssi))}
+      className={toneClass(networkTone(kind, rssi))}
       wrapperClassName="bar-wifi"
       onClick={onClick}
       card={
@@ -960,6 +1007,8 @@ export function BarWifiCell({
           ssid={ssid}
           rssi={rssi}
           online={online}
+          kind={rawKind}
+          port={port}
           cardRef={hover.cardRef}
         />
       }

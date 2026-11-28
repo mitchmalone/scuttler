@@ -46,6 +46,11 @@ export interface AgentSession {
 export interface WifiDetail {
   iface: string | null
   online: boolean
+  /** `wifi` | `ethernet` | `tethered` | `other`; empty when offline. Absent
+   * from older payloads, where online meant Wi-Fi. */
+  kind?: string
+  /** The interface's hardware port ("Belkin USB-C LAN"). */
+  port?: string | null
   ssid: string | null
   ip: string | null
   router: string | null
@@ -276,7 +281,16 @@ export interface BarSnapshot {
   onAc: boolean
   charging: boolean
   chargeLimit: number | null
-  wifi: { online: boolean; ssid: string | null; rssi: number | null }
+  /** The network cell: the link that carries traffic (Wi-Fi, Ethernet,
+   * tethered, other) — still keyed `wifi` so layouts keep their slot. */
+  wifi: {
+    online: boolean
+    ssid: string | null
+    rssi: number | null
+    kind?: string
+    port?: string | null
+    iface?: string | null
+  }
   agents: AgentSession[]
   /** Optional so fixtures without a keep-awake session stay valid. */
   awake?: AwakeBarState | null

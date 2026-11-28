@@ -22,7 +22,10 @@
     workflows switched off on GitHub, and reads a moved repo once under its new name
     (a pinned `RamenAmok/peekay`, now `mitchmalone/peekay`, doubled its stale rows).
   - The wifi card says "Connected" and shows a signal meter (DECISIONS 2026-11-25).
-- **Built 2026-11-27 on `feat/agents-session-card`, live run open: one hover card per
+- **Built 2026-11-28 on `feat/network-cell`: the Wi-Fi cell is a network cell**
+  (DECISIONS 2026-11-28). Ethernet, a tethered phone or a VPN reads as connected with
+  its own glyph; only no connection at all reads Offline.
+- **Merged into `release/0.9` 2026-11-27, live run open: one hover card per
   agent session** (`plans/active/2026-11-27-agents-session-card.md`, DECISIONS
   2026-11-27): a tile grid per tmux session / herdr workspace, a neutral age chip, and a
   context bar for Claude sessions. The last feature for 0.9.

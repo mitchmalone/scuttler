@@ -321,6 +321,40 @@ export function wifiTitle(online: boolean, ssid: string | null): string {
   return ssid ? `Connected to ${ssid}` : 'Connected'
 }
 
+/** The link kinds the network cell draws (bar_modules.rs `link_kind`). */
+export type NetworkKind = 'wifi' | 'ethernet' | 'tethered' | 'other' | 'offline'
+
+/** What carries traffic. An older payload without `kind` meant Wi-Fi. */
+export function networkKind(online: boolean, kind?: string): NetworkKind {
+  if (!online) return 'offline'
+  if (kind === 'ethernet' || kind === 'tethered' || kind === 'other')
+    return kind
+  return 'wifi'
+}
+
+/** The network card's title: Wi-Fi keeps its SSID line; the rest name the
+ * kind of link, with the adapter as the subtitle. */
+export function networkTitle(kind: NetworkKind, ssid: string | null): string {
+  switch (kind) {
+    case 'offline':
+      return 'Offline'
+    case 'wifi':
+      return wifiTitle(true, ssid)
+    case 'ethernet':
+      return 'Ethernet'
+    case 'tethered':
+      return 'Tethered'
+    case 'other':
+      return 'Connected'
+  }
+}
+
+/** Cell tone for any link: only offline alarms; a poor Wi-Fi link warns. */
+export function networkTone(kind: NetworkKind, rssi: number | null): CellTone {
+  if (kind === 'offline') return 'danger'
+  return kind === 'wifi' ? wifiTone(true, rssi) : 'normal'
+}
+
 /**
  * How many of the card meter's `count` bars are lit: −90 dBm lights one,
  * −50 lights them all, and each quarter of the meter is one `wifiBars` band.
