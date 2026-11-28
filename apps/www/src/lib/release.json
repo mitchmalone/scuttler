@@ -1,15 +1,15 @@
 {
-  "version": "0.8.8",
-  "date": "2026-11-19",
+  "version": "0.9.0",
+  "date": "2026-11-28",
   "signed": true,
   "artifacts": {
     "zip": {
-      "url": "https://github.com/mitchmalone/scuttler/releases/download/v0.8.8/scuttler-0.8.8.zip",
-      "sha256": "dcd3faa974d9d84cfc272c9c9d159a889471bc758ed549e8125e51125df653ed"
+      "url": "https://github.com/mitchmalone/scuttler/releases/download/v0.9.0/scuttler-0.9.0.zip",
+      "sha256": "687cfb6dfe49572d921a69d97389f25a849d1ccaadc1f51298431e73716851dc"
     },
     "dmg": {
-      "url": "https://github.com/mitchmalone/scuttler/releases/download/v0.8.8/scuttler-0.8.8.dmg",
-      "sha256": "cd2609ddbfe5a98d5ffe040a09fbda93511610bd2e3edb768a7b3f67155c8784"
+      "url": "https://github.com/mitchmalone/scuttler/releases/download/v0.9.0/scuttler-0.9.0.dmg",
+      "sha256": "38b5c47dc23c732b7ddd49ea431881fcca295a237d6c0beaf7aa34b7a4d3e597"
     }
   }
 }
