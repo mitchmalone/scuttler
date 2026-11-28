@@ -99,7 +99,23 @@ export interface UpdateSource {
   /** Homebrew only: formulae whose links point at a keg that was never
    * installed. Absent when there are none, and in reports before 2026-11-25. */
   broken?: BrokenFormula[]
+  /** Homebrew only: renamed formulae `brew outdated` won't look past until
+   * each is migrated. Absent when none, and in reports before 0.9.1. */
+  migrations?: Migration[]
 }
+
+/** Mirrors `updates.rs`'s `Migration`: Homebrew renamed `from` to `to`. */
+export interface Migration {
+  from: string
+  to: string
+}
+
+/** The migrate row's title. */
+export const migrateTitle = (m: Migration) => `${m.from} was renamed to ${m.to}`
+
+/** The migrate row's detail line. */
+export const migrateDetail = () =>
+  'Homebrew checks nothing until it is migrated'
 
 /** Mirrors `brewlinks.rs`'s `BrokenFormula`. */
 export interface BrokenFormula {
@@ -258,6 +274,7 @@ export type UpdatesMessage =
   | { restore: SourceId; item: string }
   | { sudoers: 'on' | 'off' }
   | { repairLinks: LinkClass }
+  | { migrate: string }
 
 /** A source's dismissed packages, by name. */
 export function dismissedItems(source: UpdateSource): UpdateItem[] {
@@ -542,6 +559,12 @@ export const GROUP_CAP = 8
 /** A row in the panel's ledger: one list, every source in table order. */
 export type PanelRow =
   | {
+      /** A renamed Homebrew formula, above every package: ↵ migrates it. */
+      kind: 'migrate'
+      source: UpdateSource
+      migration: Migration
+    }
+  | {
       /** Broken Homebrew links, above every package: ↵ removes them. */
       kind: 'broken'
       source: UpdateSource
@@ -574,6 +597,7 @@ export type PanelRow =
     }
 
 export const rowSelectable = (row: PanelRow) =>
+  row.kind === 'migrate' ||
   row.kind === 'broken' ||
   row.kind === 'item' ||
   row.kind === 'more' ||
@@ -592,11 +616,18 @@ export function ledgerRows(
   expanded: ReadonlySet<string> = new Set(),
 ): PanelRow[] {
   const rows: PanelRow[] = []
+  for (const source of report.sources) {
+    for (const migration of source.migrations ?? []) {
+      rows.push({ kind: 'migrate', source, migration })
+    }
+  }
   for (const group of brokenGroups(report)) {
     rows.push({ kind: 'broken', source: group.source, group })
   }
   for (const source of report.sources) {
-    if (source.error != null) {
+    if (source.error != null && source.migrations?.length) {
+      // The migrate rows above are the error, with a fix attached.
+    } else if (source.error != null) {
       rows.push({ kind: 'band', source })
       rows.push({ kind: 'error', source, error: source.error })
     } else if (source.items.length === 0) {
@@ -625,6 +656,7 @@ export function ledgerRows(
  * terminal. */
 export function rowCommand(row: PanelRow): string {
   if (row.kind === 'broken') return brokenCommand(row.group)
+  if (row.kind === 'migrate') return `brew migrate ${row.migration.from}`
   return row.kind === 'item' || row.kind === 'dismissed'
     ? row.item.upgradeCommand
     : row.source.upgradeCommand
@@ -637,6 +669,8 @@ export function rowUpgradeMessage(row: PanelRow): UpdatesMessage | null {
   switch (row.kind) {
     case 'broken':
       return { repairLinks: row.group.class }
+    case 'migrate':
+      return { migrate: row.migration.from }
     case 'item':
       if (needsRule(row.source)) return ADMIN_RULE_MESSAGE
       return { upgrade: row.source.id, item: row.item.name }

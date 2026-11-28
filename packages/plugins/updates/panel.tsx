@@ -2,6 +2,7 @@ import { KeyHints, ListRow, MeterRow, Panel, useListNav } from '@scuttler/tui'
 import type { PluginPanelProps } from '@scuttler/tui/plugins'
 import {
   AlertTriangle,
+  ArrowRightLeft,
   Check,
   CircleDashed,
   Download,
@@ -40,6 +41,8 @@ import {
   headline,
   lastLine,
   ledgerRows,
+  migrateDetail,
+  migrateTitle,
   needsRule,
   rowCommand,
   rowDismissMessage,
@@ -238,7 +241,8 @@ export default function UpdatesPanel({
       return
     }
     // Removing links under a running brew is refused in Rust too.
-    if (row.kind === 'broken' && upgradeBusy(state)) return
+    if ((row.kind === 'broken' || row.kind === 'migrate') && upgradeBusy(state))
+      return
     const message = rowUpgradeMessage(row)
     if (message) host.send(message)
   }
@@ -331,13 +335,15 @@ export default function UpdatesPanel({
     {
       keys: '↵',
       label:
-        selectedRow?.kind === 'broken'
-          ? BROKEN_ACTION[selectedRow.group.class]
-          : selectedRow && needsRule(selectedRow.source)
-            ? 'allow'
-            : busy
-              ? 'queue'
-              : 'upgrade',
+        selectedRow?.kind === 'migrate'
+          ? 'migrate'
+          : selectedRow?.kind === 'broken'
+            ? BROKEN_ACTION[selectedRow.group.class]
+            : selectedRow && needsRule(selectedRow.source)
+              ? 'allow'
+              : busy
+                ? 'queue'
+                : 'upgrade',
     },
     { keys: 'u', label: 'group' },
     { keys: 'a', label: 'all' },
@@ -364,7 +370,8 @@ export default function UpdatesPanel({
   }[] = []
   rows.forEach((row, i) => {
     // The fix rows sit above every source, in a group of their own.
-    const id = row.kind === 'broken' ? 'broken' : row.source.id
+    const id =
+      row.kind === 'broken' || row.kind === 'migrate' ? row.kind : row.source.id
     const last = groups[groups.length - 1]
     if (last && last.id === id) last.rows.push({ row, i })
     else groups.push({ id, source: row.source, rows: [{ row, i }] })
@@ -473,6 +480,27 @@ export default function UpdatesPanel({
               activate(row)
             }
             switch (row.kind) {
+              case 'migrate':
+                return (
+                  <ListRow
+                    key={`migrate-${row.migration.from}`}
+                    icon={<ArrowRightLeft {...ICON} />}
+                    label={
+                      <span className="tui-updates-error">
+                        {migrateTitle(row.migration)}
+                      </span>
+                    }
+                    sub={migrateDetail()}
+                    right={
+                      <Button keyHint="↵" disabled={busy} onClick={click}>
+                        migrate
+                      </Button>
+                    }
+                    selected={selected}
+                    onHover={hover}
+                    onClick={click}
+                  />
+                )
               case 'broken':
                 return (
                   <ListRow

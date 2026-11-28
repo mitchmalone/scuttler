@@ -186,6 +186,7 @@ pub fn check() -> UpdateSource {
         dismissed: Vec::new(),
         admin: None,
         broken: Vec::new(),
+        migrations: Vec::new(),
     };
     let Some(id) = identity() else {
         source.error = Some("not an installed, signed build".into());

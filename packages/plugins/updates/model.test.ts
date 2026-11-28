@@ -32,6 +32,8 @@ import {
   headline,
   lastLine,
   ledgerRows,
+  migrateDetail,
+  migrateTitle,
   needsRule,
   rowCommand,
   rowDismissMessage,
@@ -665,6 +667,45 @@ describe('updates model', () => {
         text: 'up to date',
         status: 'clean',
       })
+    })
+  })
+
+  describe('renamed Homebrew formulae', () => {
+    const stuck: UpdateSource = {
+      ...brewSource,
+      items: [],
+      error: 'brew migrate cloudflare-wrangler',
+      migrations: [{ from: 'cloudflare-wrangler', to: 'wrangler' }],
+    }
+    const rows = () => ledgerRows(report({ sources: [stuck, masSource] }))
+
+    it('puts a migrate row first, in place of the failed check', () => {
+      const kinds = rows().map((r) => r.kind)
+      expect(kinds[0]).toBe('migrate')
+      expect(kinds).not.toContain('error')
+      expect(rows()[0]).toMatchObject({
+        kind: 'migrate',
+        migration: { from: 'cloudflare-wrangler', to: 'wrangler' },
+      })
+    })
+
+    it('says what happened and runs brew migrate on enter', () => {
+      const row = rows()[0]!
+      expect(rowSelectable(row)).toBe(true)
+      expect(rowUpgradeMessage(row)).toEqual({ migrate: 'cloudflare-wrangler' })
+      expect(rowCommand(row)).toBe('brew migrate cloudflare-wrangler')
+      if (row.kind !== 'migrate') throw new Error('not a migrate row')
+      expect(migrateTitle(row.migration)).toBe(
+        'cloudflare-wrangler was renamed to wrangler',
+      )
+      expect(migrateDetail()).toMatch(/Homebrew checks nothing until/)
+    })
+
+    it('keeps the error row when the failure is something else', () => {
+      const plain = ledgerRows(
+        report({ sources: [{ ...stuck, migrations: [] }] }),
+      )
+      expect(plain.map((r) => r.kind)).toEqual(['band', 'error'])
     })
   })
 
