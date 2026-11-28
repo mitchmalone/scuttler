@@ -2,7 +2,7 @@
 
 Hard-won knowledge a contributor needs, by topic: symptom → cause → fix. Curated, not a log: an entry earns its place when someone outside the project would otherwise lose time to it. Prune what goes stale.
 
-Dates in parentheses name the original log entry. Code comments that cite `JOURNAL <date>` or a `plans/…` file point at the per-session log and plan files that lived in `docs/` until v0.8.8: read them with `git show v0.8.8:docs/JOURNAL.md` (plans: `git show v0.8.8:docs/plans/done/<file>`, or `active/`).
+Dates in parentheses name the original log entry. Code comments that cite `JOURNAL <date>` or a `plans/…` file point at the per-session log and plan files that lived in `docs/` until v0.8.8: read them with `git show v0.8.8:docs/JOURNAL.md` (plans: `git show v0.8.8:docs/plans/done/<file>`, or `active/`). Comments added in 0.9 that cite `JOURNAL 2026-11-2x` or a 2026-11-2x plan point at the 0.9 branch's copies, which never reached main: `git show 0dc6f29:docs/JOURNAL.md` and `git show 0dc6f29:docs/plans/active/<file>`.
 
 ## macOS / AppKit / TCC
 
@@ -59,6 +59,8 @@ Dates in parentheses name the original log entry. Code comments that cite `JOURN
 
 ## TUI kit (`packages/tui`)
 
+- `.bar button { background: none; border: none }` (0,1,1) outranks a single-class rule on a button. Double the class (`.x.x`, 0,2,0) rather than scoping under `.bar`: the site renders some kit components outside a bar (2026-11-27, the session card's tiles).
+
 - **Keyboard selection must always be scrolled into view — at both ends.** Every selectable
   kit component passes `revealSelected` as the selected element's ref (`ListRow`,
   `SegmentedControl` cursor); it does `scrollIntoView(nearest)` and snaps the panel body to
@@ -70,6 +72,8 @@ Dates in parentheses name the original log entry. Code comments that cite `JOURN
   whole batch, not its last job (2026-10-31).
 
 ## Agents / Claude Code
+
+- Claude Code keeps `<config>/sessions/<pid>.json` per running session (`status` busy/idle/shell, `tmux` pane, `sessionId`, `name`); a `<pid>.<hash>.key` file sits beside each and is never read. The format is private: parse leniently, and the screen stays the only source for attention (`claude_sessions.rs`, DECISIONS 2026-11-27).
 
 - Claude Code's keychain item is `Claude Code-credentials-<first 8 hex of sha256(config dir)>`
   under `CLAUDE_CONFIG_DIR`; the `oauthAccount` block in that dir's `.claude.json` names the
