@@ -5,6 +5,24 @@
 
 ---
 
+### 2026-11-28 · The Wi-Fi cell becomes a network cell
+
+- **Context.** "Online" meant the Wi-Fi link was up, so a Mac on Ethernet showed a red
+  "Offline" (Mitch, 2026-11-28, on a Belkin USB-C LAN adapter).
+- **Decision.** The cell describes the link that carries traffic. macOS's
+  `State:/Network/Global/IPv4` (`PrimaryInterface`, `Router`, one `scutil` read) names
+  it; its hardware port (`networksetup -listallhardwareports`, already read for the
+  Wi-Fi interface) classifies it: `Wi-Fi` is wifi, an iPhone/iPad/Android port is
+  tethered, a tunnel (`utun`, `ipsec`, `ppp`) or bridge is other, any other port is
+  ethernet. A non-Wi-Fi primary skips the Wi-Fi probes entirely. Online is a primary
+  with a router (a tunnel counts without one); only a Mac with neither reads Offline.
+  The glyph is lucide `ethernet-port`, `smartphone` or `network`, Wi-Fi keeps its
+  strength arcs; the card titles the link (Ethernet, Tethered, Connected to <SSID>) with
+  the adapter as its subtitle and the primary interface's IP and router. The snapshot
+  keeps its `wifi` key (and the module its `wifi` id) so layouts keep their slot; the
+  Settings label is "Network". Two optional fields on the snapshot (`kind`, `port`),
+  no new command.
+
 ### 2026-11-27 · Agents: one hover card per session, a tile per agent, and context %
 
 - **Context.** The Notion card "Agents: per-session hover card": the bar boxes agent

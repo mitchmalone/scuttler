@@ -131,6 +131,8 @@ export function barZoneNodes({
             online={snap!.wifi.online}
             ssid={snap!.wifi.ssid}
             rssi={snap!.wifi.rssi}
+            kind={snap!.wifi.kind}
+            port={snap!.wifi.port}
             hover={hover}
             detail={wifiDetail}
             onClick={actions.openWifiSettings}

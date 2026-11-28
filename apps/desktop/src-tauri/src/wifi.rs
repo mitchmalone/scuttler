@@ -16,6 +16,9 @@ pub struct WifiStatus {
     pub iface: Option<String>,
     pub power: bool,
     pub online: bool,
+    /// `wifi`, `ethernet`, `tethered`, `other`, or empty (bar_modules.rs).
+    pub kind: String,
+    pub port: Option<String>,
     pub ssid: Option<String>,
     pub ip: Option<String>,
     pub router: Option<String>,
@@ -23,17 +26,24 @@ pub struct WifiStatus {
 }
 
 pub fn status() -> WifiStatus {
-    let Some(iface) = wifi_iface() else {
+    let state = read_wifi();
+    // The card describes the link that carries traffic (Ethernet included);
+    // the Wi-Fi radio's power is still the Wi-Fi interface's.
+    let wifi = wifi_iface();
+    let Some(iface) = state.iface.clone().or_else(|| wifi.clone()) else {
         return WifiStatus::default();
     };
-    let state = read_wifi();
-    let power = run("/usr/sbin/networksetup", &["-getairportpower", &iface])
+    let power = wifi
+        .as_deref()
+        .and_then(|w| run("/usr/sbin/networksetup", &["-getairportpower", w]))
         .as_deref()
         .map(parse_power)
         .unwrap_or(false);
     WifiStatus {
         power,
         online: state.online,
+        kind: state.kind,
+        port: state.port,
         ssid: state.ssid,
         ip: run("/usr/sbin/ipconfig", &["getifaddr", &iface])
             .map(|s| s.trim().to_owned())

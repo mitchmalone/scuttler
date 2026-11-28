@@ -14,6 +14,9 @@ import {
   contextTone,
   formatBarClock,
   groupAgents,
+  networkKind,
+  networkTitle,
+  networkTone,
   sessionCardHeight,
   sessionCounts,
   sessionHoverKey,
@@ -527,5 +530,25 @@ describe('session card', () => {
     expect(sessionCardHeight(1)).toBe(sessionCardHeight(4))
     expect(sessionCardHeight(5) - sessionCardHeight(4)).toBe(84)
     expect(sessionCardHeight(30)).toBe(sessionCardHeight(16))
+  })
+})
+
+describe('network cell', () => {
+  it('names what carries traffic; old payloads without a kind are Wi-Fi', () => {
+    expect(networkKind(true, 'ethernet')).toBe('ethernet')
+    expect(networkKind(true, 'tethered')).toBe('tethered')
+    expect(networkKind(true, 'other')).toBe('other')
+    expect(networkKind(true, 'wifi')).toBe('wifi')
+    expect(networkKind(true, undefined)).toBe('wifi')
+    expect(networkKind(false, 'ethernet')).toBe('offline')
+  })
+
+  it('titles the card by the link, and only offline alarms', () => {
+    expect(networkTitle('ethernet', null)).toBe('Ethernet')
+    expect(networkTitle('wifi', 'Home')).toBe('Connected to Home')
+    expect(networkTitle('offline', null)).toBe('Offline')
+    expect(networkTone('ethernet', null)).toBe('normal')
+    expect(networkTone('offline', null)).toBe('danger')
+    expect(networkTone('wifi', -85)).toBe('warn')
   })
 })

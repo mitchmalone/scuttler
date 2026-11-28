@@ -9,6 +9,8 @@ const card = (props: {
   online: boolean
   ssid: string | null
   rssi: number | null
+  kind?: string
+  port?: string | null
 }) => renderToStaticMarkup(<BarWifiCard detail={null} {...props} />)
 
 const lit = (html: string) => html.match(/data-lit="true"/g)?.length ?? 0
@@ -49,8 +51,23 @@ describe('BarWifiCard', () => {
   it('leaves the meter dark offline', () => {
     const html = card({ online: false, ssid: null, rssi: null })
 
-    expect(html).toContain('Wi-Fi offline')
+    expect(html).toContain('>Offline<')
     expect(lit(html)).toBe(0)
     expect(html).toContain('aria-label="No signal"')
+  })
+
+  it('names an Ethernet link by its adapter, with no signal meter', () => {
+    const html = card({
+      online: true,
+      ssid: null,
+      rssi: null,
+      kind: 'ethernet',
+      port: 'Belkin USB-C LAN',
+    })
+
+    expect(html).toContain('>Ethernet<')
+    expect(html).toContain('Belkin USB-C LAN')
+    expect(html).not.toContain('data-lit')
+    expect(html).not.toContain('Offline')
   })
 })
