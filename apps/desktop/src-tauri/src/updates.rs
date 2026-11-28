@@ -173,6 +173,18 @@ pub struct UpdateSource {
     /// so the panel and the card ask for the fix above the packages.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub broken: Vec<crate::brewlinks::BrokenFormula>,
+    /// Homebrew only: renamed formulae `brew outdated` refuses to look past
+    /// until each is migrated (`brew migrate <from>`). Absent when none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub migrations: Vec<Migration>,
+}
+
+/// A formula Homebrew renamed and wants migrated before it will check
+/// anything — mirrored by `Migration` in the updates plugin's model.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Migration {
+    pub from: String,
+    pub to: String,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -1355,15 +1367,21 @@ fn scan(prev: Option<&UpdatesReport>, force: bool) -> UpdatesReport {
 /// the parser is tried on stdout regardless of exit status; a parse failure
 /// (or a timeout) is what makes a source `error`.
 fn check_source(def: &'static SourceDef, bin: &Path) -> UpdateSource {
+    let mut migrations = Vec::new();
     let (items, error) = match run_check(bin, def.args, CHECK_TIMEOUT) {
         Err(e) => (Vec::new(), Some(e)),
-        Ok((stdout, stderr)) => match (def.parser)(&stdout) {
-            Ok(items) => (items, None),
-            Err(parse_err) => (
-                Vec::new(),
-                Some(last_nonempty_line(&stderr).unwrap_or(parse_err)),
-            ),
-        },
+        Ok((stdout, stderr)) => {
+            if def.id == BREW {
+                migrations = parse_migrations(&stderr);
+            }
+            match (def.parser)(&stdout) {
+                Ok(items) => (items, None),
+                Err(parse_err) => (
+                    Vec::new(),
+                    Some(last_nonempty_line(&stderr).unwrap_or(parse_err)),
+                ),
+            }
+        }
     };
     UpdateSource {
         id: def.id.into(),
@@ -1381,7 +1399,69 @@ fn check_source(def: &'static SourceDef, bin: &Path) -> UpdateSource {
         } else {
             Vec::new()
         },
+        migrations,
     }
+}
+
+// ---- Homebrew's renamed formulae -------------------------------------------
+//
+// `brew outdated` exits 1 and checks nothing while a renamed formula is still
+// installed under its old name: "Error: cloudflare-wrangler was renamed to
+// wrangler and needs to be migrated by running: brew migrate
+// cloudflare-wrangler" (2026-11-28). The panel offers that command as a row.
+
+/// A Homebrew formula or cask name: letters, digits and `@._+-`.
+fn formula_name(s: &str) -> bool {
+    !s.is_empty()
+        && s.len() <= 100
+        && s.chars()
+            .all(|c| c.is_ascii_alphanumeric() || "@._+-".contains(c))
+}
+
+/// Every "X was renamed to Y and needs to be migrated" in brew's stderr.
+fn parse_migrations(stderr: &str) -> Vec<Migration> {
+    stderr
+        .lines()
+        .filter_map(|line| {
+            let rest = line.trim().strip_prefix("Error: ")?;
+            let (from, rest) = rest.split_once(" was renamed to ")?;
+            let (to, _) = rest.split_once(" and needs to be migrated")?;
+            (formula_name(from) && formula_name(to)).then(|| Migration {
+                from: from.to_owned(),
+                to: to.to_owned(),
+            })
+        })
+        .collect()
+}
+
+/// The panel's `{"migrate":"<from>"}`: `brew migrate <from>` as a Homebrew
+/// job (streamed, logged, then a fresh check), only for a name the last check
+/// reported. Refused while an upgrade runs.
+pub fn migrate(name: &str) -> Result<(), String> {
+    if !formula_name(name) {
+        return Err(format!("not a formula name: {name}"));
+    }
+    let asked = REPORT
+        .lock()
+        .unwrap()
+        .as_ref()
+        .and_then(|r| r.sources.iter().find(|s| s.id == BREW))
+        .is_some_and(|s| s.migrations.iter().any(|m| m.from == name));
+    if !asked {
+        return Err(format!("Homebrew did not ask to migrate {name}"));
+    }
+    let mut runner = RUNNER.lock().unwrap();
+    if runner.running() {
+        return Err("an upgrade is running".to_string());
+    }
+    runner.enqueue(vec![UpgradeJob {
+        source: BREW.to_owned(),
+        item: Some(name.to_owned()),
+        command: format!("brew migrate {name}"),
+    }]);
+    crate::logbook::breadcrumb("updates", &format!("queued brew migrate {name}"));
+    pump(&mut runner);
+    Ok(())
 }
 
 // ---- Homebrew's half-upgraded formulae (brewlinks.rs) --------------------
@@ -1887,6 +1967,37 @@ mod tests {
             "no rule file"
         );
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_renamed_formula_is_read_from_brews_error() {
+        let stderr = "==> Downloading Homebrew API data\n\
+            Error: cloudflare-wrangler was renamed to wrangler and needs to be migrated by running:\n  \
+            brew migrate cloudflare-wrangler\n";
+        assert_eq!(
+            parse_migrations(stderr),
+            vec![Migration {
+                from: "cloudflare-wrangler".into(),
+                to: "wrangler".into()
+            }]
+        );
+        assert!(parse_migrations("Error: something else broke\n").is_empty());
+        assert!(
+            parse_migrations(
+                "Error: a; rm -rf / was renamed to b and needs to be migrated by running:"
+            )
+            .is_empty(),
+            "a name that is not a formula name is ignored"
+        );
+        let two = "Error: a was renamed to b and needs to be migrated by running:\n\
+            Error: python@3.12 was renamed to python3 and needs to be migrated by running:\n";
+        assert_eq!(parse_migrations(two).len(), 2);
+    }
+
+    #[test]
+    fn migrate_refuses_a_name_brew_did_not_ask_for() {
+        assert!(migrate("not-renamed").is_err());
+        assert!(migrate("bad name; rm").is_err());
     }
 
     /// Runner tests share the one static RUNNER; they take this in turn.
