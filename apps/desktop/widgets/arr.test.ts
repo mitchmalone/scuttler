@@ -513,8 +513,8 @@ describe('arr view', () => {
       ],
       NOW,
     )
-    // Downloading wins the cell's count; the subtitle says both.
-    expect(v).toMatchObject({ tone: 'accent', label: '1' })
+    // A quiet cell: no count, no accent; the subtitle says both.
+    expect(v).toMatchObject({ tone: 'ok', label: null })
     expect(v.card?.subtitle).toMatch(/^1 downloading( · 1 new today)?$/)
     expect(v.card?.rows).toEqual([])
     expect(v.card?.sections?.map((s) => s.title)).toEqual([
@@ -573,7 +573,7 @@ describe('arr view', () => {
       ],
       NOW,
     )
-    expect(v).toMatchObject({ tone: 'accent', label: '1' })
+    expect(v).toMatchObject({ tone: 'ok', label: null })
     expect(v.card?.subtitle).toBe('1 new today')
   })
 
@@ -588,8 +588,8 @@ describe('arr view', () => {
     )
     expect(v).toMatchObject({
       icon: 'clapperboard',
-      tone: 'accent',
-      label: '2',
+      tone: 'ok',
+      label: null,
     })
     expect(v.card?.subtitle).toBe('2 downloading')
     expect(brief(v)).toEqual([
@@ -612,7 +612,7 @@ describe('arr view', () => {
     expect(v).toMatchObject({
       icon: 'clapperboard',
       tone: 'warn',
-      label: '1',
+      label: null,
       click: { type: 'open', value: SONARR },
     })
     expect(v.card?.subtitle).toBe('1 issue')
@@ -643,7 +643,7 @@ describe('arr view', () => {
     expect(v).toMatchObject({
       icon: 'triangle-alert',
       tone: 'error',
-      label: '1',
+      label: null,
     })
     expect(v.card?.subtitle).toBe('1 issue · 1 downloading')
     expect(brief(v)).toEqual([
@@ -673,7 +673,7 @@ describe('arr view', () => {
     expect(v).toMatchObject({
       icon: 'triangle-alert',
       tone: 'error',
-      label: '3',
+      label: null,
       click: { type: 'open', value: RADARR },
     })
     expect(v.setup).toBeUndefined()
@@ -715,7 +715,7 @@ describe('arr view', () => {
       [],
     )
     const v = toView([up('radarr', RADARR, { issues })], NOW)
-    expect(v).toMatchObject({ tone: 'error', label: '1' })
+    expect(v).toMatchObject({ tone: 'error', label: null })
     expect(v.card?.rows?.[0]).toMatchObject({
       dot: 'error',
       text: '8 GB free on /movies',
@@ -792,7 +792,7 @@ describe('arr view', () => {
       ['In flight', 'd1'],
     ])
     expect(v.card?.hint).toBe('+5 more')
-    expect(v.label).toBe('12')
+    expect(v.label).toBeNull()
 
     // With room to spare, downloads still stop at five; the import follows.
     const few = toView([up('radarr', RADARR, { downloads, recent })], NOW)
