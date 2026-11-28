@@ -290,8 +290,19 @@ pub struct Config {
     /// each widget's manifest `settings` (docs/WIDGETS.md). Secrets never land here —
     /// they're in the Keychain (widget_secrets.rs). Delivered to the widget as env.
     pub widgets: std::collections::HashMap<String, std::collections::HashMap<String, String>>,
+    /// Services the user added to widgets that declare them (manifest
+    /// `services`): widget id → instances, in order. Secrets are Keychain-only
+    /// (`widget/<widget>/<service>/<KEY>`); delivered as `SCUTTLER_SERVICES`.
+    pub widget_services: std::collections::HashMap<String, Vec<crate::widgets::WidgetService>>,
     /// Plugins: disabled ids (docs/PLUGINS.md).
     pub plugins: PluginsConfig,
+    /// The desktop picture (Settings → Wallpaper): a light and a dark image swapped
+    /// with the theme. Off by default; off sets nothing (invariant 12).
+    pub wallpaper: WallpaperConfig,
+    /// Focus mode wallpaper: one image per macOS Focus, overriding the default
+    /// while that Focus is on. Off by default; on is consent to read the Focus
+    /// database, which needs Full Disk Access (invariant 1, DECISIONS 2026-11-23).
+    pub focus_wallpaper: FocusWallpaperConfig,
     /// scuttler's own updates (selfupdate.rs, DECISIONS 2026-09-16).
     pub updates: UpdatesConfig,
 }
@@ -317,6 +328,24 @@ pub struct MachineConfig {
     pub enabled: bool,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[serde(default, rename_all = "camelCase")]
+pub struct WallpaperConfig {
+    pub enabled: bool,
+    /// Image for the light half; `None` = the theme's own backgrounds.
+    pub light: Option<String>,
+    /// Image for the dark half; `None` = the theme's own backgrounds.
+    pub dark: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[serde(default, rename_all = "camelCase")]
+pub struct FocusWallpaperConfig {
+    pub enabled: bool,
+    /// Focus mode identifier (`com.apple.focus.work`) → image path.
+    pub modes: std::collections::BTreeMap<String, String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(default, rename_all = "camelCase")]
 pub struct AppearanceConfig {
@@ -330,8 +359,9 @@ pub struct AppearanceConfig {
     /// Reload a running Ghostty's config over AppleScript at theme set (one Automation
     /// consent, first time). Off by default — the OSC retint needs no consent.
     pub ghostty: bool,
-    /// The policy — mode (system | light | dark | schedule), schedule, pair, Focus
-    /// mappings. Opaque to Rust: `@scuttler/core/appearance` owns the shape.
+    /// The policy — mode (system | light | dark) and the light/dark pair. Opaque to
+    /// Rust: `@scuttler/core/appearance` owns the shape (and drops the keys 0.9
+    /// retired, `schedule` and `focus`).
     #[serde(flatten)]
     pub policy: serde_json::Map<String, serde_json::Value>,
 }
@@ -375,7 +405,10 @@ impl Default for Config {
             color_loupe_zoom: 8,
             color_loupe_size: 264,
             widgets: std::collections::HashMap::new(),
+            widget_services: std::collections::HashMap::new(),
             plugins: PluginsConfig::default(),
+            wallpaper: WallpaperConfig::default(),
+            focus_wallpaper: FocusWallpaperConfig::default(),
         }
     }
 }
@@ -422,6 +455,158 @@ pub fn migrate_defaults(raw: &mut serde_json::Value) -> bool {
         }
     }
     root.insert("defaultsVersion".into(), json!(DEFAULTS_VERSION));
+    true
+}
+
+/// One-time, on load, once the jobs widget is installed: the github-actions and
+/// vercel widgets it replaces hand over (DECISIONS 2026-11-27). Their bar slot
+/// becomes one `widget:jobs` slot where the first of them sat, and each becomes
+/// a jobs service: GitHub Actions keeps its pinned repos. Runs only while jobs
+/// has no services, so it never touches a list the user made. Their old
+/// `widgets` keys stay (adopt, never overwrite). Returns whether `raw` changed.
+pub fn migrate_jobs_widget(raw: &mut serde_json::Value, jobs_installed: bool) -> bool {
+    use serde_json::{json, Map, Value};
+    const OLD: [&str; 2] = ["widget:github-actions", "widget:vercel"];
+    if !jobs_installed {
+        return false;
+    }
+    let Some(root) = raw.as_object_mut() else {
+        return false;
+    };
+    if root
+        .get("widgetServices")
+        .and_then(|w| w.get("jobs"))
+        .is_some()
+    {
+        return false;
+    }
+    let has_widget = |root: &Map<String, Value>, id: &str| {
+        root.get("widgets")
+            .and_then(Value::as_object)
+            .is_some_and(|w| w.contains_key(id))
+    };
+    let mut in_layout = [false, false];
+    for key in ["layout", "notchedLayout"] {
+        let Some(zones) = root
+            .get_mut("bar")
+            .and_then(|b| b.get_mut(key))
+            .and_then(Value::as_object_mut)
+        else {
+            continue;
+        };
+        let mut placed_here = false;
+        for zone in zones.values_mut() {
+            let Some(mods) = zone.as_array_mut() else {
+                continue;
+            };
+            let mut out = Vec::with_capacity(mods.len());
+            for m in mods.drain(..) {
+                let id = m.get("id").and_then(Value::as_str).unwrap_or("");
+                match OLD.iter().position(|o| *o == id) {
+                    Some(i) => {
+                        in_layout[i] = true;
+                        let on = m.get("enabled").and_then(Value::as_bool).unwrap_or(true);
+                        if !placed_here {
+                            placed_here = true;
+                            out.push(json!({ "id": "widget:jobs", "enabled": on }));
+                        }
+                    }
+                    None => out.push(m),
+                }
+            }
+            *mods = out;
+        }
+    }
+    let github = in_layout[0] || has_widget(root, "github-actions");
+    let vercel = in_layout[1] || has_widget(root, "vercel");
+    if !github && !vercel {
+        return false;
+    }
+    let repos = root
+        .get("widgets")
+        .and_then(|w| w.get("github-actions"))
+        .and_then(|g| g.get("GITHUB_REPOS"))
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_string();
+    let mut services = Vec::new();
+    if github {
+        let values = if repos.is_empty() {
+            json!({})
+        } else {
+            json!({ "GITHUB_REPOS": repos })
+        };
+        services.push(json!({
+            "id": "github", "type": "github", "label": "GitHub Actions", "values": values
+        }));
+    }
+    if vercel {
+        services.push(json!({
+            "id": "vercel", "type": "vercel", "label": "Vercel", "values": {}
+        }));
+    }
+    let all = root.entry("widgetServices").or_insert_with(|| json!({}));
+    if let Some(map) = all.as_object_mut() {
+        map.insert("jobs".into(), Value::Array(services));
+    }
+    true
+}
+
+/// One-time, on load, once the arr widget is installed: each app whose URL is
+/// in `widgets.arr` becomes a service named after it (id = type, so its API
+/// key is found under the old Keychain item and copied forward, widgets.rs
+/// `service_secret`). Runs only while arr has no services; the old keys stay.
+/// Returns whether `raw` changed.
+pub fn migrate_arr_services(raw: &mut serde_json::Value, arr_installed: bool) -> bool {
+    use serde_json::{json, Value};
+    const APPS: [(&str, &str); 4] = [
+        ("radarr", "Radarr"),
+        ("sonarr", "Sonarr"),
+        ("prowlarr", "Prowlarr"),
+        ("bazarr", "Bazarr"),
+    ];
+    if !arr_installed {
+        return false;
+    }
+    let Some(root) = raw.as_object_mut() else {
+        return false;
+    };
+    if root
+        .get("widgetServices")
+        .and_then(|w| w.get("arr"))
+        .is_some()
+    {
+        return false;
+    }
+    let Some(flat) = root
+        .get("widgets")
+        .and_then(|w| w.get("arr"))
+        .and_then(Value::as_object)
+        .cloned()
+    else {
+        return false;
+    };
+    let services: Vec<Value> = APPS
+        .iter()
+        .filter_map(|(id, name)| {
+            let key = format!("{}_URL", id.to_ascii_uppercase());
+            let url = flat
+                .get(&key)
+                .and_then(Value::as_str)
+                .filter(|u| !u.trim().is_empty())?;
+            Some(json!({ "id": id, "type": id, "label": name, "values": { key: url } }))
+        })
+        .collect();
+    if services.is_empty() {
+        return false;
+    }
+    if let Some(map) = root
+        .entry("widgetServices")
+        .or_insert_with(|| json!({}))
+        .as_object_mut()
+    {
+        map.insert("arr".into(), Value::Array(services));
+    }
     true
 }
 
@@ -529,7 +714,11 @@ fn load_or_create_at(path: &std::path::Path) -> CmdResult<(Config, bool)> {
     // but say so, or a typo silently reverts every setting (found 2026-08-15).
     // Nothing is written back on that path.
     let parsed = serde_json::from_str::<serde_json::Value>(&raw).and_then(|mut value| {
-        let migrated = migrate_defaults(&mut value);
+        let jobs_installed = crate::widgets::installed("jobs");
+        let arr_installed = crate::widgets::installed("arr");
+        let migrated = migrate_defaults(&mut value)
+            | migrate_jobs_widget(&mut value, jobs_installed)
+            | migrate_arr_services(&mut value, arr_installed);
         let cfg = Config::deserialize(&value)?;
         Ok((cfg, migrated.then_some(value)))
     });
@@ -598,6 +787,7 @@ pub fn watch(app: AppHandle) {
                         crate::indexer::refresh(&app);
                     }
                     crate::agents::configure(&new_config.agents);
+                    crate::appearance::configure(new_config.focus_wallpaper.enabled);
                     crate::usage::configure(&new_config.agents);
                     crate::selfupdate::configure(&new_config.updates);
                     crate::plugins::configure(&app, &new_config.plugins.disabled);
@@ -800,6 +990,76 @@ mod tests {
         let (cfg, _) = load_or_create_at(&path).unwrap();
         assert!(cfg.bar.enabled);
         fs::remove_dir_all(path.parent().unwrap()).unwrap();
+    }
+
+    #[test]
+    fn jobs_takes_over_the_github_and_vercel_slots_once() {
+        let mut raw = serde_json::json!({
+            "bar": { "layout": {
+                "left": [],
+                "center": [],
+                "right": [
+                    { "id": "wifi", "enabled": true },
+                    { "id": "widget:github-actions", "enabled": true },
+                    { "id": "widget:trmnl", "enabled": true },
+                    { "id": "widget:vercel", "enabled": false }
+                ]
+            }},
+            "widgets": { "github-actions": { "GITHUB_REPOS": "a/b, c/d" } }
+        });
+        assert!(
+            !migrate_jobs_widget(&mut raw.clone(), false),
+            "not before jobs is installed"
+        );
+        assert!(migrate_jobs_widget(&mut raw, true));
+        let right: Vec<&str> = raw["bar"]["layout"]["right"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|m| m["id"].as_str().unwrap())
+            .collect();
+        assert_eq!(right, ["wifi", "widget:jobs", "widget:trmnl"]);
+        let jobs = &raw["widgetServices"]["jobs"];
+        assert_eq!(jobs[0]["type"], "github");
+        assert_eq!(jobs[0]["values"]["GITHUB_REPOS"], "a/b, c/d");
+        assert_eq!(jobs[1]["type"], "vercel");
+        assert_eq!(raw["widgets"]["github-actions"]["GITHUB_REPOS"], "a/b, c/d");
+        let cfg = Config::deserialize(&raw).unwrap();
+        assert_eq!(cfg.widget_services["jobs"].len(), 2);
+        assert!(
+            !migrate_jobs_widget(&mut raw, true),
+            "second pass is a no-op"
+        );
+    }
+
+    #[test]
+    fn jobs_migration_leaves_a_config_without_the_old_widgets_alone() {
+        let mut raw = serde_json::json!({ "bar": { "layout": { "right": [] } } });
+        assert!(!migrate_jobs_widget(&mut raw, true));
+        assert!(raw.get("widgetServices").is_none());
+    }
+
+    #[test]
+    fn arr_apps_become_services_once() {
+        let mut raw = serde_json::json!({
+            "widgets": { "arr": {
+                "RADARR_URL": "http://beebee:7878",
+                "SONARR_URL": "",
+                "BAZARR_URL": "http://beebee:6767",
+                "PIPELINE_STATUS_URL": "http://p"
+            }}
+        });
+        assert!(!migrate_arr_services(&mut raw.clone(), false));
+        assert!(migrate_arr_services(&mut raw, true));
+        let arr = raw["widgetServices"]["arr"].as_array().unwrap();
+        let ids: Vec<&str> = arr.iter().map(|s| s["id"].as_str().unwrap()).collect();
+        assert_eq!(ids, ["radarr", "bazarr"]);
+        assert_eq!(arr[0]["values"]["RADARR_URL"], "http://beebee:7878");
+        assert_eq!(raw["widgets"]["arr"]["PIPELINE_STATUS_URL"], "http://p");
+        assert!(
+            !migrate_arr_services(&mut raw, true),
+            "second pass is a no-op"
+        );
     }
 
     #[test]

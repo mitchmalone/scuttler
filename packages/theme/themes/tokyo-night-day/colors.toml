@@ -1,0 +1,35 @@
+# Tokyo Night Day — the light style, from github.com/folke/tokyonight.nvim (Apache-2.0).
+mode = "light"
+
+accent = "#2e7de9"
+selection = "#b7c1e3"
+muted = "#848cb5"
+
+background = "#e1e2e7"
+dark_background = "#d0d5e3"
+darker_background = "#c4c8da"
+lighter_background = "#d0d5e3"
+
+foreground = "#3760bf"
+dark_foreground = "#6172b0"
+light_foreground = "#3760bf"
+bright_foreground = "#2a4a96"
+
+red = "#f52a65"
+yellow = "#8c6c3e"
+orange = "#b15c00"
+green = "#587539"
+cyan = "#007197"
+blue = "#2e7de9"
+magenta = "#9854f1"
+
+bright_red = "#c64343"
+bright_yellow = "#8c6c3e"
+bright_green = "#387068"
+bright_cyan = "#188092"
+bright_blue = "#2e7de9"
+bright_magenta = "#7847bd"
+
+[launcher]
+border = "#a8aecb"
+selected = "rgba(46, 125, 233, 0.12)"

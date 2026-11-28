@@ -1,122 +1,99 @@
-import type { AppearanceMode } from '@scuttler/core/appearance'
-import type { Link } from '@scuttler/core/types'
-import type {
-  BarSnapshot,
-  BarWidget,
-  UsageReport,
-  WidgetSetting,
-} from '@scuttler/tui'
-import { GithubIcon, XIcon } from '@scuttler/tui/icons'
-import { getVersion } from '@tauri-apps/api/app'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
+import { CornerDownLeft, Search } from 'lucide-react'
 import {
-  BookOpen,
-  Bot,
-  Globe,
-  GripVertical,
-  Info,
-  LayoutGrid,
-  Link2,
-  PanelTop,
-  Settings,
-  Tag,
-  Wrench,
-} from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+  type ComponentType,
+  Fragment,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react'
 
+import type { Config } from '../lib/config'
+import { applyTheme } from '../lib/themes'
+import { useMergedThemes } from '../lib/user-themes'
 import {
-  FOCUS_OWN_PAIR,
-  FOCUS_USE_PAIR,
-  focusChoice,
-  isClock,
-  pickTheme,
-  withFocusChoice,
-  withFocusHalf,
-} from '../lib/appearance-ui'
-import {
-  type AgentsConfig,
-  type AppearanceConfig,
-  type BarZones,
-  type ClaudeAccountConfig,
-  type Config,
-  type WidgetHome,
-  type ZoneName,
-  normalizeBarZones,
-  notchedZones,
-  widgetModuleId,
-} from '../lib/config'
-import {
-  type ThemeResult,
-  appearanceOf,
-  applyThemeEverywhere,
-} from '../lib/theme'
-import { applyTheme, themeNames } from '../lib/themes'
-import {
-  type AppearanceInputs,
-  appearanceInputs,
-} from '../lib/use-appearance-policy'
-import {
-  installTheme,
-  removeTheme,
-  updateThemes,
-  useMergedThemes,
-  useUserThemes,
-} from '../lib/user-themes'
-import { usePlugins } from '../plugins/use-plugins'
-import DesktopTab from './DesktopTab'
-import { HooksRow } from './HooksRow'
-import HotkeyRecorder from './HotkeyRecorder'
-import MachineTab from './MachineTab'
-import { PluginsSection } from './PluginsSection'
-import SubTabs from './SubTabs'
-import iconUrl from './scuttler.svg'
+  GROUPS,
+  PAGES,
+  type PageId,
+  SEARCH_INDEX,
+  pageDef,
+  pageFromHash,
+  rungState,
+} from './pages'
+import { type SearchHit, rowAnchor, searchSettings } from './search'
+import type { PageProps } from './types'
+import { AboutPage } from './views/AboutPage'
+import { AgentsPage } from './views/AgentsPage'
+import { BarPage } from './views/BarPage'
+import { ColorPickerPage } from './views/ColorPickerPage'
+import { DesktopPage } from './views/DesktopPage'
+import { FocusWallpaperPage } from './views/FocusWallpaperPage'
+import { LauncherPage } from './views/LauncherPage'
+import { MachinePage } from './views/MachinePage'
+import { PluginsPage } from './views/PluginsPage'
+import { QuicklinksPage } from './views/QuicklinksPage'
+import { ThemePage } from './views/ThemePage'
+import { UpdatesPage } from './views/UpdatesPage'
+import { WallpaperPage } from './views/WallpaperPage'
+import { WidgetsPage } from './views/WidgetsPage'
+import { PAGE_ICONS } from './views/icons'
 
 /**
- * The settings window: a live view over config.json. Every edit autosaves (debounced);
- * the config watcher hot-applies everything (hotkey, shortcuts, login item, links,
- * bookmarks). The file stays the source of truth — hand-edits keep working and update
- * this window while it's open.
+ * The settings window: a live view over config.json. Every edit autosaves
+ * (debounced); the config watcher hot-applies everything (hotkey, shortcuts,
+ * login item, links, bookmarks). The file stays the source of truth — hand-edits
+ * keep working and update this window while it's open.
+ *
+ * Layout (Claude Design 1a + 1c, plans/active/2026-11-23-settings-redesign.md):
+ * a grouped sidebar with a prompt-style search, one page at a time.
  */
 
 const EMPTY_THEMES = { themes: {} }
-
-const TABS = [
-  { id: 'general', label: 'General', icon: Settings },
-  { id: 'menubar', label: 'Menubar', icon: PanelTop },
-  { id: 'desktop', label: 'Desktop', icon: LayoutGrid },
-  { id: 'agents', label: 'Agents', icon: Bot },
-  { id: 'quicklinks', label: 'Quicklinks', icon: Link2 },
-  { id: 'machine', label: 'Machine', icon: Wrench },
-  { id: 'about', label: 'About', icon: Info },
-] as const
-
-/** Where scuttler lives on the web — the About tab's links. */
-const SITE_URL = 'https://www.scuttler.app'
-const DOCS_URL = 'https://www.scuttler.app/docs'
-const GITHUB_URL = 'https://github.com/mitchmalone/scuttler'
-const RELEASES_URL = `${GITHUB_URL}/releases`
-const X_URL = 'https://x.com/mitchmalone'
-
-type TabId = (typeof TABS)[number]['id']
-
 const SAVE_DEBOUNCE_MS = 400
+const FLASH_MS = 1400
+
+const PAGE_VIEWS: Record<PageId, ComponentType<PageProps>> = {
+  launcher: LauncherPage,
+  bar: BarPage,
+  quicklinks: QuicklinksPage,
+  colorpicker: ColorPickerPage,
+  theme: ThemePage,
+  wallpaper: WallpaperPage,
+  focuswallpaper: FocusWallpaperPage,
+  desktop: DesktopPage,
+  machine: MachinePage,
+  agents: AgentsPage,
+  plugins: PluginsPage,
+  widgets: WidgetsPage,
+  updates: UpdatesPage,
+  about: AboutPage,
+}
 
 export default function SettingsApp() {
   const [config, setConfig] = useState<Config | null>(null)
   // Deep link: `open_settings { tab }` puts the id in the URL hash for a fresh
   // window and emits `settings-tab` at an open one (the adopt prompt lands here).
-  const [tab, setTab] = useState<TabId>(() => tabFromHash(window.location.hash))
+  const [page, setPage] = useState<PageId>(() =>
+    pageFromHash(window.location.hash),
+  )
+  const [query, setQuery] = useState('')
+  // The highlighted search result; reset whenever the query changes.
+  const [sel, setSel] = useState(0)
+  useEffect(() => setSel(0), [query])
+  const [error, setError] = useState<string | null>(null)
+  const mergedThemes = useMergedThemes(config ?? EMPTY_THEMES)
+
   useEffect(() => {
-    const un = listen<string>('settings-tab', (e) =>
-      setTab(tabFromHash(e.payload)),
-    )
+    const un = listen<string>('settings-tab', (e) => {
+      setQuery('')
+      setPage(pageFromHash(e.payload))
+    })
     return () => {
       un.then((u) => u())
     }
   }, [])
-  const [error, setError] = useState<string | null>(null)
-  const mergedThemes = useMergedThemes(config ?? EMPTY_THEMES)
 
   // Autosave plumbing: don't write back what we just loaded or received from the
   // watcher (echo), and don't let our own write's config-changed event clobber
@@ -160,1813 +137,261 @@ export default function SettingsApp() {
     if (config) applyTheme(config.theme, mergedThemes, 'settings')
   }, [config, mergedThemes])
 
+  // Keep the hash in step so a reload stays on the page.
+  useEffect(() => {
+    history.replaceState(null, '', `#${page}`)
+  }, [page])
+
+  // Search lands on a row: scroll to it and flash it once the page renders.
+  const mainRef = useRef<HTMLElement>(null)
+  const [landing, setLanding] = useState<string | null>(null)
+  useLayoutEffect(() => {
+    if (!landing || !mainRef.current) return
+    const el = mainRef.current.querySelector<HTMLElement>(
+      `[data-row="${landing}"]`,
+    )
+    setLanding(null)
+    if (!el) return
+    el.scrollIntoView({ block: 'center' })
+    el.classList.add('flash')
+    const t = setTimeout(() => el.classList.remove('flash'), FLASH_MS)
+    return () => clearTimeout(t)
+  }, [landing, page])
+
+  const goTo = (id: PageId) => {
+    setQuery('')
+    setPage(id)
+    mainRef.current?.scrollTo({ top: 0 })
+  }
+  const land = (hit: SearchHit) => {
+    setQuery('')
+    setPage(hit.entry.page)
+    setLanding(rowAnchor(hit.entry.label))
+  }
+
   if (!config) return <div className="settings" />
 
   const patch = (p: Partial<Config>) => setConfig({ ...config, ...p })
   const set = <K extends keyof Config>(key: K, value: Config[K]) =>
     patch({ [key]: value })
+  const View = PAGE_VIEWS[page]
+  const hits = searchSettings(query, SEARCH_INDEX)
 
   return (
     <div className="settings">
-      <nav className="tabstrip" data-tauri-drag-region>
-        {TABS.map(({ id, label, icon: TabIcon }) => (
-          <button
-            key={id}
-            className={`tab${tab === id ? ' active' : ''}`}
-            onClick={() => setTab(id)}
-          >
-            <TabIcon size={18} strokeWidth={1.8} aria-hidden />
-            {label}
-          </button>
-        ))}
-      </nav>
-
-      {error ? <div className="error-banner">{error}</div> : null}
-
-      <main className="content">
-        <div className="content-inner">
-          {tab === 'general' && (
-            <GeneralTab config={config} set={set} patch={patch} />
-          )}
-          {tab === 'menubar' && <MenubarTab config={config} set={set} />}
-          {tab === 'desktop' && <DesktopTab config={config} set={set} />}
-          {tab === 'agents' && <AgentsTab config={config} set={set} />}
-          {tab === 'quicklinks' && <QuicklinksTab config={config} set={set} />}
-          {tab === 'machine' && <MachineTab config={config} set={set} />}
-          {tab === 'about' && <AboutTab />}
+      <div className="dragbar" data-tauri-drag-region />
+      <aside className="side">
+        <div className="brand" data-tauri-drag-region>
+          <span className="sigil">❯</span>settings
         </div>
+        <SearchBox
+          query={query}
+          onQuery={setQuery}
+          hits={hits}
+          sel={sel}
+          onSel={setSel}
+          onLand={land}
+        />
+        <nav className="nav" aria-label="Settings pages">
+          {GROUPS.map((g) => (
+            <Fragment key={g.id}>
+              {g.label && <div className="grp">{g.label}</div>}
+              {PAGES.filter((p) => p.group === g.id).map((p) => {
+                const Icon = PAGE_ICONS[p.id]
+                const rung = rungState(p.id, config)
+                const active = p.id === page && !query
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={`navitem${active ? ' act' : ''}`}
+                    aria-current={active ? 'page' : undefined}
+                    onClick={() => goTo(p.id)}
+                  >
+                    <Icon size={15} strokeWidth={1.8} aria-hidden />
+                    <span>{p.label}</span>
+                    {rung && <span className={`st ${rung}`}>{rung}</span>}
+                  </button>
+                )
+              })}
+            </Fragment>
+          ))}
+        </nav>
+        <div className="sidefoot">
+          <button
+            type="button"
+            className="linkish dim"
+            title="Open config.json"
+            onClick={() =>
+              invoke('open_path', { target: 'config' }).catch(console.error)
+            }
+          >
+            ~/.config/scuttler
+          </button>
+        </div>
+      </aside>
+
+      <main className="main" ref={mainRef}>
+        {error ? <div className="error-banner">{error}</div> : null}
+        {query.trim() ? (
+          <SearchResults query={query} hits={hits} sel={sel} onLand={land} />
+        ) : (
+          <View config={config} set={set} patch={patch} />
+        )}
       </main>
     </div>
   )
 }
 
-type SetFn = <K extends keyof Config>(key: K, value: Config[K]) => void
-/** Several keys in one state update (`set` twice would clobber). */
-type PatchFn = (p: Partial<Config>) => void
-
-function tabFromHash(hash: string): TabId {
-  const id = hash.replace(/^#/, '')
-  return TABS.some((t) => t.id === id) ? (id as TabId) : 'general'
-}
-
-function Row({
-  label,
-  children,
-}: {
-  label: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className="row">
-      <div className="rowlabel">{label}</div>
-      <div className="rowcontrol">{children}</div>
-    </div>
-  )
-}
-
-const GENERAL_SUBTABS = [
-  { id: 'general', label: 'General' },
-  { id: 'colorpicker', label: 'Color picker' },
-  { id: 'config', label: 'Config' },
-] as const
-type GeneralSubTab = (typeof GENERAL_SUBTABS)[number]['id']
-
-/** Settings → General: the basics, then the two rows that had grown into pages. */
-function GeneralTab({
-  config,
-  set,
-  patch,
-}: {
-  config: Config
-  set: SetFn
-  patch: PatchFn
-}) {
-  const [sub, setSub] = useState<GeneralSubTab>('general')
-  return (
-    <>
-      <SubTabs tabs={GENERAL_SUBTABS} value={sub} onChange={setSub} />
-      {sub === 'general' && (
-        <GeneralBasics config={config} set={set} patch={patch} />
-      )}
-      {sub === 'colorpicker' && (
-        <ColorPickerSection config={config} set={set} />
-      )}
-      {sub === 'config' && <ConfigSection />}
-    </>
-  )
-}
-
-function GeneralBasics({
-  config,
-  set,
-  patch,
-}: {
-  config: Config
-  set: SetFn
-  patch: PatchFn
-}) {
-  return (
-    <>
-      <Row label="Summon hotkey">
-        <HotkeyRecorder
-          value={config.hotkey}
-          onChange={(accel) => accel && set('hotkey', accel)}
-        />
-      </Row>
-      <Row label="Startup">
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={config.launchAtLogin}
-            onChange={(e) => set('launchAtLogin', e.target.checked)}
-          />
-          Launch at login
-        </label>
-      </Row>
-      <Row label="Updates">
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={config.updates?.checkSelf ?? true}
-            onChange={(e) => set('updates', { checkSelf: e.target.checked })}
-          />
-          Check for scuttler updates
-        </label>
-        <p className="hint">
-          Every 6 h, from GitHub Releases; the newest shows in{' '}
-          <code>updates ⏎</code>, where ↵ installs it and relaunches. Nothing
-          about you is sent. Off means the request is never made.
-        </p>
-      </Row>
-      <hr />
-      <ThemeSection config={config} set={set} patch={patch} />
-      <Row label="Prompt sigil">
-        <input
-          className="tiny"
-          value={config.sigil}
-          onChange={(e) => set('sigil', e.target.value)}
-        />
-      </Row>
-      <Row label="Bang sigil">
-        <input
-          className="tiny"
-          value={config.bangSigil}
-          onChange={(e) => set('bangSigil', e.target.value)}
-        />
-      </Row>
-      <Row label="Terminal">
-        <select
-          value={config.terminal}
-          onChange={(e) =>
-            set('terminal', e.target.value as Config['terminal'])
-          }
-        >
-          <option value="Ghostty">Ghostty</option>
-          <option value="iTerm2">iTerm2</option>
-          <option value="Terminal">Terminal.app</option>
-        </select>
-      </Row>
-      <Row label="Windows">
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={config.bangNewWindow}
-            onChange={(e) => set('bangNewWindow', e.target.checked)}
-          />
-          New window per command
-        </label>
-      </Row>
-    </>
-  )
-}
-
-function ColorPickerSection({ config, set }: { config: Config; set: SetFn }) {
-  return (
-    <>
-      <Row label="Color picker">
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={config.colorLoupe}
-            onChange={(e) => set('colorLoupe', e.target.checked)}
-          />
-          Use the scuttler loupe
-        </label>
-        {config.colorLoupe && (
-          <label className="check">
-            Zoom
-            <select
-              value={String(config.colorLoupeZoom)}
-              onChange={(e) => set('colorLoupeZoom', Number(e.target.value))}
-            >
-              {[2, 3, 4, 6, 8].map((z) => (
-                <option key={z} value={z}>
-                  {z}×
-                </option>
-              ))}
-            </select>{' '}
-            Size
-            <select
-              value={String(config.colorLoupeSize)}
-              onChange={(e) => set('colorLoupeSize', Number(e.target.value))}
-            >
-              {[176, 264, 352, 440, 528].map((d) => (
-                <option key={d} value={d}>
-                  {d}px
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        <p className="hint">
-          Off (default): <code>colorpicker</code> uses Apple's own sampler — no
-          permission, its zoom. On: scuttler draws its own loupe, which needs{' '}
-          <strong>Screen Recording</strong> — the first pick after switching
-          asks macOS once; grant it, relaunch scuttler, and picks use the loupe.
-          Flip back any time to compare.
-        </p>
-      </Row>
-    </>
-  )
-}
-
-function ConfigSection() {
-  return (
-    <>
-      <Row label="Config">
-        <div className="buttonrow">
-          <button
-            className="ghost"
-            onClick={() => invoke('open_path', { target: 'config' })}
-          >
-            edit config.json
-          </button>
-          <button
-            className="ghost"
-            onClick={() => invoke('open_path', { target: 'scripts' })}
-          >
-            open scripts folder
-          </button>
-        </div>
-        <p className="hint">
-          This whole window is a view over{' '}
-          <code>~/.config/scuttler/config.json</code> — edit either place,
-          changes apply live.
-        </p>
-      </Row>
-    </>
-  )
-}
-
-const MODES: { id: AppearanceMode; label: string; hint: string }[] = [
-  {
-    id: 'system',
-    label: 'system',
-    hint: 'follows macOS, including its sunrise/sunset schedule',
-  },
-  { id: 'light', label: 'light', hint: 'always the light half of the pair' },
-  { id: 'dark', label: 'dark', hint: 'always the dark half of the pair' },
-  { id: 'schedule', label: 'schedule', hint: 'our own clock' },
-]
-
-function ThemeSelect({
-  value,
-  names,
-  onChange,
-  extra,
-}: {
-  value: string
-  names: string[]
-  onChange: (name: string) => void
-  extra?: React.ReactNode
-}) {
-  return (
-    <select value={value} onChange={(e) => onChange(e.target.value)}>
-      {extra}
-      {names.map((name) => (
-        <option key={name} value={name}>
-          {name}
-        </option>
-      ))}
-    </select>
-  )
-}
-
 /**
- * Settings → General ▸ Theme: the pick, the policy that decides which theme is
- * active when (DECISIONS 2026-09-11, `@scuttler/core/appearance`), then the
- * rung that renders it beyond the app.
+ * The search field is the prompt: the sigil, a block caret, Esc clears. ⌘F
+ * focuses it from anywhere; ↑/↓ move through results, ↵ lands on the row.
  */
-/** `~/.config/scuttler/themes/<name>/colors.toml`: list, install from git, update, remove. */
-function UserThemesRow() {
-  const user = useUserThemes()
-  const [url, setUrl] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [note, setNote] = useState<string | null>(null)
-  const run = (p: Promise<string>) => {
-    setBusy(true)
-    setNote(null)
-    p.then(setNote)
-      .catch((e) => setNote(String(e)))
-      .finally(() => setBusy(false))
-  }
-  return (
-    <Row label="Your themes">
-      {user.length === 0 && (
-        <p className="hint">
-          None yet. Drop a <code>colors.toml</code> in{' '}
-          <code>~/.config/scuttler/themes/&lt;name&gt;/</code> (Omarchy's format
-          — any Omarchy theme works as-is), or install one from git below. A
-          theme named after a built-in replaces it.
-        </p>
-      )}
-      {user.map((t) => (
-        <div key={t.name} className="focusrow">
-          <span className="focusname">
-            {t.name}
-            {t.installed ? ' · installed from git' : ''}
-          </span>
-          <button
-            className="ghost"
-            disabled={busy}
-            onClick={() =>
-              run(removeTheme(t.name).then(() => `removed ${t.name}`))
-            }
-          >
-            remove
-          </button>
-        </div>
-      ))}
-      <div className="buttonrow inline">
-        <input
-          value={url}
-          placeholder="https://github.com/…/omarchy-<name>-theme"
-          onChange={(e) => setUrl(e.target.value)}
-        />
-        <button
-          className="ghost"
-          disabled={busy || !url.trim()}
-          onClick={() =>
-            run(
-              installTheme(url.trim()).then((t) => {
-                setUrl('')
-                return `installed ${t.name}`
-              }),
-            )
-          }
-        >
-          {busy ? 'working…' : 'install'}
-        </button>
-        {user.some((t) => t.installed) && (
-          <button
-            className="ghost"
-            disabled={busy}
-            onClick={() =>
-              run(
-                updateThemes().then((n) =>
-                  n.length ? `updated ${n.join(', ')}` : 'all up to date',
-                ),
-              )
-            }
-          >
-            update installed
-          </button>
-        )}
-      </div>
-      {note && <p className="hint tiny">{note}</p>}
-    </Row>
-  )
-}
-
-function ThemeSection({
-  config,
-  set,
-  patch,
+function SearchBox({
+  query,
+  onQuery,
+  hits,
+  sel,
+  onSel: setSel,
+  onLand,
 }: {
-  config: Config
-  set: SetFn
-  patch: PatchFn
+  query: string
+  onQuery: (q: string) => void
+  hits: SearchHit[]
+  sel: number
+  onSel: (update: (s: number) => number) => void
+  onLand: (hit: SearchHit) => void
 }) {
-  const appearance = appearanceOf(config)
-  const merged = useMergedThemes(config)
-  const names = themeNames(merged)
-  const [inputs, setInputs] = useState<AppearanceInputs | null>(null)
+  const ref = useRef<HTMLInputElement>(null)
   useEffect(() => {
-    appearanceInputs().then(setInputs).catch(console.error)
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey && e.key.toLowerCase() === 'f') {
+        e.preventDefault()
+        ref.current?.focus()
+        ref.current?.select()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
   }, [])
-  const [busy, setBusy] = useState(false)
-  const [result, setResult] = useState<ThemeResult | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const setAppearance = (p: Partial<AppearanceConfig>) =>
-    set('appearance', { ...appearance, ...p })
-  const applyNow = () => {
-    setBusy(true)
-    setError(null)
-    applyThemeEverywhere(config)
-      .then(setResult)
-      .catch((e) => setError(String(e)))
-      .finally(() => setBusy(false))
-  }
-  const modeHint = MODES.find((m) => m.id === appearance.mode)?.hint
-  const activeFocus = inputs?.modes.find((m) => m.id === inputs.focusMode)
+  const live = query.length > 0
   return (
-    <>
-      <Row label="Theme">
-        <ThemeSelect
-          value={config.theme}
-          names={names}
-          onChange={(name) => patch(pickTheme(config, inputs, name))}
-        />
-        <p className="hint">
-          Add your own under <code>"themes"</code> in config.json — partial
-          overrides welcome. A pick here sticks in the slot the policy below is
-          reading{activeFocus ? ` (Focus: ${activeFocus.name})` : ''}.
-        </p>
-      </Row>
-      <Row label="Mode">
-        <select
-          value={appearance.mode}
-          onChange={(e) =>
-            setAppearance({ mode: e.target.value as AppearanceMode })
+    <label className={`search${live ? ' live' : ''}`}>
+      {live ? (
+        <span className="sigil">❯</span>
+      ) : (
+        <Search size={12} strokeWidth={1.8} aria-hidden />
+      )}
+      <input
+        ref={ref}
+        type="text"
+        spellCheck={false}
+        autoComplete="off"
+        aria-label="Search settings"
+        placeholder="search settings"
+        value={query}
+        onChange={(e) => onQuery(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowDown') {
+            e.preventDefault()
+            setSel((s) => Math.min(s + 1, Math.max(hits.length - 1, 0)))
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault()
+            setSel((s) => Math.max(s - 1, 0))
+          } else if (e.key === 'Enter') {
+            const hit = hits[sel]
+            if (hit) {
+              onLand(hit)
+              ref.current?.blur()
+            }
+          } else if (e.key === 'Escape') {
+            if (query) onQuery('')
+            else ref.current?.blur()
           }
-        >
-          {MODES.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.label}
-            </option>
-          ))}
-        </select>
-        {modeHint && <p className="hint">{modeHint}</p>}
-        {appearance.mode === 'schedule' && (
-          <>
-            <div className="buttonrow inline">
-              <span className="hint">light from</span>
-              <input
-                className="tiny"
-                value={appearance.schedule.light}
-                placeholder="07:00"
-                onChange={(e) =>
-                  setAppearance({
-                    schedule: { ...appearance.schedule, light: e.target.value },
-                  })
-                }
-              />
-              <span className="hint">dark from</span>
-              <input
-                className="tiny"
-                value={appearance.schedule.dark}
-                placeholder="19:00"
-                onChange={(e) =>
-                  setAppearance({
-                    schedule: { ...appearance.schedule, dark: e.target.value },
-                  })
-                }
-              />
-            </div>
-            {(!isClock(appearance.schedule.light) ||
-              !isClock(appearance.schedule.dark)) && (
-              <p className="hint error">
-                Times are HH:MM, 24h — until both parse, 07:00 / 19:00 apply.
-              </p>
-            )}
-          </>
-        )}
-      </Row>
-      <Row label="Pair">
-        <div className="buttonrow inline">
-          <span className="hint">light</span>
-          <ThemeSelect
-            value={appearance.pair.light}
-            names={names}
-            onChange={(light) =>
-              setAppearance({ pair: { ...appearance.pair, light } })
-            }
-          />
-          <span className="hint">dark</span>
-          <ThemeSelect
-            value={appearance.pair.dark}
-            names={names}
-            onChange={(dark) =>
-              setAppearance({ pair: { ...appearance.pair, dark } })
-            }
-          />
-        </div>
-        <p className="hint">The mode picks one half; a Focus can override.</p>
-      </Row>
-      <Row label="Focus">
-        {inputs === null ? (
-          <p className="hint">reading Focus modes…</p>
-        ) : inputs.modes.length === 0 ? (
-          <p className="hint">
-            No Focus modes found — set them up in System Settings → Focus.
-          </p>
-        ) : (
-          inputs.modes.map((m) => {
-            const mapping = appearance.focus[m.id]
-            const choice = focusChoice(mapping)
-            return (
-              <div key={m.id} className="focusrow">
-                <div className="buttonrow inline">
-                  <span className="focusname">{m.name}</span>
-                  <ThemeSelect
-                    value={choice}
-                    names={names}
-                    onChange={(c) =>
-                      setAppearance(withFocusChoice(appearance, m.id, c))
-                    }
-                    extra={
-                      <>
-                        <option value={FOCUS_USE_PAIR}>— (use the pair)</option>
-                        <option value={FOCUS_OWN_PAIR}>its own pair…</option>
-                      </>
-                    }
-                  />
-                  {choice === FOCUS_OWN_PAIR && typeof mapping === 'object' && (
-                    <>
-                      <span className="hint">light</span>
-                      <ThemeSelect
-                        value={mapping.light}
-                        names={names}
-                        onChange={(t) =>
-                          setAppearance(
-                            withFocusHalf(appearance, m.id, 'light', t),
-                          )
-                        }
-                      />
-                      <span className="hint">dark</span>
-                      <ThemeSelect
-                        value={mapping.dark}
-                        names={names}
-                        onChange={(t) =>
-                          setAppearance(
-                            withFocusHalf(appearance, m.id, 'dark', t),
-                          )
-                        }
-                      />
-                    </>
-                  )}
-                </div>
-                <p className="hint tiny">
-                  <code>{m.id}</code>
-                  {inputs.focusMode === m.id ? ' · active now' : ''}
-                </p>
-              </div>
-            )
-          })
-        )}
-      </Row>
-      <UserThemesRow />
-      <Row label="Everywhere">
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={appearance.everywhere}
-            onChange={(e) => {
-              setAppearance({ everywhere: e.target.checked })
-              if (e.target.checked) applyNow()
-            }}
-          />
-          Render this theme into Ghostty, tmux, the prompt, delta and Claude
-          Code
-        </label>
-        <p className="hint">
-          Files land in <code>~/.local/state/scuttler/current/theme/</code>;
-          every open shell retints at once (tmux or not, any terminal, no
-          permission), new terminal windows read the files. Themes you add in
-          config.json are token-only and stay app-only.
-        </p>
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={appearance.ghostty}
-            onChange={(e) => setAppearance({ ghostty: e.target.checked })}
-          />
-          Also reload Ghostty&rsquo;s config (one Automation prompt, first time)
-        </label>
-        <p className="hint">
-          The retint above changes colours only; this asks a running Ghostty to
-          re-read its config so open windows take the whole theme. Needs Ghostty
-          1.3+.
-        </p>
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={appearance.macos}
-            onChange={(e) => setAppearance({ macos: e.target.checked })}
-          />
-          Follow it with macOS light/dark
-        </label>
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={appearance.editors}
-            onChange={(e) => setAppearance({ editors: e.target.checked })}
-          />
-          Also retint editors: VS Code, Cursor, Zed, Neovim, Helix, btop
-        </label>
-        <p className="hint">
-          Installs a generated theme for each and switches to it in their own
-          settings files (a one-time <code>.bak-scuttler</code> beside each).
-          Running instances change on the spot; ones not installed are skipped.
-        </p>
-        <p className="hint">
-          Only when the mode is light, dark or schedule — in system mode macOS
-          is the source and we follow it, not the other way round.
-        </p>
-        <div className="buttonrow">
-          <button className="ghost" disabled={busy} onClick={applyNow}>
-            {busy ? 'applying…' : 'apply now'}
-          </button>
-        </div>
-        {error && <p className="hint error">{error}</p>}
-        {result && (
-          <p className="hint tiny">
-            {result.reloaded.length > 0 &&
-              `reloaded: ${result.reloaded.join(', ')}`}
-            {result.failed.length > 0 &&
-              ` · failed: ${result.failed.map(([w, why]) => `${w} (${why})`).join('; ')}`}
-            {result.reloaded.length === 0 &&
-              result.failed.length === 0 &&
-              'rendered'}
-          </p>
-        )}
-      </Row>
-    </>
-  )
-}
-
-function QuicklinksTab({ config, set }: { config: Config; set: SetFn }) {
-  const setLink = (i: number, patch: Partial<Link>) => {
-    const links = config.links.slice()
-    links[i] = { ...links[i]!, ...patch }
-    set('links', links)
-  }
-  return (
-    <>
-      <p className="hint lead">
-        Links open on Enter; add <code>{'{query}'}</code> to a URL to make it a
-        quicklink with a trigger word.
-      </p>
-      {config.links.map((link, i) => (
-        <div className="linkrow" key={i}>
-          <input
-            placeholder="name"
-            value={link.name}
-            onChange={(e) => setLink(i, { name: e.target.value })}
-          />
-          <input
-            className="grow"
-            placeholder="https://…"
-            value={link.url}
-            onChange={(e) => setLink(i, { url: e.target.value })}
-          />
-          <input
-            className="small"
-            placeholder="trigger"
-            value={link.trigger ?? ''}
-            onChange={(e) => setLink(i, { trigger: e.target.value || null })}
-          />
-          <button
-            className="ghost"
-            title="remove"
-            onClick={() =>
-              set(
-                'links',
-                config.links.filter((_, j) => j !== i),
-              )
-            }
-          >
-            ✕
-          </button>
-        </div>
-      ))}
-      <button
-        className="ghost add"
-        onClick={() => set('links', [...config.links, { name: '', url: '' }])}
-      >
-        + add link
-      </button>
-      <hr />
-      <Row label="Fallback search">
-        <input
-          className="wide"
-          value={config.searchFallback}
-          onChange={(e) => set('searchFallback', e.target.value)}
-        />
-        <p className="hint">
-          Opens when nothing matches; <code>{'{query}'}</code> is replaced with
-          your input.
-        </p>
-      </Row>
-      <Row label="Bookmarks">
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={config.indexBookmarks}
-            onChange={(e) => set('indexBookmarks', e.target.checked)}
-          />
-          Index browser bookmarks
-        </label>
-        <p className="hint">Chrome-family + Safari; local reads only.</p>
-      </Row>
-    </>
-  )
-}
-
-const AGENT_SUBTABS = [
-  { id: 'mode', label: 'Agent mode' },
-  { id: 'local', label: 'Local monitoring' },
-  { id: 'usage', label: 'Usage monitoring' },
-] as const
-type AgentSubTab = (typeof AGENT_SUBTABS)[number]['id']
-
-/** Settings → Agents: three sub-tabs, one per feature the tab used to stack. */
-function AgentsTab({ config, set }: { config: Config; set: SetFn }) {
-  const [sub, setSub] = useState<AgentSubTab>('mode')
-  const agents = config.agents
-  const setAgents = (patch: Partial<Config['agents']>) =>
-    set('agents', { ...agents, ...patch })
-  return (
-    <>
-      <SubTabs tabs={AGENT_SUBTABS} value={sub} onChange={setSub} />
-      {sub === 'mode' && (
-        <Row label="Agent mode">
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={agents.askMode}
-              onChange={(e) => setAgents({ askMode: e.target.checked })}
-            />
-            Enable agent mode
-          </label>
-          <p className="hint">
-            Activates the <code>?</code> command: press <code>?</code> in the
-            launcher to converse with your own agent CLI — your subscription,
-            your credentials. The spawned CLI is caged (empty working dir,
-            tightest tool restrictions it offers); Enter sends, follow-ups keep
-            context, Esc ends the conversation.
-          </p>
-          {agents.askMode && (
-            <label className="check">
-              Provider
-              <select
-                value={agents.askProvider}
-                onChange={(e) =>
-                  setAgents({
-                    askProvider: e.target
-                      .value as Config['agents']['askProvider'],
-                  })
-                }
-              >
-                <option value="claude">claude (Claude Code)</option>
-                <option value="codex">codex (Codex CLI)</option>
-              </select>
-            </label>
-          )}
-        </Row>
-      )}
-      {sub === 'local' && (
-        <Row label="Local monitoring">
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={agents.monitor}
-              onChange={(e) => setAgents({ monitor: e.target.checked })}
-            />
-            Enable local agent monitoring
-          </label>
-          <p className="hint">
-            Live session states in the bar and the <code>agents ⏎</code> panel.
-            Agents report in over a local socket (<code>agents.sock</code>);
-            nothing leaves this machine.
-          </p>
-          {agents.monitor && (
-            <>
-              <HooksRow />
-              <label className="check">
-                <input
-                  type="checkbox"
-                  checked={agents.showIdle}
-                  onChange={(e) => setAgents({ showIdle: e.target.checked })}
-                />
-                Show idle sessions in the bar
-              </label>
-              <label className="check">
-                Forget sessions after{' '}
-                <input
-                  className="tiny"
-                  type="number"
-                  min={1}
-                  max={168}
-                  value={agents.pruneHours}
-                  onChange={(e) =>
-                    setAgents({
-                      pruneHours: Math.max(1, Number(e.target.value) || 12),
-                    })
-                  }
-                />{' '}
-                hours of silence
-              </label>
-            </>
-          )}
-        </Row>
-      )}
-      {sub === 'usage' && (
-        <Row label="Usage">
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={agents.usage}
-              onChange={(e) => setAgents({ usage: e.target.checked })}
-            />
-            Enable agent usage
-          </label>
-          <p className="hint">
-            Activates the <code>usage ⏎</code> token monitor: tokens by day and
-            model, read from the journals Claude Code and Codex already keep
-            locally.
-          </p>
-          {agents.usage && (
-            <>
-              <p className="hint">
-                Account limits (“how soon am I rate-limited?”) are computed by
-                the providers, so showing them means one HTTPS request to each —
-                using credentials the CLIs already store. Grant access per
-                provider; scuttler picks the freshest source, falls back
-                automatically, and never refreshes or writes tokens.
-              </p>
-              <label className="check">
-                <input
-                  type="checkbox"
-                  checked={agents.claudeCreds}
-                  onChange={(e) => setAgents({ claudeCreds: e.target.checked })}
-                />
-                Claude — may read Claude Code’s stored credentials
-              </label>
-              <p className="hint">
-                Credentials file first (silent); keychain when the file is stale
-                — macOS shows its own prompt once per account.
-              </p>
-              <ClaudeAccountsList agents={agents} setAgents={setAgents} />
-              <label className="check">
-                <input
-                  type="checkbox"
-                  checked={agents.codexCreds}
-                  onChange={(e) => setAgents({ codexCreds: e.target.checked })}
-                />
-                Codex — may read <code>~/.codex/auth.json</code>
-              </label>
-              <p className="hint">
-                Off = the panel shows this device’s last session snapshot only,
-                which misses usage from your other machines.
-              </p>
-            </>
-          )}
-        </Row>
-      )}
-    </>
-  )
-}
-
-/**
- * The Claude accounts usage.rs discovered — `~/.claude` plus every
- * `~/.claude-*` (one login per `CLAUDE_CONFIG_DIR`). Nothing to add here:
- * the list *is* the directory convention; a row only renames or hides.
- */
-function ClaudeAccountsList({
-  agents,
-  setAgents,
-}: {
-  agents: AgentsConfig
-  setAgents: (patch: Partial<AgentsConfig>) => void
-}) {
-  const [report, setReport] = useState<UsageReport | null>(null)
-  useEffect(() => {
-    let live = true
-    const poll = () =>
-      invoke<UsageReport>('usage_status')
-        .then((r) => live && setReport(r))
-        .catch(console.error)
-    poll()
-    // The first call kicks the scan; one retry picks up the result.
-    const id = setTimeout(poll, 2500)
-    return () => {
-      live = false
-      clearTimeout(id)
-    }
-  }, [])
-  const accounts = (report?.providers ?? []).filter(
-    (p) => p.provider === 'claude',
-  )
-  const dirFor = (id: string) => `~/.${id}`
-  const overrideFor = (id: string) =>
-    agents.claudeAccounts.find((a) => a.dir === dirFor(id))
-  const setOverride = (id: string, patch: Partial<ClaudeAccountConfig>) => {
-    const dir = dirFor(id)
-    const rest = agents.claudeAccounts.filter((a) => a.dir !== dir)
-    const merged: ClaudeAccountConfig = {
-      dir,
-      label: null,
-      enabled: true,
-      ...overrideFor(id),
-      ...patch,
-    }
-    // Back to defaults → drop the entry rather than store a no-op.
-    const noop = merged.enabled && !merged.label
-    setAgents({ claudeAccounts: noop ? rest : [...rest, merged] })
-  }
-  // Hidden accounts are absent from the report; keep their rows from config.
-  const hidden = agents.claudeAccounts.filter(
-    (a) => !a.enabled && !accounts.some((p) => dirFor(p.id) === a.dir),
-  )
-  if (accounts.length === 0 && hidden.length === 0) return null
-  return (
-    <div className="accounts">
-      <p className="hint">
-        Accounts found — one per Claude Code config dir (<code>~/.claude</code>,{' '}
-        <code>~/.claude-*</code>):
-      </p>
-      {accounts.map((p) => {
-        const o = overrideFor(p.id)
-        return (
-          <label key={p.id} className="check account-row">
-            <input
-              type="checkbox"
-              checked={o?.enabled ?? true}
-              onChange={(e) => setOverride(p.id, { enabled: e.target.checked })}
-            />
-            <code>{dirFor(p.id)}</code>
-            <input
-              type="text"
-              className="account-label"
-              placeholder={p.label}
-              value={o?.label ?? ''}
-              onChange={(e) =>
-                setOverride(p.id, { label: e.target.value || null })
-              }
-            />
-            {p.account && <span className="dim">{p.account}</span>}
-          </label>
-        )
-      })}
-      {hidden.map((a) => (
-        <label key={a.dir} className="check account-row">
-          <input
-            type="checkbox"
-            checked={false}
-            onChange={() =>
-              setAgents({
-                claudeAccounts: agents.claudeAccounts.filter(
-                  (x) => x.dir !== a.dir,
-                ),
-              })
-            }
-          />
-          <code>{a.dir}</code>
-          <span className="dim">hidden</span>
-        </label>
-      ))}
-    </div>
-  )
-}
-
-const MODULE_LABELS: Record<string, string> = {
-  workspaces: 'AeroSpace',
-  agents: 'Agent monitors',
-  frontApp: 'Active app',
-  clock: 'Clock',
-  wifi: 'Wi-Fi',
-  awake: 'Awake (keep-alive)',
-  usage: 'Agent usage',
-  battery: 'Battery',
-}
-
-/** Built-ins by name; a user widget (`widget:<id>`, docs/WIDGETS.md) shows
- * its manifest name when the live set knows it, else its id. */
-const moduleLabel = (id: string, widgets: BarWidget[]) => {
-  if (MODULE_LABELS[id]) return MODULE_LABELS[id]
-  if (id.startsWith('plugin:')) return `${id.slice('plugin:'.length)} · plugin`
-  if (!id.startsWith('widget:')) return id
-  const wid = id.slice('widget:'.length)
-  const w = widgets.find((w) => w.id === wid)
-  return `${w?.name ?? wid} · widget`
-}
-
-const ZONE_LABELS: Record<ZoneName, string> = {
-  left: 'Left',
-  center: 'Center',
-  right: 'Right',
-}
-
-/**
- * One column per alignment zone plus a "Retired" tray. Modules drag between
- * and within columns; ✕ retires a widget to the tray, dragging it back into a
- * zone restores it. Retirement is `enabled: false` in place — the bar already
- * skips disabled modules, so no schema change. Pure HTML5 DnD: the list
- * reorders live as the drag passes over rows, commits through onChange.
- */
-function ZoneBoard({
-  zones,
-  zoneNames,
-  widgets,
-  onChange,
-}: {
-  zones: BarZones
-  zoneNames: ZoneName[]
-  /** The live user widgets, for labels. */
-  widgets: BarWidget[]
-  onChange: (next: BarZones) => void
-}) {
-  const [dragId, setDragId] = useState<string | null>(null)
-
-  const all = () => [...zones.left, ...zones.center, ...zones.right]
-  const retired = all().filter((m) => !m.enabled)
-  const without = (id: string): BarZones => ({
-    left: zones.left.filter((m) => m.id !== id),
-    center: zones.center.filter((m) => m.id !== id),
-    right: zones.right.filter((m) => m.id !== id),
-  })
-  /** Drop the dragged module into `zone`, before `beforeId` (or at the end);
-   * dropping restores a retired widget. */
-  const placeAt = (zone: ZoneName, beforeId: string | null) => {
-    const moved = all().find((m) => m.id === dragId)
-    if (!moved || moved.id === beforeId) return
-    const next = without(moved.id)
-    const list = next[zone]
-    const at = beforeId ? list.findIndex((m) => m.id === beforeId) : -1
-    list.splice(at < 0 ? list.length : at, 0, { ...moved, enabled: true })
-    onChange(next)
-  }
-  const retire = (id: string) => {
-    const flip = (list: BarZones['left']) =>
-      list.map((x) => (x.id === id ? { ...x, enabled: false } : x))
-    onChange({
-      left: flip(zones.left),
-      center: flip(zones.center),
-      right: flip(zones.right),
-    })
-  }
-
-  const chip = (
-    m: { id: string; enabled: boolean },
-    inZone: ZoneName | null,
-  ) => (
-    <div
-      key={m.id}
-      className={`modrow ${m.id === dragId ? 'modrow-dragging' : ''} ${inZone ? '' : 'modrow-retired'}`}
-      draggable
-      onDragStart={(e) => {
-        setDragId(m.id)
-        e.dataTransfer.effectAllowed = 'move'
-      }}
-      onDragEnter={(e) => {
-        if (inZone) {
-          e.stopPropagation()
-          placeAt(inZone, m.id)
-        }
-      }}
-      onDragOver={(e) => e.preventDefault()}
-      onDragEnd={() => setDragId(null)}
-    >
-      <GripVertical size={14} className="grip" aria-hidden />
-      <span className="grow">{moduleLabel(m.id, widgets)}</span>
-      {inZone && (
-        <button
-          type="button"
-          className="modx"
-          title="retire widget"
-          onClick={() => retire(m.id)}
-        >
-          ✕
-        </button>
-      )}
-    </div>
-  )
-
-  return (
-    <div className="zoneboard-wrap">
-      <div
-        className="zoneboard"
-        style={{ gridTemplateColumns: `repeat(${zoneNames.length}, 1fr)` }}
-      >
-        {zoneNames.map((zone) => {
-          const active = zones[zone].filter((m) => m.enabled)
-          return (
-            <div
-              key={zone}
-              className="zonecol"
-              onDragOver={(e) => e.preventDefault()}
-              onDragEnter={(e) => {
-                // Only when entering the column's empty space, not a row.
-                if (e.target === e.currentTarget) placeAt(zone, null)
-              }}
-              onDrop={(e) => {
-                e.preventDefault()
-                setDragId(null)
-              }}
-            >
-              <div className="zonehead">{ZONE_LABELS[zone]}</div>
-              {active.map((m) => chip(m, zone))}
-              {active.length === 0 && (
-                <div className="zoneempty">drop here</div>
-              )}
-            </div>
-          )
-        })}
-      </div>
-      <div
-        className="zonetray"
-        onDragOver={(e) => e.preventDefault()}
-        onDragEnter={() => {
-          if (dragId) retire(dragId)
         }}
-        onDrop={(e) => {
-          e.preventDefault()
-          setDragId(null)
-        }}
-      >
-        <div className="zonehead">Retired</div>
-        <div className="zonetray-chips">
-          {retired.map((m) => chip(m, null))}
-          {retired.length === 0 && (
-            <div className="zoneempty">✕ a widget, or drag it here</div>
-          )}
-        </div>
-      </div>
-    </div>
+      />
+      <kbd>{live ? 'esc' : '⌘F'}</kbd>
+    </label>
   )
 }
 
-/**
- * The live user widgets (docs/WIDGETS.md), polled from the bar snapshot while
- * the Menubar tab is open — an in-memory read Rust-side, so 2 s is cheap, and
- * it lets the board and the widgets list follow adds/removes/ticks live.
- */
-function useWidgets(): BarWidget[] {
-  const [widgets, setWidgets] = useState<BarWidget[]>([])
-  useEffect(() => {
-    let live = true
-    const pull = () =>
-      invoke<BarSnapshot>('bar_snapshot')
-        .then((s) => live && setWidgets(s.widgets ?? []))
-        .catch(console.error)
-    pull()
-    const t = window.setInterval(pull, 2000)
-    return () => {
-      live = false
-      window.clearInterval(t)
-    }
-  }, [])
-  return widgets
-}
-
-/** "ok · 3m ago" / "error · exit 1 …" / "hidden" / "waiting" for the list. */
-function widgetStatus(w: BarWidget, now: number): string {
-  const ago = (t: number) => {
-    const s = Math.max(0, Math.round(now / 1000 - t))
-    if (s < 60) return `${s}s ago`
-    if (s < 3600) return `${Math.round(s / 60)}m ago`
-    return `${Math.round(s / 3600)}h ago`
-  }
-  if (w.needs?.length) return `needs setup · ${w.needs.join(', ')}`
-  if (w.view?.setup) return `setup · ${w.view.setup.message}`
-  if (w.error) {
-    return `error · ${w.error}${w.lastOk ? ` · last ok ${ago(w.lastOk)}` : ''}`
-  }
-  if (!w.view) return 'waiting for the first tick'
-  const at = w.updatedAt ? ` · ${ago(w.updatedAt)}` : ''
-  return w.view.hidden ? `hidden${at}` : `ok${at}`
-}
-
-type WidgetSource =
-  { kind: 'url'; url: string } | { kind: 'file'; name: string; content: string }
-
-/**
- * Custom widgets: what's installed and how it's doing, plus add (a picked file
- * — read in the webview, no dialog plugin — or a URL, one user-initiated
- * fetch) and remove. Layout lives on the board above; this is the inventory.
- */
-/** A widget that's running fine needs no fields under it — a healthy row is
- * just its name and "ok" (Mitch, 2026-08-20: a page of token inputs reads as
- * "asking for tokens" even when every one is optional). */
-const widgetNeedsAttention = (w: BarWidget) =>
-  Boolean(w.needs?.length || w.view?.setup || w.error)
-
-/** One `widget-auth` event from widgets.rs (`AuthEvent`). */
-type WidgetAuthEvent =
-  | { phase: 'code'; id: string; url: string; code: string }
-  | { phase: 'message'; id: string; message: string }
-  | { phase: 'done'; id: string }
-  | { phase: 'error'; id: string; error: string }
-
-/**
- * A widget's declared settings (docs/WIDGETS.md): plain values bind to
- * `config.widgets[id]`; secrets go to the Keychain through `widget_secret_set`
- * and the UI only learns which are set. A widget with `auth` puts its sign-in
- * button on the row of its first secret — the user signs in *or* pastes a
- * token, one row either way (Mitch, 2026-08-19).
- */
-function WidgetSettings({
-  widget,
-  config,
-  set,
+function SearchResults({
+  query,
+  hits,
+  sel,
+  onLand,
 }: {
-  widget: BarWidget
-  config: Config
-  set: SetFn
+  query: string
+  hits: SearchHit[]
+  sel: number
+  onLand: (hit: SearchHit) => void
 }) {
-  const settings = widget.settings ?? []
-  const plain = config.widgets[widget.id] ?? {}
-  const [present, setPresent] = useState<string[]>([])
-  const [drafts, setDrafts] = useState<Record<string, string>>({})
-  const [auth, setAuth] = useState<WidgetAuthEvent | null>(null)
-  const [note, setNote] = useState<string | null>(null)
-  const hasSecrets = settings.some((s) => s.secret)
-  const authKey = widget.auth ? settings.find((s) => s.secret)?.key : undefined
-
-  const refreshPresent = useCallback(() => {
-    if (!hasSecrets) return
-    invoke<string[]>('widget_secret_keys', { id: widget.id })
-      .then(setPresent)
-      .catch(console.error)
-  }, [widget.id, hasSecrets])
-  useEffect(refreshPresent, [refreshPresent])
-
-  useEffect(() => {
-    if (!widget.auth) return
-    const un = listen<WidgetAuthEvent>('widget-auth', (e) => {
-      if (e.payload.id !== widget.id) return
-      setAuth(e.payload)
-      if (e.payload.phase === 'done') refreshPresent()
-    })
-    return () => {
-      un.then((u) => u())
-    }
-  }, [widget.id, widget.auth, refreshPresent])
-
-  const attention = widgetNeedsAttention(widget)
-  if (!settings.length) return null
-
-  const setPlain = (key: string, value: string) => {
-    const mine = { ...plain }
-    if (value) mine[key] = value
-    else delete mine[key]
-    const all = { ...config.widgets }
-    if (Object.keys(mine).length) all[widget.id] = mine
-    else delete all[widget.id]
-    set('widgets', all)
-  }
-  const saveSecret = (key: string, value: string | null) => {
-    setNote(null)
-    invoke('widget_secret_set', { id: widget.id, key, value })
-      .then(() => {
-        setDrafts((d) => ({ ...d, [key]: '' }))
-        setAuth(null)
-        refreshPresent()
-      })
-      .catch((e) => setNote(String(e)))
-  }
-  const startAuth = () => {
-    setNote(null)
-    setAuth({ phase: 'message', id: widget.id, message: 'starting…' })
-    invoke('widget_auth', { id: widget.id }).catch((e) => setNote(String(e)))
-  }
-  const cancelAuth = () => {
-    invoke('widget_auth_cancel', { id: widget.id }).catch(console.error)
-    setAuth(null)
-  }
-  const authBusy =
-    auth != null && (auth.phase === 'code' || auth.phase === 'message')
-
-  /** The sign-in controls, inline on the token row. */
-  const authControls = () => {
-    if (!widget.auth) return null
-    if (auth?.phase === 'code') {
-      return (
-        <>
-          <span className="widgetauth-text">
-            enter <code className="widgetauth-code">{auth.code}</code> at
-          </span>
-          <button
-            type="button"
-            className="ghost"
-            onClick={() =>
-              invoke('open_url', { url: auth.url }).catch(console.error)
-            }
-          >
-            {auth.url.replace(/^https?:\/\//, '')}
-          </button>
-          <button type="button" className="ghost" onClick={cancelAuth}>
-            cancel
-          </button>
-        </>
-      )
-    }
-    if (auth?.phase === 'message') {
-      return (
-        <>
-          <span className="widgetauth-text">{auth.message}</span>
-          <button type="button" className="ghost" onClick={cancelAuth}>
-            cancel
-          </button>
-        </>
-      )
-    }
-    return (
-      <button type="button" className="ghost nowrap" onClick={startAuth}>
-        {widget.auth.label}
-      </button>
-    )
-  }
-
-  const field = (s: WidgetSetting) => {
-    const missing = widget.needs?.includes(s.key)
-    const isSet = s.secret ? present.includes(s.key) : Boolean(plain[s.key])
-    // Healthy and nothing stored: no field — the widget found its own way
-    // (the CLI). The row returns the moment the widget needs the user.
-    if (!attention && !isSet && !s.required) return null
-    const req = (s.required || missing) && (
-      <span className="widgetsetting-req"> · required</span>
-    )
-    if (!s.secret) {
-      return (
-        <div className="linkrow widgetsetting" key={s.key}>
-          <label
-            className="widgetsetting-label"
-            htmlFor={`ws-${widget.id}-${s.key}`}
-          >
-            {s.label}
-            {!plain[s.key] && req}
-          </label>
-          <input
-            id={`ws-${widget.id}-${s.key}`}
-            type="text"
-            className="grow"
-            placeholder={s.hint ?? s.key}
-            value={plain[s.key] ?? ''}
-            onChange={(e) => setPlain(s.key, e.target.value)}
-          />
-        </div>
-      )
-    }
-    const withAuth = s.key === authKey
-    if (isSet) {
-      // Set: say so, offer clear — no input until they want to replace it.
-      return (
-        <div className="linkrow widgetsetting" key={s.key}>
-          <span className="widgetsetting-label">{s.label}</span>
-          <span className="widgetsetting-set">
-            {withAuth && auth?.phase === 'done' ? 'signed in' : 'set'}
-          </span>
-          <button
-            type="button"
-            className="ghost"
-            onClick={() => saveSecret(s.key, null)}
-          >
-            {withAuth ? 'sign out' : 'clear'}
-          </button>
-        </div>
-      )
-    }
-    // Unset with a sign-in: the button leads; paste is the fallback. A failed
-    // sign-in reports on its own line under the row — never inline, where a
-    // long message crushes the field (Mitch, 2026-08-19).
-    const busy = withAuth && authBusy
-    const authError = withAuth && auth?.phase === 'error' ? auth.error : null
-    return (
-      <div key={s.key}>
-        <div className="linkrow widgetsetting">
-          <label
-            className="widgetsetting-label"
-            htmlFor={`ws-${widget.id}-${s.key}`}
-          >
-            {s.label}
-            {req}
-          </label>
-          {withAuth && authControls()}
-          {!busy && (
-            <>
-              {withAuth && <span className="widgetsetting-or">or paste</span>}
-              <input
-                id={`ws-${widget.id}-${s.key}`}
-                type="password"
-                className="grow"
-                autoComplete="off"
-                placeholder={s.hint ?? s.key}
-                value={drafts[s.key] ?? ''}
-                onChange={(e) =>
-                  setDrafts((d) => ({ ...d, [s.key]: e.target.value }))
-                }
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && drafts[s.key])
-                    saveSecret(s.key, drafts[s.key]!)
-                }}
-              />
+  return (
+    <article className="page">
+      <header className="pagehead">
+        <Search size={20} strokeWidth={1.8} aria-hidden className="pageicon" />
+        <h1>
+          {hits.length === 0
+            ? `Nothing matches “${query.trim()}”`
+            : `${hits.length} setting${hits.length === 1 ? '' : 's'} match “${query.trim()}”`}
+        </h1>
+      </header>
+      <p className="pagedesc">
+        Matched by the launcher&apos;s own fuzzy matcher, across every page.
+      </p>
+      {hits.length > 0 && (
+        <section className="sec">
+          <div className="box results">
+            {hits.map((h, i) => (
               <button
+                key={`${h.entry.page}:${h.entry.label}`}
                 type="button"
-                className="ghost"
-                disabled={!drafts[s.key]}
-                onClick={() => saveSecret(s.key, drafts[s.key]!)}
+                className={`hit${i === sel ? ' on' : ''}`}
+                onClick={() => onLand(h)}
               >
-                save
+                <span className="crumb">
+                  {pageDef(h.entry.page).label} › {h.entry.section}
+                </span>
+                <span className="hit-t">
+                  <Highlight text={h.entry.label} positions={h.positions} />
+                </span>
+                {h.entry.hint && <span className="hit-h">{h.entry.hint}</span>}
               </button>
-            </>
-          )}
-        </div>
-        {authError && (
-          <p className="hint widgetstatus-error widgetsetting-note">
-            {authError}
-          </p>
-        )}
-      </div>
-    )
-  }
-
-  return (
-    <div className="widgetsettings">
-      {settings.map(field)}
-      {note && <p className="hint widgetstatus-error">{note}</p>}
-    </div>
-  )
-}
-
-/**
- * Declared prerequisites (manifest `requires`) + the live setup message when
- * the widget can't run: what it expects, and the copyable command that fixes
- * it. Rendered under the widget's row like its settings.
- */
-function WidgetPrereqs({ widget }: { widget: BarWidget }) {
-  const requires = widget.requires ?? []
-  const setup = widget.view?.setup
-  const [copied, setCopied] = useState<string | null>(null)
-  // A healthy widget explains nothing — prerequisites appear when unmet.
-  if (!widgetNeedsAttention(widget)) return null
-  if (!requires.length && !setup) return null
-  const copy = (cmd: string) => {
-    navigator.clipboard
-      .writeText(cmd)
-      .then(() => setCopied(cmd))
-      .catch(console.error)
-  }
-  const fix = (cmd: string | null | undefined) =>
-    cmd && (
-      <button
-        type="button"
-        className="ghost widgetfix"
-        title="copy the command"
-        onClick={() => copy(cmd)}
-      >
-        {copied === cmd ? 'copied' : cmd}
-      </button>
-    )
-  return (
-    <div className="widgetsettings widgetprereqs">
-      {setup && (
-        <div className="linkrow widgetsetting">
-          <span className="widgetsetting-label widgetsetting-req">
-            needs you
-          </span>
-          <span className="widgetprereq-text">{setup.message}</span>
-          {fix(setup.fix)}
-        </div>
-      )}
-      {requires.map((r) => (
-        <div className="linkrow widgetsetting" key={r.label}>
-          <span className="widgetsetting-label">expects</span>
-          <span className="widgetprereq-text">{r.label}</span>
-          {fix(r.fix)}
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function WidgetsSection({
-  widgets,
-  config,
-  set,
-}: {
-  widgets: BarWidget[]
-  config: Config
-  set: SetFn
-}) {
-  const [url, setUrl] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [note, setNote] = useState<string | null>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
-  const now = Date.now()
-
-  const install = (source: WidgetSource) => {
-    setBusy(true)
-    setNote(null)
-    invoke<string>('widget_install', { source })
-      .then((id) => {
-        setNote(`installed ${id}`)
-        setUrl('')
-      })
-      .catch((e) => setNote(String(e)))
-      .finally(() => setBusy(false))
-  }
-  const pickFile = (file: File | undefined) => {
-    if (!file) return
-    file
-      .text()
-      .then((content) => install({ kind: 'file', name: file.name, content }))
-      .catch((e) => setNote(String(e)))
-  }
-  const remove = (w: BarWidget) => {
-    setNote(null)
-    invoke('widget_remove', { id: w.id })
-      .then(() => setNote(`removed ${w.id}`))
-      .catch((e) => setNote(String(e)))
-  }
-  const tick = (w: BarWidget) =>
-    invoke('widget_tick', { id: w.id }).catch(console.error)
-
-  return (
-    <section className="row-full">
-      <div className="zonehead">Custom widgets</div>
-      <p className="hint">
-        Executables in <code>~/.config/scuttler/widgets/</code> that answer{' '}
-        <code>manifest</code> and <code>tick</code> — any language, live, no
-        restart. Contract and reference widgets: docs/WIDGETS.md.
-      </p>
-      {widgets.length === 0 && (
-        <p className="hint">No custom widgets installed.</p>
-      )}
-      {widgets.map((w) => (
-        <div className="widgetentry" key={w.id}>
-          <div className="linkrow">
-            <div className="grow widgetmeta">
-              <span className="widgetname">{w.name}</span>
-              <span className="widgetid">{widgetModuleId(w.id)}</span>
-              <span
-                className={`widgetstatus ${w.error ? 'widgetstatus-error' : ''}`}
-                title={w.error ?? undefined}
-              >
-                {widgetStatus(w, now)}
-              </span>
-            </div>
-            <button
-              type="button"
-              className="ghost"
-              title="run the widget now"
-              onClick={() => tick(w)}
-            >
-              tick
-            </button>
-            <button
-              type="button"
-              className="ghost"
-              title="delete the widget file"
-              onClick={() => remove(w)}
-            >
-              remove
-            </button>
+            ))}
           </div>
-          <WidgetPrereqs widget={w} />
-          <WidgetSettings widget={w} config={config} set={set} />
-        </div>
-      ))}
-      <div className="linkrow widgetadd">
-        <input
-          type="text"
-          className="grow"
-          placeholder="https://…/widget.py — install from URL"
-          value={url}
-          disabled={busy}
-          onChange={(e) => setUrl(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && url.trim()) {
-              install({ kind: 'url', url: url.trim() })
-            }
-          }}
-        />
-        <button
-          type="button"
-          className="ghost"
-          disabled={busy || !url.trim()}
-          onClick={() => install({ kind: 'url', url: url.trim() })}
-        >
-          install
-        </button>
-        <button
-          type="button"
-          className="ghost"
-          disabled={busy}
-          onClick={() => fileRef.current?.click()}
-        >
-          add file…
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          hidden
-          onChange={(e) => {
-            pickFile(e.target.files?.[0])
-            e.target.value = ''
-          }}
-        />
-        <button
-          type="button"
-          className="ghost"
-          onClick={() => invoke('open_path', { target: 'widgets' })}
-        >
-          open folder
-        </button>
+        </section>
+      )}
+      <div className="legend">
+        <span>
+          <kbd>↑</kbd>
+          <kbd>↓</kbd> move
+        </span>
+        <span>
+          <kbd>
+            <CornerDownLeft size={10} strokeWidth={2} aria-hidden />
+          </kbd>{' '}
+          go to the setting
+        </span>
+        <span>
+          <kbd>esc</kbd> clear
+        </span>
       </div>
-      {note && <p className="hint">{note}</p>}
-    </section>
+    </article>
   )
 }
 
-const MENUBAR_SUBTABS = [
-  { id: 'layout', label: 'Layout' },
-  { id: 'plugins', label: 'Plugins' },
-  { id: 'widgets', label: 'Custom widgets' },
-] as const
-type MenubarSubTab = (typeof MENUBAR_SUBTABS)[number]['id']
-
-/** Settings → Menubar: the strip + zone boards, and the custom-widget
- * inventory on its own sub-tab (Mitch, 2026-08-19: not jammed into the page). */
-function MenubarTab({ config, set }: { config: Config; set: SetFn }) {
-  const [sub, setSub] = useState<MenubarSubTab>('layout')
-  const widgets = useWidgets()
-  const plugins = usePlugins(2000)
-  const homes: WidgetHome[] = [
-    ...widgets.map((w) => ({ id: w.id, zone: w.zone })),
-    ...plugins
-      .filter((p) => p.enabled && p.kinds.includes('bar-widget'))
-      .map((p) => ({ id: p.id, zone: p.zone, kind: 'plugin' as const })),
-  ]
-  const layout = normalizeBarZones(config.bar.layout, homes)
-  // Normalized + center-folded, so every module stays reachable on a board
-  // that has no center column.
-  const notched = config.bar.notchedLayout
-    ? notchedZones(config.bar, homes)
-    : null
+function Highlight({ text, positions }: { text: string; positions: number[] }) {
+  if (!positions.length) return <>{text}</>
+  const on = new Set(positions)
   return (
     <>
-      <SubTabs tabs={MENUBAR_SUBTABS} value={sub} onChange={setSub} />
-      {sub === 'plugins' && (
-        <PluginsSection
-          config={config}
-          set={set}
-          WidgetSettings={WidgetSettings}
-          WidgetPrereqs={WidgetPrereqs}
-        />
-      )}
-      {sub === 'widgets' && (
-        <WidgetsSection widgets={widgets} config={config} set={set} />
-      )}
-      {sub === 'layout' && (
-        <>
-          <Row label="Menubar">
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={config.bar.enabled}
-                onChange={(e) =>
-                  set('bar', { ...config.bar, enabled: e.target.checked })
-                }
-              />
-              Enable the scuttler bar
-            </label>
-            <p className="hint">
-              Replaces the macOS menu bar with an Omarchy-style strip. Applies
-              immediately.
-            </p>
-          </Row>
-          <Row label="Fullscreen apps">
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={config.bar.hideOverFullscreen ?? true}
-                onChange={(e) =>
-                  set('bar', {
-                    ...config.bar,
-                    hideOverFullscreen: e.target.checked,
-                  })
-                }
-              />
-              Hide the bar over fullscreen apps
-            </label>
-            <p className="hint">
-              While the app in front covers a whole display (a game, a video),
-              the bar on that display steps aside and returns when you switch
-              away.
-            </p>
-          </Row>
-          <hr />
-          {/* Boards break the 160px-label grid on purpose (Mitch, 2026-08-16):
-          three drag columns need the whole content width. */}
-          <section className="row-full">
-            <div className="zonehead">Widgets</div>
-            <p className="hint">
-              Drag widgets between the zones; ✕ retires one to the tray below,
-              dragging it back restores it. Custom widgets join here as soon as
-              they're installed (next tab).
-            </p>
-            <ZoneBoard
-              zones={layout}
-              zoneNames={['left', 'center', 'right']}
-              widgets={widgets}
-              onChange={(next) => set('bar', { ...config.bar, layout: next })}
-            />
-          </section>
-          <hr />
-          <section className="row-full">
-            <div className="zonehead">Notched displays</div>
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={notched !== null}
-                onChange={(e) =>
-                  set('bar', {
-                    ...config.bar,
-                    // Seeded from what a notched display shows today (center
-                    // folded into right); unchecking falls back to that derivation.
-                    notchedLayout: e.target.checked
-                      ? notchedZones(config.bar, homes)
-                      : null,
-                  })
-                }
-              />
-              Separate arrangement for notched displays
-            </label>
-            <p className="hint">
-              Notched displays have no center zone — the camera housing owns it.
-            </p>
-            {notched && (
-              <ZoneBoard
-                zones={notched}
-                zoneNames={['left', 'right']}
-                widgets={widgets}
-                onChange={(next) =>
-                  set('bar', { ...config.bar, notchedLayout: next })
-                }
-              />
-            )}
-          </section>
-        </>
+      {[...text].map((ch, i) =>
+        on.has(i) ? (
+          <mark key={i}>{ch}</mark>
+        ) : (
+          <Fragment key={i}>{ch}</Fragment>
+        ),
       )}
     </>
-  )
-}
-
-function AboutTab() {
-  const [version, setVersion] = useState('')
-  useEffect(() => {
-    getVersion().then(setVersion).catch(console.error)
-  }, [])
-  const open = (url: string) => invoke('open_url', { url }).catch(console.error)
-  const links: { label: string; url: string; icon: React.ReactNode }[] = [
-    {
-      label: 'www.scuttler.app',
-      url: SITE_URL,
-      icon: <Globe size={15} strokeWidth={1.75} aria-hidden />,
-    },
-    {
-      label: 'docs',
-      url: DOCS_URL,
-      icon: <BookOpen size={15} strokeWidth={1.75} aria-hidden />,
-    },
-    { label: 'github', url: GITHUB_URL, icon: <GithubIcon size={15} /> },
-    {
-      label: 'releases',
-      url: RELEASES_URL,
-      icon: <Tag size={15} strokeWidth={1.75} aria-hidden />,
-    },
-    { label: '@mitchmalone', url: X_URL, icon: <XIcon size={15} /> },
-  ]
-  return (
-    <div className="about">
-      <img className="appicon" src={iconUrl} alt="scuttler icon" />
-      <p className="wordmark">
-        <span className="sigil">❯</span> scuttler
-        {version ? ` v${version}` : ''}
-      </p>
-      <p className="hint">The keyboard control surface for macOS.</p>
-      <p className="hint">
-        Scuttle the ship. Sail the wreck. — by{' '}
-        <button className="linkish" onClick={() => open(X_URL)}>
-          Mitch Malone
-        </button>
-        .
-      </p>
-      <div className="aboutlinks">
-        {links.map((l) => (
-          <button key={l.url} className="ghost" onClick={() => open(l.url)}>
-            {l.icon}
-            {l.label}
-          </button>
-        ))}
-      </div>
-      <p className="hint aboutfoot">
-        Zero granted permissions, zero network. Your config lives at{' '}
-        <code>~/.config/scuttler/config.json</code>; scripts extend the prompt
-        (see docs). Because the apps won’t launch themselves. Yarr.
-      </p>
-    </div>
   )
 }

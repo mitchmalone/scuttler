@@ -246,6 +246,25 @@ pub async fn appearance_inputs() -> crate::appearance::AppearanceInputs {
     crate::appearance::inputs()
 }
 
+/// Set the desktop picture on every display (wallpaper.rs). `None` re-applies the
+/// theme's current background, if it ships any. Returns the path now showing.
+/// Which image and when is TypeScript's (lib/wallpaper.ts, DECISIONS 2026-11-23).
+#[tauri::command]
+pub async fn wallpaper_set(path: Option<String>) -> CmdResult<Option<String>> {
+    let res = match path {
+        Some(p) => crate::wallpaper::set(&p).map(|_| Some(p)),
+        None => crate::wallpaper::reapply_theme_background(),
+    };
+    res.map_err(CmdError::Internal)
+}
+
+/// Settings → Wallpaper / Focus mode wallpaper "choose…": the system file dialog,
+/// images only. `None` when cancelled.
+#[tauri::command]
+pub async fn wallpaper_pick() -> CmdResult<Option<String>> {
+    crate::wallpaper::pick_image()
+}
+
 /// Theme rung: install rendered files under the state dir and fan out reloads (theme.rs).
 #[tauri::command]
 pub async fn theme_apply(req: crate::theme::ThemeApply) -> CmdResult<crate::theme::ThemeResult> {
@@ -490,6 +509,9 @@ pub fn script_action(app: AppHandle, action: crate::scripts::ScriptAction) -> Cm
         ScriptAction::Open(target) => {
             Command::new("open").arg(&target).spawn()?;
         }
+        ScriptAction::Settings(page) => crate::settings_window::open_tab(&app, Some(&page))?,
+        // Unknown ids are ignored; the scheduler picks the tick up within a second.
+        ScriptAction::Refresh(id) => crate::widgets::poke(&id),
         ScriptAction::None => {}
     }
     Ok(())
@@ -650,6 +672,11 @@ pub fn open_path(target: String) -> CmdResult<()> {
                 .map(|(_, id)| std::path::PathBuf::from(crate::settings_panes::deep_link(id)))
                 .ok_or_else(|| CmdError::Internal(format!("no {pane} settings pane")))?
         }
+        // Focus mode wallpaper asks the user to grant this (invariant 1, DECISIONS
+        // 2026-11-23); the pane is where they do it.
+        "full-disk-access" => std::path::PathBuf::from(
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles",
+        ),
         other => return Err(CmdError::Internal(format!("unknown open target: {other}"))),
     };
     std::process::Command::new("open").arg(path).spawn()?;
@@ -699,31 +726,84 @@ pub fn widget_tick(id: String) {
     crate::widgets::poke(&id)
 }
 
-/// Settings → Menubar → Custom widgets → a secret setting: store (or clear
-/// with null/empty) one Keychain value. The key must be one the widget's
-/// manifest declares `secret` — plain settings go through `config.widgets`.
+/// Settings → Widgets → configure → a secret setting: store (or clear with
+/// null/empty) one Keychain value. The key must be one the widget's manifest
+/// declares `secret` — plain settings go through `config.widgets`. With
+/// `service`, the key belongs to that configured service (its type declares
+/// it) and is stored under `widget/<id>/<service>/<KEY>` (DECISIONS 2026-11-27).
 #[tauri::command]
-pub fn widget_secret_set(id: String, key: String, value: Option<String>) -> CmdResult<()> {
+pub fn widget_secret_set(
+    id: String,
+    key: String,
+    value: Option<String>,
+    service: Option<String>,
+    state: State<'_, AppState>,
+) -> CmdResult<()> {
     if !crate::widgets::valid_id(&id) || !crate::widgets::valid_setting_key(&key) {
         return Err(CmdError::Internal(format!("bad widget secret {id}/{key}")));
     }
-    if !crate::widgets::declares_secret(&id, &key) && !crate::plugins::declares_secret(&id, &key) {
-        return Err(CmdError::Internal(format!("{id} declares no secret {key}")));
-    }
-    crate::widget_secrets::set(&id, &key, value.as_deref().unwrap_or(""))
+    let store_id = match service {
+        Some(sid) => {
+            let svc = configured_service(&state, &id, &sid)?;
+            if !crate::widgets::service_declares_secret(&id, &svc, &key) {
+                return Err(CmdError::Internal(format!(
+                    "{id} service {sid} declares no secret {key}"
+                )));
+            }
+            crate::widgets::service_secret_id(&id, &sid)
+        }
+        None => {
+            if !crate::widgets::declares_secret(&id, &key)
+                && !crate::plugins::declares_secret(&id, &key)
+            {
+                return Err(CmdError::Internal(format!("{id} declares no secret {key}")));
+            }
+            id.clone()
+        }
+    };
+    crate::widget_secrets::set(&store_id, &key, value.as_deref().unwrap_or(""))
         .map_err(CmdError::Internal)?;
     crate::widgets::poke(&id);
     crate::plugins::poke(&id);
     Ok(())
 }
 
-/// Which of a widget's secret settings are set — never the values.
-#[tauri::command]
-pub fn widget_secret_keys(id: String) -> Vec<String> {
-    if crate::plugins::has(&id) {
-        return crate::plugins::secret_keys_present(&id);
+/// The service `sid` of widget `id` as config holds it; an unknown one is an
+/// error, so a secret is never written for a service that doesn't exist.
+fn configured_service(
+    state: &State<'_, AppState>,
+    id: &str,
+    sid: &str,
+) -> CmdResult<crate::widgets::WidgetService> {
+    if !crate::widgets::valid_id(sid) {
+        return Err(CmdError::Internal(format!("bad service id {sid:?}")));
     }
-    crate::widgets::secret_keys_present(&id)
+    state
+        .config
+        .read()
+        .map_err(|_| CmdError::Internal("config lock poisoned".into()))?
+        .widget_services
+        .get(id)
+        .and_then(|list| list.iter().find(|s| s.id == sid).cloned())
+        .ok_or_else(|| CmdError::Internal(format!("{id} has no service {sid}")))
+}
+
+/// Which of a widget's secret settings are set — never the values. With
+/// `service`, that configured service's secrets instead.
+#[tauri::command]
+pub fn widget_secret_keys(
+    id: String,
+    service: Option<String>,
+    state: State<'_, AppState>,
+) -> CmdResult<Vec<String>> {
+    if let Some(sid) = service {
+        let svc = configured_service(&state, &id, &sid)?;
+        return Ok(crate::widgets::service_secret_keys_present(&id, &svc));
+    }
+    if crate::plugins::has(&id) {
+        return Ok(crate::plugins::secret_keys_present(&id));
+    }
+    Ok(crate::widgets::secret_keys_present(&id))
 }
 
 /// Start the widget's own sign-in (`<widget> auth`); progress arrives as

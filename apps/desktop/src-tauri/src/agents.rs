@@ -111,6 +111,14 @@ pub struct AgentSession {
     /// the card can say why; `None` until the pane has been looked at.
     #[serde(default)]
     pub rule: Option<String>,
+    /// How full the agent's context is, 0–100, when its transcript says
+    /// (Claude only: claude_sessions.rs). None means unknown, not empty.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context_pct: Option<u8>,
+    /// The session's own name when its agent reports one (Claude's session
+    /// file); the card titles a tile with it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
 }
 
 /// Incoming wire event: an `AgentSession` minus the timestamp, all fields
@@ -179,9 +187,13 @@ fn own_list() -> Vec<AgentSession> {
     let now = now_secs();
     let stale = stale_secs();
     let dropped = reap(&mut sessions, &layout, layout_fresh, now, stale, comm_of);
+    let reports = claude_reports(&sessions);
+    let placed = place_claude(&mut sessions, &reports, &layout);
     let found = discover(&mut sessions, &layout, now);
-    let looked = look(&mut sessions, &layout, now);
-    let dropped = dropped || found || looked;
+    let quiet = quiet_claude(&sessions, &reports);
+    let looked = look(&mut sessions, &layout, now, &quiet);
+    let agreed = reconcile_claude(&mut sessions, &reports, now);
+    let dropped = dropped || placed || found || looked || agreed;
     let mut fresh: Vec<AgentSession> = sessions
         .iter()
         .cloned()
@@ -872,7 +884,12 @@ fn discover(sessions: &mut Vec<AgentSession>, layout: &Layout, now: u64) -> bool
 /// `working` or `attention`, or were just poked, are read: an idle or done
 /// cell changes on its next hook event, and an idle pane costs nothing.
 /// Returns whether a state changed.
-fn look(sessions: &mut [AgentSession], layout: &Layout, now: u64) -> bool {
+fn look(
+    sessions: &mut [AgentSession],
+    layout: &Layout,
+    now: u64,
+    quiet: &std::collections::HashSet<String>,
+) -> bool {
     use std::time::Instant;
     static LAST: Mutex<Option<std::collections::HashMap<String, Instant>>> = Mutex::new(None);
     let poked: Vec<String> = {
@@ -893,6 +910,11 @@ fn look(sessions: &mut [AgentSession], layout: &Layout, now: u64) -> bool {
         let active = s.state == "working" || s.state == "attention";
         let wanted = poked.contains(&s.session);
         if !active && !wanted {
+            continue;
+        }
+        // Claude says it's idle and nothing asks for attention: the screen has
+        // nothing to add, so it isn't read (reconcile_claude settles it).
+        if quiet.contains(&s.session) && !wanted {
             continue;
         }
         if !wanted
@@ -944,6 +966,196 @@ fn settle(s: &mut AgentSession, verdict: Option<crate::rules::Verdict>, now: u64
     s.state = next.to_owned();
     s.state_since = now;
     s.updated_at = now;
+    true
+}
+
+// ---- Claude Code's own report (claude_sessions.rs) -------------------------
+
+/// The agent id the rules give Claude Code (agents/claude.toml).
+const CLAUDE: &str = "claude";
+/// How long the screen may keep saying working after the transcript says the
+/// turn ended, before the transcript wins (Esc emits no hook; agents-deck's
+/// `Settle()` uses the same grace).
+const TURN_END_GRACE_SECS: u64 = 30;
+/// Claude rewrites its session file a moment after a hook or the screen has
+/// spoken. A status older than our state wins only once the two have
+/// disagreed this long; a newer one wins at once.
+const FILE_LAG_SECS: u64 = 5;
+
+/// What Claude says about one of our sessions this tick.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ClaudeReport {
+    /// Which `AgentSession` it belongs to.
+    session: String,
+    status: Option<crate::claude_sessions::Status>,
+    /// Unix seconds Claude last set `status`; 0 when unknown.
+    status_at: u64,
+    pane: Option<String>,
+    /// The transcript's turn verdict.
+    tail: Option<crate::claude_sessions::Tail>,
+    /// Context used, 0–100, from the transcript's last usage.
+    context: Option<u8>,
+    /// Claude's name for the session.
+    name: Option<String>,
+}
+
+/// The session files matched to our sessions: by Claude's session id (hook
+/// sessions), else the pane, else the pid. Discovered panes match by pane.
+fn match_reports(
+    sessions: &[AgentSession],
+    files: &[crate::claude_sessions::ClaudeSession],
+) -> Vec<(usize, usize)> {
+    let mut out = Vec::new();
+    for (i, s) in sessions.iter().enumerate() {
+        if s.agent != CLAUDE {
+            continue;
+        }
+        let hit = files
+            .iter()
+            .position(|f| f.session_id == s.session)
+            .or_else(|| {
+                (!s.mux_target.is_empty())
+                    .then(|| {
+                        files
+                            .iter()
+                            .position(|f| f.pane.as_deref() == Some(s.mux_target.as_str()))
+                    })
+                    .flatten()
+            })
+            .or_else(|| {
+                s.pid
+                    .and_then(|pid| files.iter().position(|f| f.pid == pid))
+            });
+        if let Some(j) = hit {
+            out.push((i, j));
+        }
+    }
+    out
+}
+
+/// Read Claude's session files (and, for working sessions, their transcript
+/// tails) for this tick. Empty when Claude Code isn't here.
+fn claude_reports(sessions: &[AgentSession]) -> Vec<ClaudeReport> {
+    use crate::claude_sessions::{config_dir, transcript_path, Scanner, Tails};
+    static SCANNER: Mutex<Option<(Scanner, Tails)>> = Mutex::new(None);
+    let Some(config) = config_dir() else {
+        return Vec::new();
+    };
+    let mut guard = SCANNER.lock().unwrap();
+    let (scanner, tails) = guard.get_or_insert_with(Default::default);
+    let files = scanner.scan(&config.join("sessions"));
+    let mut read = Vec::new();
+    let reports = match_reports(sessions, &files)
+        .into_iter()
+        .map(|(i, j)| {
+            let (s, f) = (&sessions[i], &files[j]);
+            let path = transcript_path(&config, &f.cwd, &f.session_id);
+            let state = tails.read(&path).unwrap_or_default();
+            read.push(path);
+            ClaudeReport {
+                session: s.session.clone(),
+                status: f.status,
+                status_at: f.status_at,
+                pane: f.pane.clone(),
+                tail: state.tail,
+                context: state.tokens.map(crate::claude_sessions::context_pct),
+                name: f.name.clone(),
+            }
+        })
+        .collect();
+    tails.retain(&read);
+    reports
+}
+
+/// A Claude session that lost its pane id (TMUX_PANE scrubbed, JOURNAL
+/// 2026-08-19) gets the one Claude reports, when tmux lists it. Returns
+/// whether anything changed.
+fn place_claude(sessions: &mut [AgentSession], reports: &[ClaudeReport], layout: &Layout) -> bool {
+    let mut changed = false;
+    for r in reports {
+        let Some(pane) = r.pane.as_ref().filter(|p| layout.contains_key(*p)) else {
+            continue;
+        };
+        if let Some(s) = sessions
+            .iter_mut()
+            .find(|s| s.session == r.session && s.mux_target.is_empty())
+        {
+            s.mux = MUX_TMUX.to_owned();
+            s.mux_target = pane.clone();
+            changed = true;
+        }
+    }
+    changed
+}
+
+/// Claude sessions whose file says idle and that aren't in attention: the
+/// screen isn't read for them.
+fn quiet_claude(
+    sessions: &[AgentSession],
+    reports: &[ClaudeReport],
+) -> std::collections::HashSet<String> {
+    use crate::claude_sessions::Status;
+    reports
+        .iter()
+        .filter(|r| r.status == Some(Status::Idle))
+        .filter(|r| {
+            sessions
+                .iter()
+                .any(|s| s.session == r.session && s.state != "attention")
+        })
+        .map(|r| r.session.clone())
+        .collect()
+}
+
+/// The second signal, after the screen has spoken (DECISIONS 2026-11-27):
+/// attention is the screen's alone; otherwise Claude's `busy`/`idle` settles
+/// working vs not where the screen disagrees; and a transcript whose turn
+/// ended settles working → done once the screen has held on for the grace.
+/// No status (`shell`, unknown) and no transcript verdict is no opinion.
+/// Returns whether a state changed.
+fn reconcile_claude(sessions: &mut [AgentSession], reports: &[ClaudeReport], now: u64) -> bool {
+    let mut changed = false;
+    for r in reports {
+        if let Some(s) = sessions.iter_mut().find(|s| s.session == r.session) {
+            changed |= reconcile(s, r, now);
+            if r.context.is_some() && s.context_pct != r.context {
+                s.context_pct = r.context;
+                changed = true;
+            }
+            if r.name.is_some() && s.name != r.name {
+                s.name = r.name.clone();
+                changed = true;
+            }
+        }
+    }
+    changed
+}
+
+fn reconcile(s: &mut AgentSession, r: &ClaudeReport, now: u64) -> bool {
+    use crate::claude_sessions::{Status, Tail};
+    if s.state == "attention" {
+        return false;
+    }
+    let held = now.saturating_sub(s.state_since);
+    let file_counts = r.status_at >= s.state_since || held >= FILE_LAG_SECS;
+    let (next, rule) = match (r.status.filter(|_| file_counts), r.tail) {
+        (Some(Status::Busy), _) if s.state != "working" => {
+            ("working", "seen: session file busy".to_owned())
+        }
+        (Some(Status::Idle), _) if s.state == "working" => {
+            ("done", "seen: session file idle".to_owned())
+        }
+        (Some(Status::Busy), _) => return false,
+        (None, _) if r.status == Some(Status::Busy) => return false,
+        (_, Some(Tail::Ended(end))) if s.state == "working" && held >= TURN_END_GRACE_SECS => {
+            ("done", format!("seen: transcript {}", end.label()))
+        }
+        _ => return false,
+    };
+    s.state = next.to_owned();
+    s.state_since = now;
+    s.updated_at = now;
+    s.rule = Some(rule);
     true
 }
 
@@ -1341,6 +1553,209 @@ mod tests {
                 )
             })
             .collect()
+    }
+
+    fn file(pid: u32, id: &str, pane: Option<&str>) -> crate::claude_sessions::ClaudeSession {
+        crate::claude_sessions::ClaudeSession {
+            pid,
+            session_id: id.into(),
+            cwd: "/x".into(),
+            name: None,
+            status: None,
+            status_at: 0,
+            pane: pane.map(str::to_owned),
+        }
+    }
+
+    fn report(
+        session: &str,
+        status: Option<crate::claude_sessions::Status>,
+        status_at: u64,
+        tail: Option<crate::claude_sessions::Tail>,
+    ) -> ClaudeReport {
+        ClaudeReport {
+            session: session.into(),
+            status,
+            status_at,
+            pane: None,
+            tail,
+            context: None,
+            name: None,
+        }
+    }
+
+    #[test]
+    fn session_files_match_by_id_then_pane_then_pid() {
+        let mut by_pid = pidded("hook-2", 77, None);
+        by_pid.mux_target.clear();
+        let mut other = paned("codex-pane", "%9");
+        other.agent = "codex".into();
+        let sessions = vec![paned("sess-a", ""), paned("pane:%5", "%5"), by_pid, other];
+        let files = vec![
+            file(1, "sess-a", Some("%1")),
+            file(2, "unrelated", Some("%5")),
+            file(77, "zzz", None),
+            file(9, "codex-file", Some("%9")),
+        ];
+        assert_eq!(
+            match_reports(&sessions, &files),
+            vec![(0, 0), (1, 1), (2, 2)]
+        );
+    }
+
+    #[test]
+    fn a_scrubbed_pane_is_filled_from_the_session_file() {
+        let mut sessions = vec![paned("sess-a", "")];
+        let mut r = report("sess-a", None, 0, None);
+        r.pane = Some("%7".into());
+        assert!(
+            !place_claude(&mut sessions, &[r.clone()], &layout(&["%1"])),
+            "not listed"
+        );
+        assert!(place_claude(&mut sessions, &[r.clone()], &layout(&["%7"])));
+        assert_eq!(
+            (sessions[0].mux.as_str(), sessions[0].mux_target.as_str()),
+            ("tmux", "%7")
+        );
+        assert!(
+            !place_claude(&mut sessions, &[r], &layout(&["%7"])),
+            "only once"
+        );
+    }
+
+    #[test]
+    fn idle_claude_panes_are_not_read_unless_asking() {
+        use crate::claude_sessions::Status;
+        let mut asking = paned("b", "%2");
+        asking.state = "attention".into();
+        let sessions = vec![paned("a", "%1"), asking, paned("c", "%3")];
+        let quiet = quiet_claude(
+            &sessions,
+            &[
+                report("a", Some(Status::Idle), 0, None),
+                report("b", Some(Status::Idle), 0, None),
+                report("c", Some(Status::Busy), 0, None),
+            ],
+        );
+        assert_eq!(quiet.into_iter().collect::<Vec<_>>(), vec!["a".to_string()]);
+    }
+
+    #[test]
+    fn the_session_file_settles_disagreements_but_never_attention() {
+        use crate::claude_sessions::Status;
+        let mut s = paned("a", "%1");
+        s.state = "idle".into();
+        s.state_since = 100;
+        // Busy, newer than our state: working at once, and the card says why.
+        assert!(reconcile(
+            &mut s,
+            &report("a", Some(Status::Busy), 101, None),
+            102
+        ));
+        assert_eq!(s.state, "working");
+        assert_eq!(s.rule.as_deref(), Some("seen: session file busy"));
+        assert!(!reconcile(
+            &mut s,
+            &report("a", Some(Status::Busy), 101, None),
+            103
+        ));
+        // Idle, newer: done.
+        assert!(reconcile(
+            &mut s,
+            &report("a", Some(Status::Idle), 104, None),
+            104
+        ));
+        assert_eq!(s.state, "done");
+        assert_eq!(s.rule.as_deref(), Some("seen: session file idle"));
+        // Attention is the screen's alone.
+        s.state = "attention".into();
+        assert!(!reconcile(
+            &mut s,
+            &report("a", Some(Status::Busy), 200, None),
+            200
+        ));
+        assert!(!reconcile(
+            &mut s,
+            &report("a", Some(Status::Idle), 200, None),
+            200
+        ));
+        assert_eq!(s.state, "attention");
+    }
+
+    #[test]
+    fn a_lagging_session_file_waits_before_it_overrides() {
+        use crate::claude_sessions::Status;
+        let mut s = paned("a", "%1");
+        s.state = "working".into();
+        s.state_since = 100; // a hook said working at 100
+        let stale_idle = report("a", Some(Status::Idle), 90, None);
+        assert!(
+            !reconcile(&mut s, &stale_idle, 102),
+            "Claude hasn't caught up yet"
+        );
+        assert_eq!(s.state, "working");
+        assert!(
+            reconcile(&mut s, &stale_idle, 105),
+            "held past the lag: the file wins"
+        );
+        assert_eq!(s.state, "done");
+    }
+
+    #[test]
+    fn context_lands_on_the_session_and_unknown_keeps_the_last() {
+        let mut sessions = vec![paned("a", "%1")];
+        let mut r = report("a", None, 0, None);
+        r.context = Some(48);
+        assert!(reconcile_claude(&mut sessions, &[r.clone()], 10));
+        assert_eq!(sessions[0].context_pct, Some(48));
+        assert!(
+            !reconcile_claude(&mut sessions, &[r.clone()], 11),
+            "unchanged"
+        );
+        r.context = None;
+        assert!(!reconcile_claude(&mut sessions, &[r.clone()], 12));
+        assert_eq!(sessions[0].context_pct, Some(48));
+        r.name = Some("Scuttler".into());
+        assert!(reconcile_claude(&mut sessions, &[r], 13));
+        assert_eq!(sessions[0].name.as_deref(), Some("Scuttler"));
+    }
+
+    #[test]
+    fn shell_or_missing_status_is_no_opinion() {
+        let mut s = paned("a", "%1");
+        s.state = "working".into();
+        s.state_since = 100;
+        assert!(!reconcile(&mut s, &report("a", None, 500, None), 500));
+        s.state = "idle".into();
+        assert!(!reconcile(&mut s, &report("a", None, 500, None), 500));
+    }
+
+    #[test]
+    fn a_transcript_turn_end_settles_working_after_the_grace() {
+        use crate::claude_sessions::{Status, Tail, TurnEnd};
+        let mut s = paned("a", "%1");
+        s.state = "working".into();
+        s.state_since = 100;
+        let ended = report("a", None, 0, Some(Tail::Ended(TurnEnd::Interrupted)));
+        assert!(!reconcile(&mut s, &ended, 120), "within the grace");
+        assert!(reconcile(&mut s, &ended, 130));
+        assert_eq!(s.state, "done");
+        assert_eq!(s.rule.as_deref(), Some("seen: transcript interrupted"));
+
+        s.state = "working".into();
+        s.state_since = 100;
+        let open = report("a", None, 0, Some(Tail::Open));
+        assert!(!reconcile(&mut s, &open, 500), "an open turn keeps working");
+        let busy_but_ended = report(
+            "a",
+            Some(Status::Busy),
+            90,
+            Some(Tail::Ended(TurnEnd::EndTurn)),
+        );
+        assert!(
+            !reconcile(&mut s, &busy_but_ended, 500),
+            "busy outranks the transcript"
+        );
     }
 
     fn paned(session: &str, pane: &str) -> AgentSession {

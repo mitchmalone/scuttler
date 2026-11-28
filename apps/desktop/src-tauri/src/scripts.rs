@@ -37,6 +37,12 @@ pub struct ScriptInfo {
 pub enum ScriptAction {
     Copy(String),
     Open(String),
+    /// Open scuttler's Settings at a page id (`widgets`, `bar`, …): a widget's
+    /// "Configure" row (DECISIONS 2026-11-24).
+    Settings(String),
+    /// Tick a widget now, by id: the refresh button in a widget card's header
+    /// (DECISIONS 2026-11-25).
+    Refresh(String),
     None,
 }
 
@@ -238,6 +244,20 @@ pub fn start(app: AppHandle) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn refresh_action_names_a_widget() {
+        let a: ScriptAction =
+            serde_json::from_str(r#"{"type":"refresh","value":"vercel"}"#).unwrap();
+        assert_eq!(a, ScriptAction::Refresh("vercel".into()));
+    }
+
+    #[test]
+    fn settings_action_names_a_page() {
+        let a: ScriptAction =
+            serde_json::from_str(r#"{"type":"settings","value":"widgets"}"#).unwrap();
+        assert_eq!(a, ScriptAction::Settings("widgets".into()));
+    }
 
     #[test]
     fn script_item_parses_with_defaults() {

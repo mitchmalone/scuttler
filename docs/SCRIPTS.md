@@ -49,6 +49,8 @@ Called on every keystroke (debounced ~120ms). Print results to stdout and exit 0
 - `action` decides what Enter does:
   - `{"type": "copy", "value": "…"}` — put text on the clipboard
   - `{"type": "open", "value": "…"}` — `open` a URL, file, or app
+  - `{"type": "settings", "value": "widgets"}` — open scuttler's Settings at that page
+    (`widgets`, `bar`, `theme`, … — the ids in the sidebar)
   - `{"type": "none"}` (default) — informational row, Enter dismisses only
 
 ## Rules of the road

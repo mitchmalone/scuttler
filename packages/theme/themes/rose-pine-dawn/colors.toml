@@ -1,0 +1,35 @@
+# Rosé Pine Dawn — the light variant, from rosepinetheme.com (MIT).
+mode = "light"
+
+accent = "#d7827e"
+selection = "#dfdad9"
+muted = "#9893a5"
+
+background = "#faf4ed"
+dark_background = "#f4ede8"
+darker_background = "#f2e9e1"
+lighter_background = "#f2e9e1"
+
+foreground = "#575279"
+dark_foreground = "#797593"
+light_foreground = "#575279"
+bright_foreground = "#464261"
+
+red = "#b4637a"
+yellow = "#ea9d34"
+orange = "#d7827e"
+green = "#286983"
+cyan = "#56949f"
+blue = "#286983"
+magenta = "#907aa9"
+
+bright_red = "#b4637a"
+bright_yellow = "#ea9d34"
+bright_green = "#286983"
+bright_cyan = "#56949f"
+bright_blue = "#56949f"
+bright_magenta = "#907aa9"
+
+[launcher]
+border = "#cecacd"
+selected = "rgba(215, 130, 126, 0.12)"

@@ -27,8 +27,6 @@ export interface ThemePanelProps {
   mode: string
   /** Which half the policy is reading right now. */
   dark: boolean
-  /** Active macOS Focus name, if any. */
-  focusName: string | null
   onPick: (name: string, how: 'now' | 'other') => void
   onClose: () => void
 }
@@ -69,7 +67,6 @@ export function ThemePanel({
   themes,
   mode,
   dark,
-  focusName,
   onPick,
   onClose,
 }: ThemePanelProps) {
@@ -89,13 +86,7 @@ export function ThemePanel({
     onBack: () => (filter ? setFilter('') : onClose()),
   })
 
-  const subtitle = [
-    current,
-    `mode: ${mode}`,
-    focusName ? `focus: ${focusName}` : null,
-  ]
-    .filter(Boolean)
-    .join(' · ')
+  const subtitle = [current, `mode: ${mode}`].filter(Boolean).join(' · ')
 
   return (
     <Panel

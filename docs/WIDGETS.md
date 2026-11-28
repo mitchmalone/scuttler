@@ -14,7 +14,8 @@ Widgets are the bar's scripts: drop a **TypeScript file** into
 short label, a tone, a click, and a hover card of rows. No build, no shebang, no chmod,
 no restart: `.ts` runs under **Bun** (or Node when Bun is absent — DECISIONS 2026-08-19).
 Any other executable in any language works too. The reference widgets in
-`apps/desktop/widgets/` (`uptime.ts`, `github-actions.ts`, `vercel.ts`, `trmnl.ts`) are
+`apps/desktop/widgets/` (`uptime.ts`, `jobs.ts`, `trmnl.ts`,
+`arr.ts`) are
 yours to copy and edit; the shape is deliberately the same as `docs/SCRIPTS.md`.
 
 ```ts
@@ -66,7 +67,7 @@ Print a JSON manifest to stdout and exit 0:
 - `name` — the card title until a tick sends one. Defaults to `id`.
 - `interval` — seconds between ticks. Default 60, minimum 5.
 - `zone` — `left` | `center` | `right`; where the cell first appears (default `right`).
-  Move it in Settings → Menubar afterwards like any module.
+  Move it in Settings → Bar afterwards like any module.
 - `icon` — a [lucide](https://lucide.dev/icons) icon name (kebab-case), shown until the
   first tick. Default `puzzle`.
 - `timeout` — seconds a tick may run before it is killed. Default 10, maximum 60.
@@ -110,15 +111,41 @@ Every field is optional; `{}` is a valid blank cell. The fields — `icon`, `lab
 ## Settings and sign-in
 
 `settings`, `requires` and `auth` are defined in [PLUGINS.md](PLUGINS.md) ("Settings and
-sign-in") and mean the same here: declared settings are collected in **Settings → Menubar
-→ Custom widgets** and arrive as environment variables on every `tick`; secrets go to the
+sign-in") and mean the same here: declared settings are collected in **Settings → Widgets** and arrive as environment variables on every `tick`; secrets go to the
 Keychain; piggyback on the provider CLI's own login first and answer `setup` when it is
-missing. `vercel.ts` reads `VERCEL_TOKEN`, else the Vercel CLI's store;
-`github-actions.ts` carries the device-flow `auth` example.
+missing. `jobs.ts`'s Vercel service reads its token, else the Vercel CLI's store, and runs
+`vercel whoami` when that login has expired so the CLI renews it.
+
+Each widget's settings live on its own **configure** screen (Settings → Widgets →
+configure).
+
+### Services
+
+A widget that watches several things of a kind declares `services` in its manifest:
+the types the user can add, each with its own `settings` and `requires`.
+
+```json
+"services": [
+  { "type": "dagu", "name": "Dagu", "icon": "workflow",
+    "settings": [
+      { "key": "DAGU_URL", "label": "URL", "required": true },
+      { "key": "DAGU_TOKEN", "label": "API key", "secret": true, "required": true }
+    ] }
+]
+```
+
+The configure screen lists the user's services under an **add service** dropdown; the same
+type can be added more than once. Instances are stored in `config.widgetServices[<id>]`,
+secrets in the Keychain per service. Every tick gets `SCUTTLER_SERVICES`, a JSON array of
+the complete ones (`[{ "id", "type", "label", "settings": { KEY: value } }]`); a service
+missing a required value is left out, so the widget never sees it. Render one card
+section per service. `jobs.ts` and `arr.ts` are the worked examples (DECISIONS
+2026-11-27).
 
 ## Refresh, failure, and the rules of the road
 
-- **On demand:** `touch ~/.config/scuttler/triggers/widget.<id>` ticks a widget now —
+- **On demand:** the refresh button in the card's header, or
+  `touch ~/.config/scuttler/triggers/widget.<id>`, ticks a widget now —
   wire it to a git hook, a cron, a keybinding, anything.
 - **Live:** the dir is watched. Drop a widget in and its cell appears within a second;
   edit it and it re-ticks; delete it and the cell goes.
@@ -133,7 +160,7 @@ missing. `vercel.ts` reads `VERCEL_TOKEN`, else the Vercel CLI's store;
   from declared **settings** (above) or wherever you like (env, the CLI's own store,
   `secret`); scuttler stores only what a manifest declares, and never calls a provider.
 - **Layout:** the widget appears in `bar.layout` as `widget:<id>`; toggle or move it in
-  Settings → Menubar. Removed widgets keep their slot in the layout, so a re-install lands
+  Settings → Bar. Removed widgets keep their slot in the layout, so a re-install lands
   where you left it.
 - **Runtime:** Bun is found on PATH, Homebrew, or `~/.bun`; Node on PATH, Homebrew,
   Volta/fnm/nvm. Neither → the cell reads `needs bun — brew install oven-sh/bun/bun`.
@@ -142,7 +169,7 @@ missing. `vercel.ts` reads `VERCEL_TOKEN`, else the Vercel CLI's store;
 
 ## Installing, arranging, removing
 
-- **Settings → Menubar → Custom widgets** (its own sub-tab) lists what's installed with its health ("ok ·
+- **Settings → Widgets** (its own page) lists what's installed with its health ("ok ·
   2m ago", "error · exit 1: …", "hidden"), and offers **install from URL** (one download,
   on click — the file must answer `manifest` or it's discarded with the reason), **add
   file…**, **tick** (run now), **remove** (deletes the file), and **open folder**.
@@ -153,12 +180,12 @@ missing. `vercel.ts` reads `VERCEL_TOKEN`, else the Vercel CLI's store;
 
 ## Reference widgets
 
-| Widget              | Source                          | Cadence | Notes                                                                                                                                                                                         |
-| ------------------- | ------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `uptime.ts`         | Upptime `summary.json`          | 5 min   | Arrow up/down, down-count label, a row per site (opens it). Set `UPTIME_SUMMARY_URL`.                                                                                                         |
-| `github-actions.ts` | GitHub API, latest run per repo | 2 min   | `gh auth token` (the CLI keeps it fresh) or a pasted token; your 10 most recently pushed repos (pin a list in the file); failing count, opens the run; dim + `gh auth login` when signed out. |
-| `vercel.ts`         | Vercel API `/v9/projects`       | 2 min   | The Vercel CLI's own login or a pasted `VERCEL_TOKEN` (Keychain); latest production deployment per project; dim + the fix when signed out or stale.                                           |
-| `trmnl.ts`          | TRMNL `/api/devices`            | 5 min   | Key via `TRMNL_API_KEY` or `secret shared/trmnl/api_key`; hidden without one.                                                                                                                 |
+| Widget      | Source                           | Cadence | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ----------- | -------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `uptime.ts` | Uptime Kuma status page          | 2 min   | Arrow up/down, down-count label, a row per monitor with its 24 h uptime and latest ping (opens the site when the page shares its URL), grouped as the page is. Set `UPTIME_KUMA_URL` to the status page's address; required.                                                                                                                                                                                                                                                                                                           |
+| `jobs.ts`   | GitHub, Dagu, Vercel APIs        | 2 min   | Services: GitHub Actions (the latest run of every active workflow in your 10 most recently pushed repos plus pinned ones; `gh auth token` or a pasted token), Dagu (latest run per DAG from `/api/v1/dags` with an API key; suspended, never-run and hidden DAGs left out), Vercel (latest production deployment per project; the CLI's login, renewed by the CLI, or a pasted token). One section per service, every row, failing first; one service failing is a grey row in its section. `activity` icon, failing count across all. |
+| `trmnl.ts`  | TRMNL `/api/devices`             | 5 min   | Key via `TRMNL_API_KEY` or `secret shared/trmnl/api_key`; hidden without one.                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `arr.ts`    | Radarr, Sonarr, Prowlarr, Bazarr | 1 min   | Each app is a service: a URL and an API key (Keychain), each app optional; health issues, low disks, disabled indexers, then downloads, then a row per app. Optional `PIPELINE_STATUS_URL` for a post-processing status file. Dim with the fix when nothing is set or every key is rejected.                                                                                                                                                                                                                                           |
 
 Install one: `cp apps/desktop/widgets/uptime.ts ~/.config/scuttler/widgets/` (or
-Settings → Menubar → Custom widgets → add file) — then it's yours to edit in place.
+Settings → Widgets → add file) — then it's yours to edit in place.

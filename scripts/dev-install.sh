@@ -3,7 +3,7 @@
 # without Finder or the app grabbing the screen (Mitch, 2026-09-10).
 #
 #   scripts/dev-install.sh          swap in the last `tauri build` and relaunch
-#   scripts/dev-install.sh --build  build first
+#   scripts/dev-install.sh --build  build first, signed with the Developer ID
 #   scripts/dev-install.sh --quit   only stop the running app (release.sh's smoke
 #                                   tests want the hotkey and the bar free)
 #
@@ -46,6 +46,21 @@ if [[ "${1:-}" == "--quit" ]]; then
 fi
 
 if [[ "${1:-}" == "--build" ]]; then
+  # Sign with the same Developer ID as a release, so macOS sees one app across
+  # rebuilds. Ad-hoc signing gives every build a new identity: TCC grants
+  # (Bluetooth, Screen Recording) and Keychain trust are keyed to it, so each
+  # reinstall asked again (JOURNAL 2026-11-24). Ad-hoc only when no Developer ID
+  # is in the keychain. An explicit APPLE_SIGNING_IDENTITY wins.
+  if [[ -z "${APPLE_SIGNING_IDENTITY:-}" ]]; then
+    APPLE_SIGNING_IDENTITY=$(security find-identity -v -p codesigning \
+      | grep -o '"Developer ID Application:[^"]*"' | head -1 | tr -d '"' || true)
+  fi
+  if [[ -n "$APPLE_SIGNING_IDENTITY" ]]; then
+    export APPLE_SIGNING_IDENTITY
+  else
+    unset APPLE_SIGNING_IDENTITY
+    echo "no Developer ID in the keychain: ad-hoc build, permissions will be asked again" >&2
+  fi
   # The .app only: the dmg step drives Finder (a window pops; without the
   # Automation grant it hangs 120 s, then fails), and only release.sh wants a
   # dmg — brew installs the zip (JOURNAL 2026-08-19, 2026-10-20).

@@ -315,9 +315,7 @@ fn write_atomic(path: &std::path::Path, contents: &str) -> std::io::Result<()> {
 /// `aerospace reload-config`; false when the CLI is missing or AeroSpace isn't
 /// running (it reads the file at its own start, so that's fine).
 pub(crate) fn reload_aerospace() -> bool {
-    deps::locate(Dep::Aerospace.binary())
-        .and_then(|bin| Command::new(bin).arg("reload-config").output().ok())
-        .is_some_and(|o| o.status.success())
+    crate::bar::aerospace(&["reload-config"]).is_some()
 }
 
 // ---- AeroSpace menu, as launcher rows ----------------------------------------

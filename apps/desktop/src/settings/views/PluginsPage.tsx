@@ -3,28 +3,22 @@ import type { PluginPermission, PluginState } from '@scuttler/tui/plugins'
 import { invoke } from '@tauri-apps/api/core'
 import { useState } from 'react'
 
-import { type Config, pluginModuleId } from '../lib/config'
-import { usePlugins } from '../plugins/use-plugins'
-
-type SetFn = <K extends keyof Config>(key: K, value: Config[K]) => void
+import { pluginModuleId } from '../../lib/config'
+import { usePlugins } from '../../plugins/use-plugins'
+import { pageDef } from '../pages'
+import type { PageProps } from '../types'
+import { Block, Note, Page, Section, Toggle } from '../ui'
+import { PAGE_ICONS } from './icons'
+import { WidgetPrereqs, WidgetSettings } from './widget-kit'
 
 /**
- * Settings → Menubar → Plugins (docs/PLUGINS.md): what's installed — bundled
- * and user — how each is doing (service, build, last state), on/off, restart,
- * install from a git URL, remove. Settings/prereqs render through the widget
- * components below: a plugin declares them the same way.
+ * Settings → Plugins (docs/PLUGINS.md): what's installed — bundled and user —
+ * how each is doing (service, build, last state), on/off, restart, install
+ * from a git URL, remove. Settings/prereqs render through the widget kit: a
+ * plugin declares them the same way a widget does.
  */
-export function PluginsSection({
-  config,
-  set,
-  WidgetSettings,
-  WidgetPrereqs,
-}: {
-  config: Config
-  set: SetFn
-  WidgetSettings: React.FC<{ widget: BarWidget; config: Config; set: SetFn }>
-  WidgetPrereqs: React.FC<{ widget: BarWidget }>
-}) {
+export function PluginsPage({ config, set }: PageProps) {
+  const def = pageDef('plugins')
   const plugins = usePlugins(2000)
   const [url, setUrl] = useState('')
   const [busy, setBusy] = useState(false)
@@ -59,99 +53,113 @@ export function PluginsSection({
   }
 
   return (
-    <section className="row-full">
-      <div className="zonehead">Plugins</div>
-      <p className="hint">
-        Directories in <code>~/.config/scuttler/plugins/</code>: a manifest, a
-        Bun service, and a cell and panel written in React on the scuttler kit.
-        Bundled ones ship with the app. Contract and reference plugins:
-        docs/PLUGINS.md.
-      </p>
-      {plugins.map((p) => (
-        <div className="widgetentry" key={p.id}>
-          <div className="linkrow">
-            <label className="check">
-              <input
-                type="checkbox"
+    <Page
+      icon={PAGE_ICONS.plugins}
+      title={def.label}
+      description={
+        <>
+          Directories in <code>~/.config/scuttler/plugins/</code>: a manifest, a
+          Bun service, and a cell and panel written in React on the scuttler
+          kit. Bundled ones ship with the app. Contract and reference plugins:
+          docs/PLUGINS.md.
+        </>
+      }
+      configKey={def.configKey}
+    >
+      <Section title="Installed" aside={`${plugins.length}`}>
+        <span data-row="installed-plugins" />
+        {plugins.length === 0 && (
+          <Block>
+            <p className="blk-hint">No plugins found.</p>
+          </Block>
+        )}
+        {plugins.map((p) => (
+          <div className="entry" key={p.id}>
+            <div className="entry-head">
+              <Toggle
+                label={`Enable ${p.name}`}
                 checked={p.enabled}
-                onChange={(e) => toggle(p, e.target.checked)}
+                onChange={(on) => toggle(p, on)}
               />
-            </label>
-            <div className="grow widgetmeta">
-              <span className="widgetname">{p.name}</span>
-              <span className="widgetid">
-                {pluginModuleId(p.id)}
-                {p.version ? ` · v${p.version}` : ''}
-                {p.firstParty ? ' · bundled' : ''}
-              </span>
-              <span
-                className={`widgetstatus ${
-                  p.error || p.buildError ? 'widgetstatus-error' : ''
-                }`}
-                title={p.buildError ?? p.error ?? undefined}
-              >
-                {pluginStatus(p, now)}
-              </span>
+              <div className="entry-meta">
+                <span className="entry-name">{p.name}</span>
+                <span className="entry-id">
+                  {pluginModuleId(p.id)}
+                  {p.version ? ` · v${p.version}` : ''}
+                </span>
+                <span
+                  className={`entry-status${
+                    p.error || p.buildError ? ' error' : ''
+                  }`}
+                  title={p.buildError ?? p.error ?? undefined}
+                >
+                  {pluginStatus(p, now)}
+                </span>
+              </div>
+              {!p.firstParty && (
+                <button
+                  type="button"
+                  className="btn"
+                  title="restart the service, rebuild the UI"
+                  onClick={() => restart(p)}
+                >
+                  restart
+                </button>
+              )}
+              {!p.firstParty && (
+                <button
+                  type="button"
+                  className="btn dim"
+                  title="delete the plugin directory"
+                  onClick={() => remove(p)}
+                >
+                  remove
+                </button>
+              )}
             </div>
-            {!p.firstParty && (
-              <button
-                type="button"
-                className="ghost"
-                title="restart the service, rebuild the UI"
-                onClick={() => restart(p)}
-              >
-                restart
-              </button>
-            )}
-            {!p.firstParty && (
-              <button
-                type="button"
-                className="ghost"
-                title="delete the plugin directory"
-                onClick={() => remove(p)}
-              >
-                remove
-              </button>
-            )}
+            {p.description && <p className="entry-desc">{p.description}</p>}
+            <PluginPermissions plugin={p} />
+            <WidgetPrereqs widget={asWidget(p)} />
+            <WidgetSettings widget={asWidget(p)} config={config} set={set} />
           </div>
-          {p.description && (
-            <p className="hint widgetsetting-note">{p.description}</p>
-          )}
-          <PluginPermissions plugin={p} />
-          <WidgetPrereqs widget={asWidget(p)} />
-          <WidgetSettings widget={asWidget(p)} config={config} set={set} />
-        </div>
-      ))}
-      <div className="linkrow widgetadd">
-        <input
-          type="text"
-          className="grow"
-          placeholder="https://github.com/…/scuttler-plugin.git — install from git"
-          value={url}
-          disabled={busy}
-          onChange={(e) => setUrl(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') install()
-          }}
-        />
-        <button
-          type="button"
-          className="ghost"
-          disabled={busy || !url.trim()}
-          onClick={install}
-        >
-          install
-        </button>
-        <button
-          type="button"
-          className="ghost"
-          onClick={() => invoke('open_path', { target: 'plugins' })}
-        >
-          open folder
-        </button>
-      </div>
-      {note && <p className="hint">{note}</p>}
-    </section>
+        ))}
+      </Section>
+
+      <Section title="Add">
+        <Block anchor="Install a plugin">
+          <div className="btnrow">
+            <input
+              type="text"
+              className="grow"
+              aria-label="Plugin git URL"
+              placeholder="https://github.com/…/scuttler-plugin.git"
+              value={url}
+              disabled={busy}
+              onChange={(e) => setUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') install()
+              }}
+            />
+            <button
+              type="button"
+              className="btn"
+              disabled={busy || !url.trim()}
+              onClick={install}
+            >
+              install from git
+            </button>
+            <button
+              type="button"
+              className="btn dim"
+              onClick={() => invoke('open_path', { target: 'plugins' })}
+            >
+              open folder
+            </button>
+          </div>
+          {note && <Note>{note}</Note>}
+        </Block>
+      </Section>
+    </Page>
   )
 }
 
@@ -187,7 +195,7 @@ function PluginPermissions({ plugin }: { plugin: PluginState }) {
       .catch((e) => setNote(String(e)))
   }
   return (
-    <div className="widgetsettings widgetprereqs">
+    <div className="widgetsettings">
       {perms.map((perm) => {
         const bad =
           perm.status === 'denied' || perm.status === 'missing-usage-string'
@@ -204,7 +212,7 @@ function PluginPermissions({ plugin }: { plugin: PluginState }) {
             {perm.status !== 'granted' && perm.status !== 'unknown' && (
               <button
                 type="button"
-                className="ghost widgetfix"
+                className="btn widgetfix"
                 title={perm.fix ?? undefined}
                 onClick={() => act(perm)}
               >
@@ -218,7 +226,7 @@ function PluginPermissions({ plugin }: { plugin: PluginState }) {
           </div>
         )
       })}
-      {note && <p className="hint">{note}</p>}
+      {note && <Note>{note}</Note>}
     </div>
   )
 }

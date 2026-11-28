@@ -87,33 +87,51 @@ nothing is left to hand-edit.
 
 ## Policy: which theme, and when
 
-`@scuttler/core/appearance`, pure; stored flat in `config.appearance`:
+`@scuttler/core/appearance`, pure; stored flat in `config.appearance` (reshaped
+2026-11-23, DECISIONS):
 
-| Key        | Meaning                                                                                               |
-| ---------- | ----------------------------------------------------------------------------------------------------- |
-| `mode`     | `system` (follow macOS, its sunrise/sunset included), `light`, `dark`, or `schedule`                  |
-| `schedule` | `{ light: "07:00", dark: "19:00" }` — our own clock, for people with the macOS feature off            |
-| `pair`     | `{ light, dark }` theme names                                                                         |
-| `focus`    | macOS Focus id → a theme (both modes) or its own `{ light, dark }` pair                               |
-| `macos`    | flip macOS light/dark with the theme — only when `mode` ≠ `system`, or the two would chase each other |
+| Key     | Meaning                                                                                                  |
+| ------- | -------------------------------------------------------------------------------------------------------- |
+| `mode`  | `system` (Match System: the pair's half that macOS is showing, sunrise/sunset included), `light`, `dark` |
+| `pair`  | `{ light, dark }` theme names; `light` and `dark` modes use one half each                                |
+| `macos` | flip macOS light/dark with the theme — only in `light` or `dark`, or the two would chase each other      |
 
-Resolution: a mapping for the active Focus wins, else the pair; the mode picks the half.
-Rust reports the inputs with no permission (`appearance.rs` watches
-`~/Library/DoNotDisturb/DB/` for the active Focus and `~/Library/Preferences/` for
-`AppleInterfaceStyle`); the panel window resolves on every input, policy edit, or schedule
-boundary and writes `config.theme` only when the answer changes. A manual pick —
-Settings, or `theme ⏎` — writes the slot the policy is reading, so it sticks.
+Settings → Theme shows one gallery in Light or Dark and a light column beside a dark
+column in Match System; themes sort into them by their own `mode`. Rust reports
+`AppleInterfaceStyle` with no permission (`appearance.rs` watches
+`~/Library/Preferences/`); the panel window resolves on every input or policy edit and
+writes `config.theme` only when the answer changes. A manual pick — Settings, or
+`theme ⏎` — writes the slot the policy is reading, so it sticks.
 
-The engine is **opt-in**: inert until `config.appearance` exists, and the pair is seeded
-with your current theme on both halves, so turning it on changes nothing until you choose
-a light or a dark theme (JOURNAL 2026-09-11).
+The engine is **opt-in**: inert until `config.appearance` has a `mode` or `pair`, and
+until then the mode is the current theme's own and the pair is that theme on both
+halves, so nothing changes until a theme is chosen (JOURNAL 2026-09-11). 0.9 retired the
+`schedule` mode (it reads as `system`) and per-Focus themes (`focus` is dropped on the
+next write); a Focus now changes the wallpaper instead (below).
 
 **Switching by hand.** `theme ⏎` lists every theme with a swatch; ⏎ applies and sticks,
 ⌥⏎ sets the row as the _other_ half (pick tonight's dark theme while it is still light).
 For a global hotkey, bind a custom shortcut to the row "scuttler — Theme switcher"
 (Settings → General ▸ Shortcuts; Omarchy's is ⌥⌃⇧Space). "Toggle Dark Mode" flips the
-policy's mode when it is `light`, `dark` or `schedule`, and flips macOS when it is
-`system` — either way the theme follows.
+policy's mode when it is `light` or `dark`, and flips macOS when it is `system` —
+either way the theme follows.
+
+## Wallpaper
+
+Two features, both off by default (`lib/wallpaper.ts` decides, `wallpaper.rs` sets it
+with `NSWorkspace` on every display, no permission, current Space only — macOS gives
+apps nothing for the other Spaces):
+
+- **Wallpaper** (`config.wallpaper`): a light and a dark image swapped with the theme in
+  use. A half with no image leaves it to the theme's `backgrounds/`.
+- **Focus mode wallpaper** (`config.focusWallpaper`): one image per macOS Focus, winning
+  while that Focus is on; a Focus with no image leaves the default alone. Knowing which
+  Focus is on means reading `~/Library/DoNotDisturb/DB/`, which macOS keeps behind
+  **Full Disk Access**: turning the feature on opens System Settings to grant it, and off
+  reads and watches nothing. A Focus turned on by hand or synced is in the database; one
+  a schedule turns on is in no file, so `activeFocus` evaluates the schedules itself
+  (honouring a later "turn Focus off"); Smart Activation can't be seen (JOURNAL
+  2026-11-23).
 
 ## Your themes
 

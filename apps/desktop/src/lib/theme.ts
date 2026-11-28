@@ -1,6 +1,7 @@
 import {
   type PolicyInputs,
   type Resolution,
+  normalizeMode,
   resolveAppearance,
 } from '@scuttler/core/appearance'
 import {
@@ -9,6 +10,7 @@ import {
   TEMPLATES,
   renderTheme,
 } from '@scuttler/theme'
+import { isLightColor, resolveTheme } from '@scuttler/tui/themes'
 import { invoke } from '@tauri-apps/api/core'
 
 import {
@@ -39,7 +41,7 @@ const ALIASES: Record<string, string> = { launcharr: 'scuttler' }
 
 /** The keys that are the policy (`@scuttler/core/appearance`), as against the rung
  * flags stored beside them. */
-const POLICY_KEYS = ['mode', 'schedule', 'pair', 'focus'] as const
+const POLICY_KEYS = ['mode', 'pair'] as const
 
 /** The engine only runs once the user has a policy on disk (the first-launch setup,
  * Settings → General ▸ Theme or `theme ⏎` write one). An upgrade or a fresh profile
@@ -53,20 +55,37 @@ export function policyConfigured(config: Config): boolean {
 }
 
 /** Merged with defaults. Until the user has a policy the pair is seeded with the
- * current theme on both halves, so turning the engine on changes nothing until a
- * light or dark theme is actually chosen. */
+ * current theme on both halves and the mode is that theme's own (light or dark),
+ * so turning the engine on changes nothing until a theme is actually chosen.
+ * Keys 0.9 retired (`schedule`, `focus`) are dropped here, so the next write
+ * removes them from config.json; a stored `schedule` mode reads as `system`. */
 export function appearanceOf(config: Config): AppearanceConfig {
-  const a: Partial<AppearanceConfig> = config.appearance ?? {}
-  const seeded = policyConfigured(config)
+  const stored: Partial<AppearanceConfig> & Record<string, unknown> =
+    config.appearance ?? {}
+  const { schedule: _schedule, focus: _focus, ...a } = stored
+  const configured = policyConfigured(config)
+  const seeded = configured
     ? DEFAULT_APPEARANCE.pair
     : { light: config.theme, dark: config.theme }
   return {
     ...DEFAULT_APPEARANCE,
     ...a,
-    schedule: { ...DEFAULT_APPEARANCE.schedule, ...(a.schedule ?? {}) },
+    mode: configured ? normalizeMode(a.mode) : themeMode(config),
     pair: { ...seeded, ...(a.pair ?? {}) },
-    focus: { ...(a.focus ?? {}) },
   }
+}
+
+/** Whether the named theme is a light one, by its background. */
+export function isLightTheme(
+  name: string,
+  themes: Config['themes'] | undefined,
+): boolean {
+  return isLightColor(resolveTheme(name, themes).bg)
+}
+
+/** The single mode a config without a policy is in: the current theme's own. */
+function themeMode(config: Config): 'light' | 'dark' {
+  return isLightTheme(config.theme, config.themes) ? 'light' : 'dark'
 }
 
 /** What the policy engine would set the theme to right now, or null while it's inert. */
@@ -115,13 +134,17 @@ export function renderNamed(
 export const renderBuiltin = (name: string) => renderNamed(name)
 
 /** Apply `config.theme` everywhere the rung reaches. Fail-visible per surface. */
+/** `withBackgrounds` false when Settings → Wallpaper (or a Focus) owns the
+ * desktop picture: the theme's backgrounds must not cycle over it. */
 export async function applyThemeEverywhere(
   config: Config,
+  withBackgrounds = true,
 ): Promise<ThemeResult> {
   const user = await userThemes().catch(() => [] as UserTheme[])
   const rendered = renderNamed(config.theme, user)
-  const backgrounds =
-    user.find((t) => t.name === rendered.name)?.backgrounds ?? []
+  const backgrounds = withBackgrounds
+    ? (user.find((t) => t.name === rendered.name)?.backgrounds ?? [])
+    : []
   return invoke<ThemeResult>('theme_apply', {
     req: { ...themeApplyRequest(rendered, config), backgrounds },
   })

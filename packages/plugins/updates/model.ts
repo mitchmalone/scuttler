@@ -96,6 +96,103 @@ export interface UpdateSource {
   dismissed?: UpdateItem[]
   /** Root sources only; absent on sources that run as the user. */
   admin?: AdminAccess
+  /** Homebrew only: formulae whose links point at a keg that was never
+   * installed. Absent when there are none, and in reports before 2026-11-25. */
+  broken?: BrokenFormula[]
+}
+
+/** Mirrors `brewlinks.rs`'s `BrokenFormula`. */
+export interface BrokenFormula {
+  /** The Cellar directory name (`luajit`, `python@3.13`). */
+  name: string
+  /** The version the links point at, which was never installed. */
+  missing: string
+  /** Versions still installed: non-empty means removing the links repairs it. */
+  kegs: string[]
+  /** The dangling links, absolute. */
+  links: string[]
+}
+
+/** The two kinds of broken link, never mixed: `repairable` has an older keg
+ * and comes back as an ordinary update; `stale` has none and is debris. */
+export type LinkClass = 'repairable' | 'stale'
+
+export interface BrokenGroup {
+  class: LinkClass
+  source: UpdateSource
+  formulae: BrokenFormula[]
+}
+
+/** The broken formulae of every source, grouped by class, repairable first;
+ * [] when Homebrew is healthy. */
+export function brokenGroups(report: UpdatesReport): BrokenGroup[] {
+  const groups: BrokenGroup[] = []
+  for (const source of report.sources) {
+    const broken = source.broken ?? []
+    const repairable = broken.filter((f) => f.kegs.length > 0)
+    const stale = broken.filter((f) => f.kegs.length === 0)
+    if (repairable.length) {
+      groups.push({ class: 'repairable', source, formulae: repairable })
+    }
+    if (stale.length) groups.push({ class: 'stale', source, formulae: stale })
+  }
+  return groups.sort(
+    (a, b) => Number(a.class === 'stale') - Number(b.class === 'stale'),
+  )
+}
+
+/** Whether a source's upgrades are held until its links are fixed: Rust
+ * leaves Homebrew out of a batch while anything repairable is broken. */
+export const brewBlocked = (source: UpdateSource): boolean =>
+  (source.broken ?? []).some((f) => f.kegs.length > 0)
+
+/** The band's words for a blocked source. */
+export const BLOCKED_LINE = 'fix the broken links above first'
+
+/** Formulae named before "+N". */
+const BROKEN_NAMES = 4
+
+/** "5 formulae half-upgraded" / "1 leftover Homebrew link". */
+export function brokenTitle(group: BrokenGroup): string {
+  const n = group.formulae.length
+  return group.class === 'repairable'
+    ? `${n} formula${n === 1 ? '' : 'e'} half-upgraded`
+    : `${n} leftover Homebrew link${n === 1 ? '' : 's'}`
+}
+
+/** The names (a few, then "+N") and what it means. */
+export function brokenDetail(group: BrokenGroup): string {
+  const names = group.formulae.map((f) => f.name)
+  const more = names.length - BROKEN_NAMES
+  const listed =
+    names.slice(0, BROKEN_NAMES).join(', ') + (more > 0 ? ` +${more}` : '')
+  return group.class === 'repairable'
+    ? `${listed} · Homebrew upgrades fail until this is fixed`
+    : `${listed} · not installed any more`
+}
+
+/** The button's word: a repair, or a removal. */
+export const BROKEN_ACTION: Record<LinkClass, string> = {
+  repairable: 'fix',
+  stale: 'remove',
+}
+
+/** What the fix does, as a command: the same links, removed by hand. */
+export function brokenCommand(group: BrokenGroup): string {
+  const quote = (path: string) => `'${path.replaceAll("'", "'\\''")}'`
+  return `rm ${group.formulae
+    .flatMap((f) => f.links)
+    .map(quote)
+    .join(' ')}`
+}
+
+const MISSING_KEG = /^Error: .*\/Cellar\/([^/]+)\/([^/]+) is not a directory$/
+
+/** brew's dangling-link error in plain words; any other line as it came. */
+export function explainFailure(line: string): string {
+  const m = MISSING_KEG.exec(line.trim())
+  if (!m) return line
+  return `${m[1]} is half-upgraded: its links point at ${m[2]}, which was never installed`
 }
 
 export interface UpdateItem {
@@ -160,6 +257,7 @@ export type UpdatesMessage =
   | { dismiss: SourceId; item: string; hours: number }
   | { restore: SourceId; item: string }
   | { sudoers: 'on' | 'off' }
+  | { repairLinks: LinkClass }
 
 /** A source's dismissed packages, by name. */
 export function dismissedItems(source: UpdateSource): UpdateItem[] {
@@ -204,12 +302,16 @@ export function cellVisible(report: UpdatesReport | null): boolean {
   if (!report) return false
   if (report.generatedAt === 0) return false
   if (upgradeRunning(report)) return true
-  return report.sources.some((s) => s.items.length > 0 || s.error != null)
+  return report.sources.some(
+    (s) => s.items.length > 0 || s.error != null || (s.broken?.length ?? 0) > 0,
+  )
 }
 
-/** `warn` when any source errored; `normal` otherwise. */
+/** `warn` when any source errored or has broken links; `normal` otherwise. */
 export function cellTone(report: UpdatesReport): CellTone {
-  return hasErrors(report) ? 'warn' : 'normal'
+  return hasErrors(report) || brokenGroups(report).length > 0
+    ? 'warn'
+    : 'normal'
 }
 
 /** "Homebrew · 3" / "App Store · up to date" / "mise · error: …". */
@@ -320,9 +422,16 @@ export function checkedAgo(generatedAt: number, nowSecs: number): string {
  * covered it and exited non-zero (it stays: the package is still listed
  * because the upgrade did not take), `done` from one that succeeded and that
  * the source has not been re-checked since — once the check lands the row
- * vanishes. `idle` otherwise.
+ * vanishes. `unchanged` when it did not vanish: the run exited 0 and the
+ * re-check still lists the package (brew said yes and did nothing, JOURNAL
+ * 2026-11-25); asked per package only, and for `UNCHANGED_SHOWN_SECS`, after
+ * which a listing is taken for a newer version. `idle` otherwise.
  */
-export type UpgradeStatus = 'idle' | 'queued' | 'running' | 'done' | 'failed'
+export type UpgradeStatus =
+  'idle' | 'queued' | 'running' | 'done' | 'failed' | 'unchanged'
+
+/** How long after a run a still-listed package reads "not upgraded". */
+export const UNCHANGED_SHOWN_SECS = 3600
 
 const covers = (
   run: { source: string; item?: string | null },
@@ -342,14 +451,19 @@ export function upgradeStatus(
     return 'running'
   }
   if (report.queue?.some((j) => covers(j, sourceId, item))) return 'queued'
-  const checkedAt =
-    report.sources.find((s) => s.id === sourceId)?.checkedAt ?? 0
+  const source = report.sources.find((s) => s.id === sourceId)
+  const checkedAt = source?.checkedAt ?? 0
   const finished = [...(report.recent ?? []), ...(run ? [run] : [])]
     .filter((r) => r.finishedAt !== 0 && covers(r, sourceId, item))
     .sort((a, b) => b.finishedAt - a.finishedAt)[0]
   if (!finished || finished.cancelled) return 'idle'
   if (finished.exitCode !== 0) return 'failed'
-  return finished.finishedAt < checkedAt ? 'idle' : 'done'
+  if (finished.finishedAt >= checkedAt) return 'done'
+  return item != null &&
+    source?.items.some((i) => i.name === item) &&
+    checkedAt - finished.finishedAt <= UNCHANGED_SHOWN_SECS
+    ? 'unchanged'
+    : 'idle'
 }
 
 /** The failed run behind a `failed` status, for its error line. */
@@ -391,6 +505,7 @@ export const STATUS_LABEL: Record<UpgradeStatus, string> = {
   running: 'upgrading…',
   done: 'upgraded',
   failed: 'failed',
+  unchanged: 'not upgraded',
 }
 
 /** A source's headline for a tile or a card block: its status while the
@@ -427,6 +542,12 @@ export const GROUP_CAP = 8
 /** A row in the panel's ledger: one list, every source in table order. */
 export type PanelRow =
   | {
+      /** Broken Homebrew links, above every package: ↵ removes them. */
+      kind: 'broken'
+      source: UpdateSource
+      group: BrokenGroup
+    }
+  | {
       /** A source's band: name, count, command, its own upgrade-all. Not
        * selectable; `u` on any row below it, or its button, upgrades it. */
       kind: 'band'
@@ -453,6 +574,7 @@ export type PanelRow =
     }
 
 export const rowSelectable = (row: PanelRow) =>
+  row.kind === 'broken' ||
   row.kind === 'item' ||
   row.kind === 'more' ||
   row.kind === 'error' ||
@@ -470,6 +592,9 @@ export function ledgerRows(
   expanded: ReadonlySet<string> = new Set(),
 ): PanelRow[] {
   const rows: PanelRow[] = []
+  for (const group of brokenGroups(report)) {
+    rows.push({ kind: 'broken', source: group.source, group })
+  }
   for (const source of report.sources) {
     if (source.error != null) {
       rows.push({ kind: 'band', source })
@@ -499,6 +624,7 @@ export function ledgerRows(
 /** The command a row would run — what `c` copies and `t` hands to the
  * terminal. */
 export function rowCommand(row: PanelRow): string {
+  if (row.kind === 'broken') return brokenCommand(row.group)
   return row.kind === 'item' || row.kind === 'dismissed'
     ? row.item.upgradeCommand
     : row.source.upgradeCommand
@@ -509,6 +635,8 @@ export function rowCommand(row: PanelRow): string {
  * or null for a row that opens rather than runs ("+N more", a clean band). */
 export function rowUpgradeMessage(row: PanelRow): UpdatesMessage | null {
   switch (row.kind) {
+    case 'broken':
+      return { repairLinks: row.group.class }
     case 'item':
       if (needsRule(row.source)) return ADMIN_RULE_MESSAGE
       return { upgrade: row.source.id, item: row.item.name }

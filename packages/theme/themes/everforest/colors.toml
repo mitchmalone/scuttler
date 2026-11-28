@@ -1,0 +1,34 @@
+# Everforest Dark (medium) — from github.com/sainnhe/everforest (MIT).
+mode = "dark"
+
+accent = "#a7c080"
+selection = "#475258"
+muted = "#7a8478"
+
+background = "#2d353b"
+dark_background = "#232a2e"
+darker_background = "#1e2326"
+lighter_background = "#343f44"
+
+foreground = "#d3c6aa"
+dark_foreground = "#859289"
+light_foreground = "#d3c6aa"
+bright_foreground = "#e3d8bf"
+
+red = "#e67e80"
+yellow = "#dbbc7f"
+orange = "#e69875"
+green = "#a7c080"
+cyan = "#83c092"
+blue = "#7fbbb3"
+magenta = "#d699b6"
+
+bright_red = "#e67e80"
+bright_yellow = "#dbbc7f"
+bright_green = "#a7c080"
+bright_cyan = "#83c092"
+bright_blue = "#7fbbb3"
+bright_magenta = "#d699b6"
+
+[launcher]
+selected = "rgba(211, 198, 170, 0.12)"

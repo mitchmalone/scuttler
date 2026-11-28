@@ -71,6 +71,59 @@ pub struct WidgetManifest {
     /// shown in Settings so the expectation is visible before anything fails.
     #[serde(default)]
     pub requires: Vec<WidgetRequire>,
+    /// Kinds of service the user can add, each with its own settings (the jobs
+    /// widget's GitHub, Dagu, Vercel). Instances live in `config.widgetServices`
+    /// and reach the widget as `SCUTTLER_SERVICES` (DECISIONS 2026-11-27).
+    #[serde(default)]
+    pub services: Vec<WidgetServiceType>,
+}
+
+/// A kind of service a widget can watch — mirrored by `WidgetServiceType` in
+/// @scuttler/tui. The user adds instances of it (the same type more than once
+/// is fine: two Dagu servers).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WidgetServiceType {
+    /// File-safe word, unique in the manifest (`github`, `dagu`).
+    #[serde(rename = "type")]
+    pub kind: String,
+    #[serde(default)]
+    pub name: String,
+    /// lucide icon name for the settings screen and the card's section header.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon: Option<String>,
+    /// The fields one instance needs, same shape and rules as manifest settings.
+    #[serde(default)]
+    pub settings: Vec<WidgetSetting>,
+    #[serde(default)]
+    pub requires: Vec<WidgetRequire>,
+}
+
+/// One configured service, as `config.widgetServices[widget]` stores it —
+/// mirrored by `WidgetService` in lib/config.ts. Secret values are not here:
+/// they're in the Keychain under `widget/<widget>/<id>/<KEY>`.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct WidgetService {
+    /// File-safe word, unique within the widget (`dagu`, `dagu-2`).
+    pub id: String,
+    #[serde(rename = "type")]
+    pub kind: String,
+    /// The card's section header.
+    pub label: String,
+    /// Plain values by KEY.
+    pub values: HashMap<String, String>,
+}
+
+/// One complete service as the widget receives it in `SCUTTLER_SERVICES`:
+/// plain values and secrets together, by KEY.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ResolvedService {
+    pub id: String,
+    #[serde(rename = "type")]
+    pub kind: String,
+    pub label: String,
+    pub settings: std::collections::BTreeMap<String, String>,
 }
 
 /// One declared prerequisite — mirrored by `WidgetRequire` in @scuttler/tui.
@@ -129,6 +182,9 @@ const MAX_TIMEOUT: u64 = 60;
 /// A device flow can wait on the user for a while.
 const AUTH_TIMEOUT: Duration = Duration::from_secs(15 * 60);
 const MAX_SETTINGS: usize = 16;
+const MAX_SERVICE_TYPES: usize = 8;
+/// The env var a widget that declares services reads its instances from.
+pub const SERVICES_ENV: &str = "SCUTTLER_SERVICES";
 const MANIFEST_TIMEOUT: Duration = Duration::from_millis(1500);
 /// How much of a failing tick's stderr the card shows.
 const STDERR_TAIL: usize = 400;
@@ -147,6 +203,41 @@ pub struct WidgetRow {
     /// Click on the row — the scripts action vocabulary.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub action: Option<ScriptAction>,
+    /// 0–100: a progress bar under the row.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub progress: Option<f64>,
+    /// A short toned tag after the hint ("4K DV").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub badge: Option<WidgetBadge>,
+}
+
+/// A row's tag: text, and a tone (ok | warn | error | muted | accent); none = dim.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WidgetBadge {
+    pub text: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tone: Option<String>,
+}
+
+/// A titled group of rows, after the card's untitled `rows`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WidgetSection {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(default)]
+    pub rows: Vec<WidgetRow>,
+}
+
+/// The card's last line, split: left and right, under a rule.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WidgetFooter {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub left: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub right: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
@@ -158,6 +249,10 @@ pub struct WidgetCard {
     pub subtitle: Option<String>,
     #[serde(default)]
     pub rows: Vec<WidgetRow>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sections: Vec<WidgetSection>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub footer: Option<WidgetFooter>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hint: Option<String>,
 }
@@ -222,6 +317,8 @@ pub struct WidgetState {
     pub requires: Vec<WidgetRequire>,
     /// Required settings currently unset; non-empty = not ticked, "needs setup".
     pub needs: Vec<String>,
+    /// Declared service types (manifest), for the configure screen.
+    pub services: Vec<WidgetServiceType>,
 }
 
 // ---- registry ----------------------------------------------------------
@@ -248,6 +345,19 @@ pub fn snapshot() -> Vec<WidgetState> {
         .iter()
         .map(|e| e.state.clone())
         .collect()
+}
+
+/// Whether a widget file named `id` (any extension) sits in the widgets
+/// folder — what a config migration can know before the registry runs.
+pub fn installed(id: &str) -> bool {
+    let Ok(entries) = fs::read_dir(widgets_dir()) else {
+        return false;
+    };
+    entries.flatten().any(|e| {
+        let path = e.path();
+        path.file_stem().and_then(|s| s.to_str()) == Some(id)
+            && crate::runtime::is_plugin_file(&path)
+    })
 }
 
 /// Whether `id`'s manifest declares `key` as a secret setting (the only keys
@@ -322,11 +432,34 @@ pub fn parse_manifest(json: &str) -> Result<WidgetManifest, String> {
     if !matches!(m.zone.as_str(), "left" | "center" | "right") {
         m.zone = default_zone();
     }
-    if m.settings.len() > MAX_SETTINGS {
+    validate_settings(&mut m.settings)?;
+    if m.services.len() > MAX_SERVICE_TYPES {
+        return Err(format!("too many service types (max {MAX_SERVICE_TYPES})"));
+    }
+    let mut kinds = std::collections::HashSet::new();
+    for svc in &mut m.services {
+        if !valid_id(&svc.kind) {
+            return Err(format!("bad service type {:?}", svc.kind));
+        }
+        if !kinds.insert(svc.kind.clone()) {
+            return Err(format!("duplicate service type {:?}", svc.kind));
+        }
+        if svc.name.is_empty() {
+            svc.name = svc.kind.clone();
+        }
+        validate_settings(&mut svc.settings)?;
+    }
+    Ok(m)
+}
+
+/// One list of declared settings: a bounded count, env-name keys, no
+/// duplicates, a label for each (the key when none is given).
+fn validate_settings(settings: &mut [WidgetSetting]) -> Result<(), String> {
+    if settings.len() > MAX_SETTINGS {
         return Err(format!("too many settings (max {MAX_SETTINGS})"));
     }
     let mut seen = std::collections::HashSet::new();
-    for st in &mut m.settings {
+    for st in settings {
         if !valid_setting_key(&st.key) {
             return Err(format!(
                 "bad setting key {:?} (want [A-Z][A-Z0-9_]*)",
@@ -340,7 +473,7 @@ pub fn parse_manifest(json: &str) -> Result<WidgetManifest, String> {
             st.label = st.key.clone();
         }
     }
-    Ok(m)
+    Ok(())
 }
 
 /// Setting keys are env-var names: uppercase, digits, underscore; ≤ 40.
@@ -396,6 +529,119 @@ pub(crate) fn settings_for(
     resolve_settings(id, settings, &plain, &|id, key| {
         crate::widget_secrets::get(id, key)
     })
+}
+
+/// The Keychain id a service's secrets live under: `<widget>/<service>`, so
+/// the account reads `widget/<widget>/<service>/<KEY>` (widget_secrets.rs).
+pub fn service_secret_id(widget: &str, service: &str) -> String {
+    format!("{widget}/{service}")
+}
+
+/// The complete services among `instances`, in the user's order: each of a
+/// declared type, with an id and every required setting set. An incomplete or
+/// unknown one is left out, so the widget never sees it and makes no request
+/// for it (invariant 12). Pure given the secret lookup.
+pub fn resolve_services(
+    widget: &str,
+    types: &[WidgetServiceType],
+    instances: &[WidgetService],
+    secret: &dyn Fn(&str, &str) -> Option<String>,
+) -> Vec<ResolvedService> {
+    let mut seen = std::collections::HashSet::new();
+    let mut out = Vec::new();
+    for inst in instances {
+        if !valid_id(&inst.id) || !seen.insert(inst.id.clone()) {
+            continue;
+        }
+        let Some(ty) = types.iter().find(|t| t.kind == inst.kind) else {
+            continue;
+        };
+        let sid = service_secret_id(widget, &inst.id);
+        let (env, needs) = resolve_settings(&sid, &ty.settings, &inst.values, secret);
+        if !needs.is_empty() {
+            continue;
+        }
+        out.push(ResolvedService {
+            id: inst.id.clone(),
+            kind: inst.kind.clone(),
+            label: if inst.label.trim().is_empty() {
+                ty.name.clone()
+            } else {
+                inst.label.trim().to_string()
+            },
+            settings: env.into_iter().collect(),
+        });
+    }
+    out
+}
+
+/// `SCUTTLER_SERVICES` for one tick: the complete services as a JSON array.
+fn services_env(app: &AppHandle, id: &str, types: &[WidgetServiceType]) -> String {
+    let instances = app
+        .try_state::<crate::AppState>()
+        .and_then(|s| {
+            s.config
+                .read()
+                .ok()
+                .and_then(|c| c.widget_services.get(id).cloned())
+        })
+        .unwrap_or_default();
+    let resolved = resolve_services(id, types, &instances, &|sid, key| {
+        service_secret(id, sid, key)
+    });
+    serde_json::to_string(&resolved).unwrap_or_else(|_| "[]".into())
+}
+
+/// Whether `id` has a configured service `service` whose type declares `key`
+/// as a secret — the only service secrets the secret-set command writes.
+pub fn service_declares_secret(id: &str, service: &WidgetService, key: &str) -> bool {
+    WIDGETS
+        .lock()
+        .unwrap()
+        .iter()
+        .find(|e| e.state.id == id)
+        .and_then(|e| e.manifest.services.iter().find(|t| t.kind == service.kind))
+        .is_some_and(|t| t.settings.iter().any(|s| s.secret && s.key == key))
+}
+
+/// The service's secret keys that currently have a Keychain value.
+pub fn service_secret_keys_present(id: &str, service: &WidgetService) -> Vec<String> {
+    let keys: Vec<String> = WIDGETS
+        .lock()
+        .unwrap()
+        .iter()
+        .find(|e| e.state.id == id)
+        .and_then(|e| e.manifest.services.iter().find(|t| t.kind == service.kind))
+        .map(|t| {
+            t.settings
+                .iter()
+                .filter(|s| s.secret)
+                .map(|s| s.key.clone())
+                .collect()
+        })
+        .unwrap_or_default();
+    let sid = service_secret_id(id, &service.id);
+    keys.into_iter()
+        .filter(|k| service_secret(id, &sid, k).is_some())
+        .collect()
+}
+
+/// A service's secret from the Keychain. A widget whose settings moved into
+/// services (arr, 2026-11-27) had them under `widget/<id>/<KEY>`; the first
+/// service of a type (id = type, as the migration names it) reads that old item
+/// when its own is missing and copies it forward. The old item stays: it's the
+/// user's (the same rule as widget_secrets' rename fallback).
+fn service_secret(widget: &str, sid: &str, key: &str) -> Option<String> {
+    if let Some(v) = crate::widget_secrets::get(sid, key) {
+        return Some(v);
+    }
+    let service = sid.strip_prefix(&format!("{widget}/"))?;
+    if !key.to_ascii_lowercase().starts_with(&format!("{service}_")) {
+        return None;
+    }
+    let old = crate::widget_secrets::get(widget, key)?;
+    let _ = crate::widget_secrets::set(sid, key, &old);
+    Some(old)
 }
 
 /// A tick's stdout must be one `WidgetView` object.
@@ -532,6 +778,7 @@ fn refresh() {
                     auth: manifest.auth.clone(),
                     requires: manifest.requires.clone(),
                     needs: Vec::new(),
+                    services: manifest.services.clone(),
                 },
                 manifest: manifest.clone(),
                 path,
@@ -547,6 +794,7 @@ fn refresh() {
         entry.state.settings = manifest.settings.clone();
         entry.state.auth = manifest.auth.clone();
         entry.state.requires = manifest.requires.clone();
+        entry.state.services = manifest.services.clone();
         entry.manifest = manifest;
         if !entry.running {
             entry.next_due = Instant::now();
@@ -570,8 +818,12 @@ fn tick(
     path: PathBuf,
     timeout: Duration,
     settings: Vec<WidgetSetting>,
+    services: Vec<WidgetServiceType>,
 ) {
-    let (env, needs) = settings_for(&app, &id, &settings);
+    let (mut env, needs) = settings_for(&app, &id, &settings);
+    if !services.is_empty() {
+        env.push((SERVICES_ENV.into(), services_env(&app, &id, &services)));
+    }
     // Required settings unset: don't run — say what's missing instead.
     let result = if needs.is_empty() {
         Some(run_widget_env(&path, "tick", timeout, &env).and_then(|out| parse_view(&out)))
@@ -974,7 +1226,14 @@ pub fn start(app: AppHandle) {
             std::thread::sleep(Duration::from_secs(1));
             continue;
         }
-        let due: Vec<(String, PathBuf, Duration, Vec<WidgetSetting>)> = {
+        type Due = (
+            String,
+            PathBuf,
+            Duration,
+            Vec<WidgetSetting>,
+            Vec<WidgetServiceType>,
+        );
+        let due: Vec<Due> = {
             let mut reg = WIDGETS.lock().unwrap();
             let now = Instant::now();
             reg.iter_mut()
@@ -986,13 +1245,14 @@ pub fn start(app: AppHandle) {
                         e.path.clone(),
                         Duration::from_secs(e.manifest.timeout),
                         e.manifest.settings.clone(),
+                        e.manifest.services.clone(),
                     )
                 })
                 .collect()
         };
-        for (id, path, timeout, settings) in due {
+        for (id, path, timeout, settings, services) in due {
             let app = app.clone();
-            std::thread::spawn(move || tick(app, id, path, timeout, settings));
+            std::thread::spawn(move || tick(app, id, path, timeout, settings, services));
         }
         std::thread::sleep(Duration::from_secs(1));
     });
@@ -1069,6 +1329,75 @@ mod tests {
     }
 
     #[test]
+    fn manifest_services_parse_and_validate() {
+        let m = parse_manifest(
+            r#"{"id":"jobs","services":[
+                {"type":"dagu","name":"Dagu","icon":"workflow","settings":[
+                    {"key":"DAGU_URL","required":true},
+                    {"key":"DAGU_TOKEN","secret":true,"required":true}]},
+                {"type":"github","settings":[{"key":"GITHUB_REPOS"}]}]}"#,
+        )
+        .unwrap();
+        assert_eq!(m.services.len(), 2);
+        assert_eq!(m.services[0].settings[0].label, "DAGU_URL");
+        assert_eq!(m.services[1].name, "github");
+        assert!(parse_manifest(r#"{"id":"w","services":[{"type":"Bad Type"}]}"#).is_err());
+        assert!(parse_manifest(r#"{"id":"w","services":[{"type":"a"},{"type":"a"}]}"#).is_err());
+        assert!(parse_manifest(
+            r#"{"id":"w","services":[{"type":"a","settings":[{"key":"lower"}]}]}"#
+        )
+        .is_err());
+    }
+
+    fn svc(id: &str, kind: &str, label: &str, values: &[(&str, &str)]) -> WidgetService {
+        WidgetService {
+            id: id.into(),
+            kind: kind.into(),
+            label: label.into(),
+            values: values
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn resolve_services_delivers_only_complete_known_services() {
+        let types = vec![WidgetServiceType {
+            kind: "dagu".into(),
+            name: "Dagu".into(),
+            icon: None,
+            settings: vec![st("DAGU_URL", false, true), st("DAGU_TOKEN", true, true)],
+            requires: vec![],
+        }];
+        let instances = vec![
+            svc("dagu", "dagu", "", &[("DAGU_URL", "https://nas")]),
+            svc("dagu-2", "dagu", "Work", &[("DAGU_URL", "https://work")]),
+            svc("gone", "vercel", "Old", &[]),
+            svc("dagu", "dagu", "dup", &[("DAGU_URL", "x")]),
+            svc("Bad Id", "dagu", "", &[("DAGU_URL", "x")]),
+        ];
+        // Only the first Dagu has its key; the second is incomplete.
+        let secret = |sid: &str, key: &str| {
+            (sid == "jobs/dagu" && key == "DAGU_TOKEN").then(|| "k".to_string())
+        };
+        let out = resolve_services("jobs", &types, &instances, &secret);
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].id, "dagu");
+        assert_eq!(out[0].label, "Dagu", "an empty label takes the type name");
+        assert_eq!(
+            out[0].settings.get("DAGU_URL").map(String::as_str),
+            Some("https://nas")
+        );
+        assert_eq!(
+            out[0].settings.get("DAGU_TOKEN").map(String::as_str),
+            Some("k")
+        );
+        let json = serde_json::to_string(&out).unwrap();
+        assert!(json.contains(r#""type":"dagu""#));
+    }
+
+    #[test]
     fn auth_results_only_land_on_declared_secrets() {
         let settings = vec![st("TOKEN", true, true), st("CLIENT_ID", false, true)];
         let stored = std::sync::Mutex::new(Vec::new());
@@ -1126,6 +1455,20 @@ mod tests {
         assert!(card.rows[1].action.is_none());
         assert!(!v.hidden);
         assert!(parse_view(r#"{"hidden":true}"#).unwrap().hidden);
+        // Sections, a progress bar, a toned badge and a split footer survive
+        // the trip to the bar: a field Rust doesn't know is dropped.
+        let rich = parse_view(
+            r#"{"card":{"rows":[],"sections":[{"title":"In flight","rows":[
+                  {"text":"Monarch","progress":62,"badge":{"text":"4K DV","tone":"accent"}}]}],
+                "footer":{"left":"5 movies","right":"3.5 TB free"}}}"#,
+        )
+        .unwrap();
+        let card = rich.card.unwrap();
+        assert_eq!(card.sections[0].title.as_deref(), Some("In flight"));
+        assert_eq!(card.sections[0].rows[0].progress, Some(62.0));
+        let badge = card.sections[0].rows[0].badge.as_ref().unwrap();
+        assert_eq!(badge.tone.as_deref(), Some("accent"));
+        assert_eq!(card.footer.unwrap().right.as_deref(), Some("3.5 TB free"));
         // The empty object is a valid (blank) view.
         assert_eq!(parse_view("{}").unwrap(), WidgetView::default());
         assert!(parse_view("not json").is_err());

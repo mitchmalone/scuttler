@@ -4,11 +4,16 @@ import {
   BatteryLow,
   BatteryMedium,
   BatteryWarning,
+  Bot,
   Coffee,
+  EthernetPort,
+  Network,
+  RefreshCw,
+  Smartphone,
   WifiOff,
 } from 'lucide-react'
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic'
-import type { ReactNode } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 
 import { ClaudeIcon, CodexIcon } from '../components/brand-icons'
 import {
@@ -24,21 +29,31 @@ import {
 } from '../components/usage'
 import { AgentStateIcon } from './agent-icons'
 import {
-  agentAge,
+  type NetworkKind,
   agentCrumbs,
-  agentDoing,
   agentMeta,
   agentStateLabel,
   batteryLook,
   batteryState,
+  contextTone,
   groupAgents,
+  networkKind,
+  networkTitle,
+  networkTone,
+  sessionCardHeight,
+  sessionCounts,
+  sessionHoverKey,
+  sessionTiles,
+  tileAge,
+  tileName,
+  tileStatus,
   timeLeft,
   toneClass,
   widgetHealth,
   widgetToneClass,
   wifiBars,
+  wifiMeterLit,
   wifiSignalLabel,
-  wifiTone,
 } from './format'
 import type {
   AgentSession,
@@ -51,6 +66,7 @@ import type {
   UsageBarAccount,
   UsageBarState,
   WidgetAction,
+  WidgetRow,
   WifiDetail,
 } from './types'
 
@@ -290,38 +306,42 @@ export function BarAgents({
   agents,
   now,
   hover,
-  cardHeight = 150,
   onJump,
 }: {
   agents: AgentSession[]
   now: Date
   hover: BarHoverApi
+  /** Unused since the per-session card: its height comes from the tile count. */
   cardHeight?: number
   onJump?: (session: string) => void
 }) {
   if (agents.length === 0) return null
 
   const { groups, loose } = groupAgents(agents)
-  const hoveredId = hover.hovered?.startsWith('agent:')
-    ? hover.hovered.slice('agent:'.length)
-    : null
-  const hovered = agents.find((a) => a.session === hoveredId) ?? null
-
-  const cell = (a: AgentSession) => (
-    <button
-      key={a.session}
-      type="button"
-      data-hover={`agent:${a.session}`}
-      data-hover-height={cardHeight}
-      className={`bar-agent bar-agent-${a.state}`}
-      onMouseEnter={() => hover.enter(`agent:${a.session}`, cardHeight)}
-      onClick={() => onJump?.(a.session)}
-    >
-      <AgentStateIcon state={a.state} />
-    </button>
-  )
-  const nowSecs = Math.floor(now.getTime() / 1000)
-  const doing = hovered ? agentDoing(hovered.state, hovered.detail) : null
+  const boxes: {
+    key: string
+    name: string
+    list: AgentSession[]
+    loose: boolean
+  }[] = [
+    ...groups.map(([name, list]) => ({
+      key: sessionHoverKey(name),
+      name,
+      list,
+      loose: false,
+    })),
+    ...(loose.length
+      ? [
+          {
+            key: sessionHoverKey(null),
+            name: 'outside a multiplexer',
+            list: loose,
+            loose: true,
+          },
+        ]
+      : []),
+  ]
+  const open = boxes.find((b) => b.key === hover.hovered) ?? null
 
   return (
     <div
@@ -329,70 +349,143 @@ export function BarAgents({
       onMouseEnter={hover.stay}
       onMouseLeave={hover.leave}
     >
-      {groups.map(([name, list]) => (
-        <div key={name} className="bar-agent-group">
-          {list.map(cell)}
-        </div>
-      ))}
-      {loose.length > 0 && (
-        <div className="bar-agent-group bar-agent-group-loose">
-          {loose.map(cell)}
-        </div>
-      )}
-      {hovered && (
-        <BarCard variant="agent" cardRef={hover.cardRef}>
-          <div className={`bar-agent-rule bar-agent-${hovered.state}`} />
-          <div className="bar-agent-head">
-            <div className={`bar-agent-swatch bar-agent-${hovered.state}`}>
-              <AgentStateIcon state={hovered.state} size={20} />
-            </div>
-            <div className="bar-agent-headtext">
-              <div className="bar-agent-stateline">
-                <span className={`bar-agent-state bar-agent-${hovered.state}`}>
-                  {agentStateLabel(hovered.state)}
-                </span>
-                <span className="bar-agent-age">
-                  {agentAge(hovered.updatedAt, now)}
-                </span>
-              </div>
-              <div className="bar-agent-title">
-                {hovered.title || hovered.agent}
-              </div>
-            </div>
-          </div>
-          {doing && (
-            <div className="bar-agent-doing">
-              {doing.icon && (
-                <DynamicIcon name={doing.icon as IconName} {...ICON_PROPS} />
-              )}
-              {doing.verb && (
-                <span className="bar-agent-verb">{doing.verb}</span>
-              )}
-              {doing.object && (
-                <span className="bar-agent-object">{doing.object}</span>
-              )}
-            </div>
-          )}
-          <div className="bar-agent-crumbs">
-            {agentCrumbs(hovered).map((crumb, i) => (
-              <span key={`${i}-${crumb}`} className="bar-agent-crumb">
-                {crumb}
-              </span>
+      {boxes.map((b) => {
+        const height = sessionCardHeight(b.list.length)
+        return (
+          <div
+            key={b.key}
+            data-hover={b.key}
+            data-hover-height={height}
+            className={`bar-agent-group${b.loose ? ' bar-agent-group-loose' : ''}${
+              open?.key === b.key ? ' bar-agent-group-open' : ''
+            }`}
+            onMouseEnter={() => hover.enter(b.key, height)}
+          >
+            {b.list.map((a) => (
+              <button
+                key={a.session}
+                type="button"
+                className={`bar-agent bar-agent-${a.state}`}
+                aria-label={`${a.title || a.agent}: ${agentStateLabel(a.state)}`}
+                onClick={() => onJump?.(a.session)}
+              >
+                <AgentStateIcon state={a.state} />
+              </button>
             ))}
           </div>
-          <div className="bar-agent-meta">
-            {agentMeta(hovered, nowSecs).map((m) => (
-              <span key={m}>{m}</span>
-            ))}
-          </div>
-          <BarCardHint>
-            {hovered.state === 'done'
-              ? 'click to jump · marks read'
-              : 'click to jump'}
-          </BarCardHint>
-        </BarCard>
+        )
+      })}
+      {open && (
+        <BarAgentSessionCard
+          key={open.key}
+          name={open.name}
+          agents={open.list}
+          now={now}
+          onJump={onJump}
+          cardRef={hover.cardRef}
+        />
       )}
     </div>
+  )
+}
+
+/**
+ * One tmux session's (or herdr workspace's, or the loose box's) agents as a
+ * grid of tiles (Claude Design `06 Agents session card`, round 2, DECISIONS
+ * 2026-11-27). State reads before text does: attention is a solid warn fill,
+ * working an accent border, done (unread) stripes, read and idle dimmed. Each
+ * tile has its state glyph, title, one status line, a neutral age chip and,
+ * when known, a context bar that warms at 60 % and heats at 80 %. The footer
+ * shows the tile under the pointer: where it is, its clock, and why scuttler
+ * thinks so. Exported for the site demo and stories.
+ */
+export function BarAgentSessionCard({
+  name,
+  agents,
+  now,
+  onJump,
+  cardRef,
+}: {
+  name: string
+  agents: AgentSession[]
+  now: Date
+  onJump?: (session: string) => void
+  cardRef?: (el: HTMLElement | null) => void
+}) {
+  const [pointed, setPointed] = useState<string | null>(null)
+  const { tiles, more } = sessionTiles(agents)
+  const focus = agents.find((a) => a.session === pointed) ?? null
+  const nowSecs = Math.floor(now.getTime() / 1000)
+  return (
+    <BarCard variant="agentsession" cardRef={cardRef}>
+      <div className="bar-agentsession-head">
+        <span className="bar-agentsession-name">{name}</span>
+        <span className="bar-agentsession-counts">
+          {sessionCounts(agents).map((c) => (
+            <span key={c}>{c}</span>
+          ))}
+        </span>
+      </div>
+      <div className="bar-agentsession-grid">
+        {tiles.map((a) => (
+          <button
+            key={a.session}
+            type="button"
+            className={`bar-agenttile bar-agenttile-${a.state}`}
+            onMouseEnter={() => setPointed(a.session)}
+            onMouseLeave={() => setPointed(null)}
+            onClick={() => onJump?.(a.session)}
+          >
+            <span className="bar-agenttile-top">
+              <span className={`bar-agent-${a.state}`}>
+                <AgentStateIcon state={a.state} />
+              </span>
+              <span className="bar-agenttile-title">{tileName(a)}</span>
+              <span className="bar-agenttile-age">{tileAge(a, now)}</span>
+            </span>
+            <span className="bar-agenttile-status">{tileStatus(a)}</span>
+            {a.contextPct != null && (
+              <span
+                className={`bar-agenttile-ctx ${contextTone(a.contextPct)}`}
+                title={`context ${a.contextPct}% used`}
+              >
+                <span className="bar-agenttile-ctxlabel">ctx</span>
+                <span className="bar-agenttile-ctxbar">
+                  <i style={{ width: `${a.contextPct}%` }} />
+                </span>
+                <span className="bar-agenttile-ctxpct">{a.contextPct}%</span>
+              </span>
+            )}
+          </button>
+        ))}
+        {more > 0 && (
+          <div className="bar-agenttile bar-agenttile-more">
+            <span className="bar-agenttile-title">+{more} more</span>
+            <span className="bar-agenttile-status">in the agents panel</span>
+          </div>
+        )}
+      </div>
+      <div className="bar-agentsession-foot">
+        {focus ? (
+          <>
+            {agentCrumbs(focus).map((c, i) => (
+              <span key={`${i}-${c}`} className="bar-agent-crumb">
+                {c}
+              </span>
+            ))}
+            <span>{agentMeta(focus, nowSecs)[0]}</span>
+            {focus.rule && (
+              <span className="bar-agentsession-rule">{focus.rule}</span>
+            )}
+          </>
+        ) : (
+          <span>
+            click a tile to jump
+            {agents.some((a) => a.state === 'done') ? ' · done marks read' : ''}
+          </span>
+        )}
+      </div>
+    </BarCard>
   )
 }
 
@@ -682,29 +775,32 @@ export function BarWifiCard({
   ssid,
   rssi = null,
   online,
+  kind: rawKind,
+  port = null,
   cardRef,
 }: {
   detail: WifiDetail | null
   ssid: string | null
   rssi?: number | null
   online: boolean
+  kind?: string
+  port?: string | null
   cardRef?: (el: HTMLElement | null) => void
 }) {
   const d = detail
-  const signal = online ? wifiSignalLabel(rssi) : ''
+  const kind = networkKind(online, rawKind ?? d?.kind)
+  const adapter = port ?? d?.port ?? null
   return (
     <BarCard variant="wifi" cardRef={cardRef}>
       <div className="bar-wifi-head">
-        <WifiGlyph online={online} rssi={rssi} size={20} />
+        <NetworkGlyph kind={kind} rssi={rssi} size={20} />
         <div>
-          <BarCardTitle>
-            {online ? (ssid ?? 'SSID hidden') : 'Wi-Fi offline'}
-          </BarCardTitle>
-          <div className="bar-card-dim bar-wifi-state">
-            {online ? 'connected' : 'no connection'}
-            {signal ? ` · ${signal}` : ''}
-            {d?.iface ? ` · ${d.iface}` : ''}
-          </div>
+          <BarCardTitle>{networkTitle(kind, ssid)}</BarCardTitle>
+          {kind === 'wifi' || kind === 'offline' ? (
+            <WifiMeter rssi={kind === 'wifi' ? rssi : null} />
+          ) : (
+            adapter && <div className="bar-card-dim">{adapter}</div>
+          )}
         </div>
       </div>
       <div className="bar-wifi-grid">
@@ -720,6 +816,48 @@ export function BarWifiCard({
       )}
       <BarCardHint>wifi ⏎ networks · dns ⏎ details</BarCardHint>
     </BarCard>
+  )
+}
+
+const WIFI_METER_BARS = 16
+const WIFI_METER_BAR = { width: 3, gap: 2, min: 3, max: 11 } as const
+
+/**
+ * The card's signal meter: a ramp of bars lit up to the link's strength, in
+ * the place a "connected · −56 dBm · excellent" line used to be. Unlit bars
+ * are ghosted like the glyph's lost arcs; a poor link takes the cell's warn
+ * tone. The reading stays in the label for a screen reader.
+ */
+function WifiMeter({ rssi }: { rssi: number | null }) {
+  const { width, gap, min, max } = WIFI_METER_BAR
+  const lit = wifiMeterLit(rssi, WIFI_METER_BARS)
+  const poor = rssi != null && wifiBars(rssi) <= 1
+  return (
+    <svg
+      className={`bar-wifi-meter ${poor ? 'bar-wifi-meter-poor' : ''}`}
+      width={WIFI_METER_BARS * (width + gap) - gap}
+      height={max}
+      role="img"
+      aria-label={
+        rssi == null ? 'No signal' : `Signal ${wifiSignalLabel(rssi)}`
+      }
+      fill="currentColor"
+    >
+      {Array.from({ length: WIFI_METER_BARS }, (_, i) => {
+        const height = min + ((max - min) * i) / (WIFI_METER_BARS - 1)
+        return (
+          <rect
+            key={i}
+            x={i * (width + gap)}
+            y={max - height}
+            width={width}
+            height={height}
+            data-lit={i < lit}
+            opacity={i < lit ? 1 : 0.25}
+          />
+        )
+      })}
+    </svg>
   )
 }
 
@@ -770,6 +908,31 @@ export function WifiStrengthIcon({
   )
 }
 
+/** The network glyph: Wi-Fi as a strength indicator, Ethernet a port, a
+ * tethered phone a phone, a VPN or bridge the generic network mark; offline
+ * is lucide's WifiOff. */
+function NetworkGlyph({
+  kind,
+  rssi,
+  size = WIDE_ICON_PROPS.size,
+}: {
+  kind: NetworkKind
+  rssi: number | null
+  size?: number
+}) {
+  const props = { ...ICON_PROPS, size }
+  switch (kind) {
+    case 'ethernet':
+      return <EthernetPort {...props} />
+    case 'tethered':
+      return <Smartphone {...props} />
+    case 'other':
+      return <Network {...props} />
+    default:
+      return <WifiGlyph online={kind !== 'offline'} rssi={rssi} size={size} />
+  }
+}
+
 /** The Wi-Fi glyph as a strength indicator; offline is lucide's WifiOff. */
 function WifiGlyph({
   online,
@@ -794,6 +957,8 @@ export function BarWifiCell({
   online,
   ssid,
   rssi = null,
+  kind: rawKind,
+  port = null,
   hover,
   detail = null,
   cardHeight = 190,
@@ -802,22 +967,27 @@ export function BarWifiCell({
   online: boolean
   ssid: string | null
   rssi?: number | null
+  /** What carries traffic (bar_modules.rs); absent means Wi-Fi. */
+  kind?: string
+  /** The adapter's name for a wired or tethered link. */
+  port?: string | null
   hover?: BarHoverApi
   detail?: WifiDetail | null
   cardHeight?: number
   onClick?: () => void
 }) {
+  const kind = networkKind(online, rawKind)
   const body = (
     <>
-      <WifiGlyph online={online} rssi={rssi} />
-      {!online && 'Offline'}
+      <NetworkGlyph kind={kind} rssi={rssi} />
+      {kind === 'offline' && 'Offline'}
     </>
   )
   if (!hover) {
     return (
       <BarCell
-        className={toneClass(wifiTone(online, rssi))}
-        title={online ? (ssid ?? undefined) : undefined}
+        className={toneClass(networkTone(kind, rssi))}
+        title={kind === 'wifi' ? (ssid ?? undefined) : (port ?? undefined)}
       >
         {body}
       </BarCell>
@@ -828,7 +998,7 @@ export function BarWifiCell({
       id="wifi"
       cardHeight={cardHeight}
       hover={hover}
-      className={toneClass(wifiTone(online, rssi))}
+      className={toneClass(networkTone(kind, rssi))}
       wrapperClassName="bar-wifi"
       onClick={onClick}
       card={
@@ -837,6 +1007,8 @@ export function BarWifiCell({
           ssid={ssid}
           rssi={rssi}
           online={online}
+          kind={rawKind}
+          port={port}
           cardRef={hover.cardRef}
         />
       }
@@ -1042,7 +1214,8 @@ export function BarUsageCard({
 }
 
 /**
- * The usage cell: the tiny meter alone — no percent. Its colour is the pace
+ * The usage cell: a robot alone, no percent and no meter (the card's head keeps
+ * the meter, where the fill can be read). Its colour is the pace
  * across every account (worst wins): green with headroom to spin up agents,
  * fg on pace, red when usage is outrunning the clock. Dim before the first
  * scan.
@@ -1060,7 +1233,7 @@ export function BarUsageCell({
 }) {
   const pace = usage ? usagePace(usage.accounts, nowSecs) : null
   const className = `bar-cell bar-pace-${pace ?? 'off'}`
-  const body = <UsageMeterIcon pct={glyphFill(usage)} />
+  const body = <Bot {...ICON_PROPS} />
   const title = pace ? `Agent usage · ${PACE_LABEL[pace]}` : 'Agent usage'
   if (!hover) {
     return (
@@ -1100,10 +1273,112 @@ export function WidgetGlyph({
   return <DynamicIcon name={(name || 'puzzle') as IconName} {...props} />
 }
 
+/** One list of a widget card's rows: dot, text, hint and badge, an optional
+ * progress bar underneath, and a click when the row carries an action. */
+function WidgetRows({
+  rows,
+  onAction,
+}: {
+  rows: WidgetRow[]
+  onAction?: (action: WidgetAction) => void
+}) {
+  return (
+    <div className="bar-widget-rows">
+      {rows.map((row, i) => {
+        const progress =
+          typeof row.progress === 'number' && Number.isFinite(row.progress)
+            ? Math.min(100, Math.max(0, row.progress))
+            : null
+        const body = (
+          <>
+            {row.dot != null ? (
+              <span className={`bar-widget-dot ${widgetToneClass(row.dot)}`}>
+                ●
+              </span>
+            ) : (
+              progress !== null && <span />
+            )}
+            <span className="bar-widget-text">{row.text}</span>
+            {(row.hint || row.badge) && (
+              <span className="bar-widget-hint">
+                {row.hint}
+                {row.hint && row.badge && ' · '}
+                {row.badge && (
+                  <span
+                    className={`bar-widget-badge ${row.badge.tone ? widgetToneClass(row.badge.tone) : ''}`}
+                  >
+                    {row.badge.text}
+                  </span>
+                )}
+              </span>
+            )}
+            {progress !== null && (
+              <span className="bar-widget-progress">
+                <span style={{ width: `${progress}%` }} />
+              </span>
+            )}
+          </>
+        )
+        const cls = `bar-widget-row${progress !== null ? ' bar-widget-row-progress' : ''}`
+        const action = row.action
+        return action && action.type !== 'none' && onAction ? (
+          <button
+            key={i}
+            type="button"
+            className={`${cls} bar-widget-row-action`}
+            onClick={() => onAction(action)}
+          >
+            {body}
+          </button>
+        ) : (
+          <div key={i} className={cls}>
+            {body}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 /**
- * A widget's card: the tick's title/subtitle, dot-rows (each optionally a
- * click), a hint, and — when the last tick failed — the health line. Purely
- * what the widget said, styled once here.
+ * The small refresh button a card's header carries: dim until hovered,
+ * spinning (and inert) while the refresh it asked for is in flight. Shared by
+ * widget cards and plugin cards so every card refreshes the same way.
+ */
+export function BarRefreshButton({
+  label,
+  spinning,
+  onRefresh,
+}: {
+  label: string
+  spinning: boolean
+  onRefresh: () => void
+}) {
+  return (
+    <button
+      type="button"
+      className={`bar-refresh${spinning ? ' bar-refreshing' : ''}`}
+      aria-label={label}
+      title="Refresh"
+      disabled={spinning}
+      onClick={(e) => {
+        // The cell under the card has its own click (open the panel).
+        e.stopPropagation()
+        onRefresh()
+      }}
+    >
+      <RefreshCw {...ICON_PROPS} size={13} />
+    </button>
+  )
+}
+
+/** Past the widget timeout clamp (60 s), a refresh that showed nothing stops spinning. */
+const REFRESH_GIVE_UP_MS = 65_000
+
+/**
+ * A widget's card: the tick's title/subtitle, untitled rows, titled sections,
+ * a split footer, a hint, and — when the last tick failed — the health line.
+ * Purely what the widget said, styled once here (docs/PLUGINS.md, WidgetView).
  */
 export function BarWidgetCard({
   widget,
@@ -1121,12 +1396,24 @@ export function BarWidgetCard({
   const needs = widget.needs ?? []
   const setup = view?.setup
   const health = needs.length
-    ? `needs setup: ${needs.join(', ')} — Settings → Menubar → Custom widgets`
+    ? `needs setup: ${needs.join(', ')} — Settings → Widgets`
     : setup
       ? setup.message
       : widgetHealth(widget.error, widget.lastOk, now)
   const quiet = needs.length > 0 || setup != null
   const rows = card?.rows ?? []
+  const sections = card?.sections ?? []
+  const footer = card?.footer
+  // The tick the button was pressed on: it spins until a newer one lands.
+  const [askedAt, setAskedAt] = useState<number | null | undefined>(undefined)
+  const refreshing = askedAt !== undefined && askedAt === widget.updatedAt
+  // `updatedAt` is whole seconds, so a tick landing inside the same second
+  // looks like no tick: give up spinning after the longest a tick may take.
+  useEffect(() => {
+    if (askedAt === undefined) return
+    const timer = setTimeout(() => setAskedAt(undefined), REFRESH_GIVE_UP_MS)
+    return () => clearTimeout(timer)
+  }, [askedAt])
   return (
     <BarCard variant="widget" cardRef={cardRef}>
       <div className="bar-widget-head">
@@ -1137,6 +1424,16 @@ export function BarWidgetCard({
             <div className="bar-card-dim bar-widget-sub">{card.subtitle}</div>
           )}
         </div>
+        {onAction && (
+          <BarRefreshButton
+            label={`Refresh ${widget.name}`}
+            spinning={refreshing}
+            onRefresh={() => {
+              setAskedAt(widget.updatedAt)
+              onAction({ type: 'refresh', value: widget.id })
+            }}
+          />
+        )}
       </div>
       {health && (
         <div
@@ -1160,40 +1457,23 @@ export function BarWidgetCard({
           <span className="bar-widget-hint">copy</span>
         </button>
       )}
-      {rows.length > 0 && (
-        <div className="bar-widget-rows">
-          {rows.map((row, i) => {
-            const body = (
-              <>
-                {row.dot != null && (
-                  <span
-                    className={`bar-widget-dot ${widgetToneClass(row.dot)}`}
-                  >
-                    ●
-                  </span>
-                )}
-                <span className="bar-widget-text">{row.text}</span>
-                {row.hint && (
-                  <span className="bar-widget-hint">{row.hint}</span>
-                )}
-              </>
-            )
-            const action = row.action
-            return action && action.type !== 'none' && onAction ? (
-              <button
-                key={i}
-                type="button"
-                className="bar-widget-row bar-widget-row-action"
-                onClick={() => onAction(action)}
-              >
-                {body}
-              </button>
-            ) : (
-              <div key={i} className="bar-widget-row">
-                {body}
+      {rows.length > 0 && <WidgetRows rows={rows} onAction={onAction} />}
+      {sections.map((section, i) =>
+        section.rows.length ? (
+          <div key={i} className="bar-widget-section">
+            {section.title && (
+              <div className="bar-card-section bar-widget-section-title">
+                {section.title}
               </div>
-            )
-          })}
+            )}
+            <WidgetRows rows={section.rows} onAction={onAction} />
+          </div>
+        ) : null,
+      )}
+      {(footer?.left || footer?.right) && (
+        <div className="bar-widget-foot">
+          <span>{footer.left}</span>
+          <span>{footer.right}</span>
         </div>
       )}
       {(card?.hint || (!view && !health)) && (

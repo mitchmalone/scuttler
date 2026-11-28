@@ -34,6 +34,11 @@ export interface AgentSession {
   /** The screen rule that last set the state (rules.rs), so a card can say
    * why; absent until the pane has been looked at. */
   rule?: string | null
+  /** How full the agent's context is, 0–100, when its transcript says
+   * (Claude only); absent means unknown. */
+  contextPct?: number | null
+  /** The session's own name when its agent reports one (Claude). */
+  name?: string | null
 }
 
 /** What the wifi hover card shows — mirrors WifiStatus in wifi.rs (the same
@@ -41,6 +46,11 @@ export interface AgentSession {
 export interface WifiDetail {
   iface: string | null
   online: boolean
+  /** `wifi` | `ethernet` | `tethered` | `other`; empty when offline. Absent
+   * from older payloads, where online meant Wi-Fi. */
+  kind?: string
+  /** The interface's hardware port ("Belkin USB-C LAN"). */
+  port?: string | null
   ssid: string | null
   ip: string | null
   router: string | null
@@ -131,6 +141,10 @@ export interface UsageBarState {
 export type WidgetAction =
   | { type: 'open'; value: string }
   | { type: 'copy'; value: string }
+  /** Open scuttler's Settings at a page id (`widgets`, `bar`, …). */
+  | { type: 'settings'; value: string }
+  /** Tick a widget now, by id: the card header's refresh button. */
+  | { type: 'refresh'; value: string }
   | { type: 'none' }
 
 /** Cell and dot tones a widget may ask for; anything else renders plain. */
@@ -142,13 +156,38 @@ export interface WidgetRow {
   text: string
   hint?: string | null
   action?: WidgetAction | null
+  /** 0–100: a progress bar under the row. */
+  progress?: number | null
+  /** A short toned tag after the hint ("4K DV"); no tone = dim like the hint. */
+  badge?: WidgetBadge | null
 }
 
-/** Mirrors WidgetCard in widgets.rs. */
+/** Mirrors WidgetBadge in widgets.rs. */
+export interface WidgetBadge {
+  text: string
+  tone?: WidgetTone | string | null
+}
+
+/** Mirrors WidgetSection in widgets.rs — a titled group of rows. */
+export interface WidgetSection {
+  title?: string | null
+  rows: WidgetRow[]
+}
+
+/** Mirrors WidgetFooter in widgets.rs — the card's last line, split. */
+export interface WidgetFooter {
+  left?: string | null
+  right?: string | null
+}
+
+/** Mirrors WidgetCard in widgets.rs. Untitled `rows` come first (issues),
+ * then `sections`, then the `footer` under a rule, then `hint`. */
 export interface WidgetCard {
   title?: string | null
   subtitle?: string | null
   rows?: WidgetRow[]
+  sections?: WidgetSection[]
+  footer?: WidgetFooter | null
   hint?: string | null
 }
 
@@ -217,6 +256,20 @@ export interface BarWidget {
   requires?: WidgetRequire[]
   /** Required settings still unset — the widget isn't ticked while non-empty. */
   needs?: string[]
+  /** Kinds of service the user can add (manifest `services`). */
+  services?: WidgetServiceType[]
+}
+
+/** Mirrors WidgetServiceType in widgets.rs: one kind of service a widget can
+ * watch, with its own settings. The user's instances live in
+ * `config.widgetServices` (desktop) and reach the widget as SCUTTLER_SERVICES. */
+export interface WidgetServiceType {
+  type: string
+  name: string
+  /** lucide icon name (kebab-case). */
+  icon?: string | null
+  settings: WidgetSetting[]
+  requires: WidgetRequire[]
 }
 
 /** One 1 Hz push from bar.rs. */
@@ -228,7 +281,16 @@ export interface BarSnapshot {
   onAc: boolean
   charging: boolean
   chargeLimit: number | null
-  wifi: { online: boolean; ssid: string | null; rssi: number | null }
+  /** The network cell: the link that carries traffic (Wi-Fi, Ethernet,
+   * tethered, other) — still keyed `wifi` so layouts keep their slot. */
+  wifi: {
+    online: boolean
+    ssid: string | null
+    rssi: number | null
+    kind?: string
+    port?: string | null
+    iface?: string | null
+  }
   agents: AgentSession[]
   /** Optional so fixtures without a keep-awake session stay valid. */
   awake?: AwakeBarState | null

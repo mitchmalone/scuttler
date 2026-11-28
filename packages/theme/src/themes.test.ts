@@ -228,6 +228,131 @@ const CURRENT_TUI_THEMES: Record<string, ThemeTokens> = {
   },
 }
 
+/** Added in 0.9 (DECISIONS 2026-11-23): generated from their colors.toml and
+ * checked by eye in Settings; pinned here so a palette edit is deliberate. */
+const ADDED_0_9: Record<string, ThemeTokens> = {
+  'catppuccin-latte': {
+    bg: '#eff1f5',
+    surface: '#e6e9ef',
+    glass: 'rgba(239, 241, 245, 0.96)',
+    border: '#bcc0cc',
+    fg: '#4c4f69',
+    dim: '#6c6f85',
+    accent: '#8839ef',
+    sigil: '#40a02b',
+    bang: '#df8e1d',
+    selected: 'rgba(136, 57, 239, 0.10)',
+    warn: '#df8e1d',
+    danger: '#d20f39',
+    good: '#40a02b',
+  },
+  everforest: {
+    bg: '#2d353b',
+    surface: '#343f44',
+    glass: 'rgba(45, 53, 59, 0.96)',
+    border: '#475258',
+    fg: '#d3c6aa',
+    dim: '#859289',
+    accent: '#a7c080',
+    sigil: '#a7c080',
+    bang: '#dbbc7f',
+    selected: 'rgba(211, 198, 170, 0.12)',
+    warn: '#dbbc7f',
+    danger: '#e67e80',
+    good: '#a7c080',
+  },
+  'everforest-light': {
+    bg: '#fdf6e3',
+    surface: '#f4f0d9',
+    glass: 'rgba(253, 246, 227, 0.96)',
+    border: '#d8d3ba',
+    fg: '#5c6a72',
+    dim: '#829181',
+    accent: '#8da101',
+    sigil: '#8da101',
+    bang: '#dfa000',
+    selected: 'rgba(141, 161, 1, 0.10)',
+    warn: '#dfa000',
+    danger: '#f85552',
+    good: '#8da101',
+  },
+  'flexoki-light': {
+    bg: '#fffcf0',
+    surface: '#f2f0e5',
+    glass: 'rgba(255, 252, 240, 0.96)',
+    border: '#cecdc3',
+    fg: '#100f0f',
+    dim: '#6f6e69',
+    accent: '#bc5215',
+    sigil: '#66800b',
+    bang: '#ad8301',
+    selected: 'rgba(188, 82, 21, 0.10)',
+    warn: '#ad8301',
+    danger: '#af3029',
+    good: '#66800b',
+  },
+  'gruvbox-light': {
+    bg: '#fbf1c7',
+    surface: '#ebdbb2',
+    glass: 'rgba(251, 241, 199, 0.96)',
+    border: '#bdae93',
+    fg: '#3c3836',
+    dim: '#7c6f64',
+    accent: '#af3a03',
+    sigil: '#79740e',
+    bang: '#b57614',
+    selected: 'rgba(175, 58, 3, 0.10)',
+    warn: '#b57614',
+    danger: '#9d0006',
+    good: '#79740e',
+  },
+  'rose-pine-dawn': {
+    bg: '#faf4ed',
+    surface: '#f2e9e1',
+    glass: 'rgba(250, 244, 237, 0.96)',
+    border: '#cecacd',
+    fg: '#575279',
+    dim: '#797593',
+    accent: '#d7827e',
+    sigil: '#286983',
+    bang: '#ea9d34',
+    selected: 'rgba(215, 130, 126, 0.12)',
+    warn: '#ea9d34',
+    danger: '#b4637a',
+    good: '#286983',
+  },
+  'tokyo-night-day': {
+    bg: '#e1e2e7',
+    surface: '#d0d5e3',
+    glass: 'rgba(225, 226, 231, 0.96)',
+    border: '#a8aecb',
+    fg: '#3760bf',
+    dim: '#6172b0',
+    accent: '#2e7de9',
+    sigil: '#587539',
+    bang: '#8c6c3e',
+    selected: 'rgba(46, 125, 233, 0.12)',
+    warn: '#8c6c3e',
+    danger: '#f52a65',
+    good: '#587539',
+  },
+}
+
+/** Every built-in, in generated order (house theme, originals, then a-z). */
+const EXPECTED: Record<string, ThemeTokens> = Object.fromEntries(
+  Object.keys({ ...CURRENT_TUI_THEMES, ...ADDED_0_9 })
+    .map(
+      (name) => [name, (CURRENT_TUI_THEMES[name] ?? ADDED_0_9[name])!] as const,
+    )
+    .sort(([a], [b]) => order(a) - order(b) || a.localeCompare(b)),
+)
+
+function order(name: string): number {
+  const lead = Object.keys(CURRENT_TUI_THEMES).slice(0, 4)
+  const i = lead.indexOf(name)
+  return i < 0 ? lead.length : i
+}
+
 function load(name: string): string {
   return readFileSync(join(THEMES_DIR, name, 'colors.toml'), 'utf8')
 }
@@ -236,14 +361,12 @@ const NAMES = readdirSync(THEMES_DIR).sort()
 
 describe('themes/*/colors.toml', () => {
   it('ships exactly the built-in set', () => {
-    expect(NAMES).toEqual(Object.keys(CURRENT_TUI_THEMES).sort())
+    expect(NAMES).toEqual(Object.keys(EXPECTED).sort())
   })
 
   it.each(NAMES)('%s reproduces the current tui tokens exactly', (name) => {
     const { palette, launcher } = parseThemeFile(load(name))
-    expect(toTokens(resolve(palette), launcher)).toEqual(
-      CURRENT_TUI_THEMES[name],
-    )
+    expect(toTokens(resolve(palette), launcher)).toEqual(EXPECTED[name])
   })
 
   it.each(NAMES)(
@@ -273,11 +396,9 @@ describe('themes/*/colors.toml', () => {
 
   it('buildTokens keeps the hand-written order: house theme, originals, then a-z', () => {
     const sources = NAMES.map((name) => ({ name, text: load(name) }))
-    expect(Object.keys(buildTokens(sources))).toEqual(
-      Object.keys(CURRENT_TUI_THEMES),
-    )
+    expect(Object.keys(buildTokens(sources))).toEqual(Object.keys(EXPECTED))
     expect(orderThemes(sources).map((s) => s.name)).toEqual(
-      Object.keys(CURRENT_TUI_THEMES),
+      Object.keys(EXPECTED),
     )
   })
 })

@@ -23,6 +23,8 @@ mod bar_constrain;
 mod bar_modules;
 mod battery;
 mod bookmarks;
+mod brewlinks;
+mod claude_sessions;
 mod clipboard;
 mod colorpicker;
 mod commands;
@@ -70,6 +72,7 @@ mod tray;
 mod updates;
 mod usage;
 mod user_themes;
+mod wallpaper;
 mod widget_secrets;
 mod widgets;
 mod wifi;
@@ -191,6 +194,8 @@ pub fn run() {
             commands::open_panel,
             commands::list_screenshots,
             commands::screenshot_thumb,
+            commands::wallpaper_set,
+            commands::wallpaper_pick,
             commands::screenshot_action,
             commands::widget_install,
             commands::widget_remove,
@@ -273,6 +278,8 @@ pub fn run() {
             config::watch(app.handle().clone());
             apply_launch_at_login(app.handle(), cfg.launch_at_login);
             setup::boot(app.handle(), cfg.machine.enabled);
+            wallpaper::init(app.handle());
+            appearance::configure(cfg.focus_wallpaper.enabled);
             appearance::watch(app.handle().clone());
             user_themes::watch(app.handle().clone());
 

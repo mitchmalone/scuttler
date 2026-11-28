@@ -56,10 +56,56 @@ export type Config = {
    * docs/WIDGETS.md, docs/PLUGINS.md). Secrets are Keychain-only and never
    * appear here. */
   widgets: Record<string, Record<string, string>>
+  /** Services added to widgets that declare them (manifest `services`): widget
+   * id → instances in order. Mirrors `WidgetService` in widgets.rs; secrets are
+   * Keychain-only, under the service. */
+  widgetServices?: Record<string, WidgetService[]>
   /** Plugins (docs/PLUGINS.md): which are switched off. */
   plugins: { disabled: string[] }
   /** scuttler's own updates: check GitHub Releases and offer the newest in `updates ⏎`. */
   updates: UpdatesConfig | undefined
+  /** The desktop picture (Settings → Wallpaper); mirrors `WallpaperConfig` in config.rs. */
+  wallpaper: WallpaperConfig | undefined
+  /** Focus mode wallpaper; mirrors `FocusWallpaperConfig` in config.rs. */
+  focusWallpaper: FocusWallpaperConfig | undefined
+}
+
+/** One configured service of a widget (Settings → Widgets → configure). */
+export type WidgetService = {
+  /** File-safe word, unique within the widget (`dagu`, `dagu-2`). */
+  id: string
+  /** The manifest service type it is (`github`, `dagu`). */
+  type: string
+  /** The card's section header; empty takes the type's name. */
+  label: string
+  /** Plain values by KEY. */
+  values: Record<string, string>
+}
+
+/** A light and a dark image swapped with the theme; `null` = the theme's own
+ * backgrounds. Off sets nothing. */
+export type WallpaperConfig = {
+  enabled: boolean
+  light: string | null
+  dark: string | null
+}
+
+/** One image per Focus mode id, overriding the default while that Focus is on.
+ * On is consent to read the Focus database (Full Disk Access). */
+export type FocusWallpaperConfig = {
+  enabled: boolean
+  modes: Record<string, string>
+}
+
+export const DEFAULT_WALLPAPER: WallpaperConfig = {
+  enabled: false,
+  light: null,
+  dark: null,
+}
+
+export const DEFAULT_FOCUS_WALLPAPER: FocusWallpaperConfig = {
+  enabled: false,
+  modes: {},
 }
 
 export type UpdatesConfig = { checkSelf: boolean }

@@ -1,121 +1,100 @@
 /**
- * The theme policy's UI half, shared by Settings → General ▸ Theme and the
- * `theme ⏎` panel: turning Rust's inputs into `PolicyInputs`, a manual pick
- * into a config patch, and a Focus mapping into a select value and back.
- * Pure — the tauri calls stay in the callers.
+ * The theme policy's UI half, shared by Settings → Theme and the `theme ⏎`
+ * panel: turning Rust's inputs into `PolicyInputs` and a manual pick into a
+ * config patch. Pure — the tauri calls stay in the callers.
  */
 import {
-  type AppearancePolicy,
-  type FocusMapping,
+  type AppearanceMode,
   type PolicyInputs,
-  parseClock,
   resolveAppearance,
   withPick,
   withPickSlot,
 } from '@scuttler/core/appearance'
 
 import type { Config } from './config'
-import { appearanceOf } from './theme'
+import { appearanceOf, isLightTheme } from './theme'
 import type { AppearanceInputs } from './use-appearance-policy'
 
-export const clockNow = (): PolicyInputs['now'] => {
-  const d = new Date()
-  return { hour: d.getHours(), minute: d.getMinutes() }
+/** Rust's inputs — what the policy resolves against. */
+export function policyInputs(inputs: AppearanceInputs | null): PolicyInputs {
+  return { systemDark: inputs?.systemDark ?? false }
 }
 
-/** Rust's inputs plus the wall clock — what the policy resolves against. */
-export function policyInputs(
-  inputs: AppearanceInputs | null,
-  now: PolicyInputs['now'] = clockNow(),
-): PolicyInputs {
-  return {
-    focusMode: inputs?.focusMode ?? null,
-    systemDark: inputs?.systemDark ?? false,
-    now,
-  }
-}
-
-/** A manual pick: `config.theme` plus the policy slot it should stick in. */
 /** ⌥⏎: set `theme` as the half the policy is *not* reading; the active theme
  * stays as it is. */
 export function pickThemeOther(
   config: Config,
   inputs: AppearanceInputs | null,
   theme: string,
-  now?: PolicyInputs['now'],
 ): Pick<Config, 'appearance'> {
   const appearance = appearanceOf(config)
-  const pin = policyInputs(inputs, now)
-  const other = resolveAppearance(appearance, pin).dark ? 'light' : 'dark'
+  const other = resolveAppearance(appearance, policyInputs(inputs)).dark
+    ? 'light'
+    : 'dark'
   return {
-    appearance: {
-      ...appearance,
-      ...withPickSlot(appearance, pin, theme, other),
-    },
+    appearance: { ...appearance, ...withPickSlot(appearance, theme, other) },
   }
 }
 
+/** A manual pick: `config.theme` plus the policy slot it should stick in. */
 export function pickTheme(
   config: Config,
   inputs: AppearanceInputs | null,
   theme: string,
-  now?: PolicyInputs['now'],
 ): Pick<Config, 'theme' | 'appearance'> {
   const appearance = appearanceOf(config)
   return {
     theme,
     appearance: {
       ...appearance,
-      ...withPick(appearance, policyInputs(inputs, now), theme),
+      ...withPick(appearance, policyInputs(inputs), theme),
     },
   }
 }
 
-/** The Focus select: `''` = use the pair, `'own'` = its own pair, else a theme name. */
-export const FOCUS_USE_PAIR = ''
-export const FOCUS_OWN_PAIR = 'own'
-
-export function focusChoice(mapping: FocusMapping | undefined): string {
-  if (mapping === undefined) return FOCUS_USE_PAIR
-  return typeof mapping === 'string' ? mapping : FOCUS_OWN_PAIR
-}
-
-/** Apply a Focus select change; "use the pair" removes the key. An "own pair"
- * choice seeds from the global pair (or keeps a single theme for both halves). */
-export function withFocusChoice(
-  policy: AppearancePolicy,
-  id: string,
-  choice: string,
-): AppearancePolicy {
-  const focus = { ...policy.focus }
-  if (choice === FOCUS_USE_PAIR) {
-    delete focus[id]
-  } else if (choice === FOCUS_OWN_PAIR) {
-    const current = focus[id]
-    focus[id] =
-      typeof current === 'string'
-        ? { light: current, dark: current }
-        : (current ?? { ...policy.pair })
-  } else {
-    focus[id] = choice
-  }
-  return { ...policy, focus }
-}
-
-/** Set one half of a Focus's own pair (no-op when it maps to a single theme). */
-export function withFocusHalf(
-  policy: AppearancePolicy,
-  id: string,
-  half: 'light' | 'dark',
+/** Match System's two columns: set one half; the theme follows if that half is
+ * the one showing now. */
+export function pickHalf(
+  config: Config,
+  inputs: AppearanceInputs | null,
   theme: string,
-): AppearancePolicy {
-  const current = policy.focus[id]
-  if (current === undefined || typeof current === 'string') return policy
+  half: 'light' | 'dark',
+): Pick<Config, 'theme' | 'appearance'> {
+  const next = withPickSlot(appearanceOf(config), theme, half)
+  const appearance = { ...appearanceOf(config), ...next }
   return {
-    ...policy,
-    focus: { ...policy.focus, [id]: { ...current, [half]: theme } },
+    theme: resolveAppearance(appearance, policyInputs(inputs)).theme,
+    appearance,
   }
 }
 
-/** Same rule as `parseClock`; the settings field shows an error otherwise. */
-export const isClock = (hhmm: string): boolean => parseClock(hhmm) !== null
+/** The light half to fall back on when a half holds a theme of the wrong mode. */
+export const FALLBACK_PAIR = { light: 'rose-pine-dawn', dark: 'scuttler' }
+
+/**
+ * Settings → Theme's mode switch. A half that holds a theme of the other mode
+ * (the pair is seeded with the current theme on both halves) is replaced by the
+ * fallback, so Light never shows a dark theme; then the theme follows the mode.
+ */
+export function setMode(
+  config: Config,
+  inputs: AppearanceInputs | null,
+  mode: AppearanceMode,
+): Pick<Config, 'theme' | 'appearance'> {
+  const appearance = appearanceOf(config)
+  const fits = (name: string, light: boolean) =>
+    isLightTheme(name, config.themes) === light
+  const pair = {
+    light: fits(appearance.pair.light, true)
+      ? appearance.pair.light
+      : FALLBACK_PAIR.light,
+    dark: fits(appearance.pair.dark, false)
+      ? appearance.pair.dark
+      : FALLBACK_PAIR.dark,
+  }
+  const next = { ...appearance, mode, pair }
+  return {
+    theme: resolveAppearance(next, policyInputs(inputs)).theme,
+    appearance: next,
+  }
+}

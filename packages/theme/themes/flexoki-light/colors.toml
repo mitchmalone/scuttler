@@ -1,0 +1,35 @@
+# Flexoki Light — from stephango.com/flexoki (MIT).
+mode = "light"
+
+accent = "#bc5215"
+selection = "#e6e4d9"
+muted = "#b7b5ac"
+
+background = "#fffcf0"
+dark_background = "#f2f0e5"
+darker_background = "#e6e4d9"
+lighter_background = "#f2f0e5"
+
+foreground = "#100f0f"
+dark_foreground = "#6f6e69"
+light_foreground = "#403e3c"
+bright_foreground = "#100f0f"
+
+red = "#af3029"
+yellow = "#ad8301"
+orange = "#bc5215"
+green = "#66800b"
+cyan = "#24837b"
+blue = "#205ea6"
+magenta = "#a02f6f"
+
+bright_red = "#d14d41"
+bright_yellow = "#d0a215"
+bright_green = "#879a39"
+bright_cyan = "#3aa99f"
+bright_blue = "#4385be"
+bright_magenta = "#ce5d97"
+
+[launcher]
+border = "#cecdc3"
+selected = "rgba(188, 82, 21, 0.10)"

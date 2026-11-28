@@ -38,6 +38,12 @@ export const DEFAULT_EDITOR_THEMES: Readonly<
   solarized: { neovim: 'solarized', helix: 'solarized_dark' },
   'solarized-light': { neovim: 'solarized', helix: 'solarized_light' },
   monokai: { neovim: 'monokai', helix: 'monokai' },
+  'catppuccin-latte': { neovim: 'catppuccin-latte', helix: 'catppuccin_latte' },
+  'rose-pine-dawn': { neovim: 'rose-pine-dawn', helix: 'rose_pine_dawn' },
+  'tokyo-night-day': { neovim: 'tokyonight-day', helix: 'tokyonight_day' },
+  'gruvbox-light': { neovim: 'gruvbox', helix: 'gruvbox_light' },
+  'everforest-light': { neovim: 'everforest', helix: 'everforest_light' },
+  everforest: { neovim: 'everforest', helix: 'everforest_dark' },
 }
 
 /** Defaults for `name`, overridden by any of `EDITOR_THEME_KEYS` present in `raw`. */

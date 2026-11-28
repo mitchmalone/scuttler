@@ -28,17 +28,11 @@ export function ThemePanelContainer({ onClose }: { onClose: () => void }) {
   const merged = useMergedThemes(config ?? EMPTY_THEMES)
   if (!config) return null
   const appearance = appearanceOf(config)
-  const focusName =
-    inputs?.modes.find((m) => m.id === inputs.focusMode)?.name ??
-    inputs?.focusMode ??
-    null
-
   return (
     <ThemePanel
       current={config.theme}
       themes={merged}
       mode={appearance.mode}
-      focusName={focusName}
       dark={resolveAppearance(appearance, policyInputs(inputs)).dark}
       onPick={(name, how) => {
         // Patch the fresh config, not the copy read at mount.

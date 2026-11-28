@@ -1,6 +1,8 @@
 //! Token-usage monitor (plans/usage-panel.md): local-only aggregation of the
 //! journals the agent CLIs already write. CodexBar is the design reference but
-//! not the mechanics — no OAuth, no cookie reading, no network (invariant 2).
+//! not the mechanics — no OAuth flow, no cookie reading. Token counts are local;
+//! account limits are one HTTPS request per provider, with the CLIs' own stored
+//! credentials and only when the user grants it (invariant 2).
 //!
 //! Sources:
 //! - Claude Code: `<config dir>/projects/**/*.jsonl` — assistant messages

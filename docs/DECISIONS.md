@@ -5,6 +5,252 @@
 
 ---
 
+### 2026-11-28 · The Wi-Fi cell becomes a network cell
+
+- **Context.** "Online" meant the Wi-Fi link was up, so a Mac on Ethernet showed a red
+  "Offline" (Mitch, 2026-11-28, on a Belkin USB-C LAN adapter).
+- **Decision.** The cell describes the link that carries traffic. macOS's
+  `State:/Network/Global/IPv4` (`PrimaryInterface`, `Router`, one `scutil` read) names
+  it; its hardware port (`networksetup -listallhardwareports`, already read for the
+  Wi-Fi interface) classifies it: `Wi-Fi` is wifi, an iPhone/iPad/Android port is
+  tethered, a tunnel (`utun`, `ipsec`, `ppp`) or bridge is other, any other port is
+  ethernet. A non-Wi-Fi primary skips the Wi-Fi probes entirely. Online is a primary
+  with a router (a tunnel counts without one); only a Mac with neither reads Offline.
+  The glyph is lucide `ethernet-port`, `smartphone` or `network`, Wi-Fi keeps its
+  strength arcs; the card titles the link (Ethernet, Tethered, Connected to <SSID>) with
+  the adapter as its subtitle and the primary interface's IP and router. The snapshot
+  keeps its `wifi` key (and the module its `wifi` id) so layouts keep their slot; the
+  Settings label is "Network". Two optional fields on the snapshot (`kind`, `port`),
+  no new command.
+
+### 2026-11-27 · Agents: one hover card per session, a tile per agent, and context %
+
+- **Context.** The Notion card "Agents: per-session hover card": the bar boxes agent
+  cells by tmux session / herdr workspace, but the hover was per agent. Mitch reviewed
+  three rounds on the canvas (`06 Agents session card`): kept the state treatments,
+  removed the illustrations ("let's go in without illustration for now", animations
+  later), removed the tab line (it repeated the title and a pane number), kept a neutral
+  age chip, and asked for a context indicator that goes red as it fills.
+- **Decision.** Hovering a box (any cell or its padding, hover key `agents:<group>`,
+  `agents:` for the loose box) opens `BarAgentSessionCard` (packages/tui): a 4-column
+  grid sized for 16 tiles, the 16th becoming `+N more` past that; tab order. A tile has
+  the state glyph, title, a neutral age chip (how long the state has held), one status
+  line, and a context bar when known (amber 60 %, red 80 %). State reads without text:
+  attention a solid warn fill, working an accent border, done stripes, read and idle
+  dimmed; theme tokens only. The footer shows the pointed tile's crumbs, clock and
+  `rule`. The per-agent card is gone; click still jumps (done marks read).
+- **Context %.** A new optional field on the agent snapshot, `contextPct` (no new
+  command): the last real assistant message's input + cache tokens over the window,
+  from the transcript tail `claude_sessions.rs` already reads, for every Claude session.
+  The transcript doesn't name the window: 200k until the count passes it, then 1M, so a
+  1M session reads high below 200k. Other agents have none and show no bar.
+
+### 2026-11-27 · Agents: Claude Code's own session state is the second signal
+
+- **Context.** Since 2026-11-06 the screen decides agent state (rule files over
+  `capture-pane`). It breaks when Claude Code redraws its UI. Claude Code keeps
+  `~/.claude/sessions/<pid>.json` (`status`: `busy` | `idle` | `shell`, `tmux` pane, ids)
+  and a transcript that says when a turn ended; agents-deck trusts those first.
+- **Decision.** The signal order for Claude sessions: (1) the screen's **attention** is
+  final (neither the file nor the transcript shows a permission prompt or question for
+  an interactive session); (2) otherwise the session file's `busy`/`idle` settles working
+  vs not where it disagrees with the screen, at once when the file changed after our
+  last state change, or after 5 s of disagreement when it is older (Claude rewrites the
+  file a moment after a hook); (3) a transcript whose last real message ended the turn
+  (`end_turn`, an API error, `[Request interrupted by user`) settles working → done once
+  the screen has said working for 30 s (Esc emits no hook); (4) `shell`, unknown, missing
+  is no opinion and the screen rules. The file's pane id fills a session whose
+  `TMUX_PANE` was scrubbed; a Claude pane whose file says idle and that isn't in
+  attention is not read with `capture-pane`. The card's `rule` names the source (`seen:
+session file busy`, `seen: transcript end_turn`).
+- **How.** `claude_sessions.rs`, plain functions on the existing 2 s tick: stat the
+  `*.json` files (never the `.key` files beside them), reparse on size/mtime change, read
+  only appended transcript bytes (first read: the last 64 KB). `CLAUDE_CONFIG_DIR` is
+  honoured. No watcher, no process, no new IPC.
+- **Alternatives.** `claude agents --json` (a spawn, ~0.25 s CPU each); the files as the
+  only source (they are private and undocumented, and can't show attention).
+
+### 2026-11-27 · Widget services, a configure screen per widget, and the jobs widget
+
+- **Context.** The Notion card "GitHub Actions monitor becomes a generalized job monitor":
+  watch GitHub Actions, Dagu (peekay's jobs moved there on 2026-11-27) and Vercel builds
+  from one cell, each under its own header. Widget settings were one flat list of env
+  vars per widget, rendered inline on the Widgets page: no way to add two Dagu servers,
+  and arr's eight fields already crowded the page.
+- **Decision.** A manifest may declare `services`: service types, each with its own
+  `settings` (same shape and rules) and `requires`. The user's instances live in a new
+  config key, `widgetServices` (widget id → `{ id, type, label, values }[]`), with
+  secrets in the Keychain under `widget/<widget>/<service>/<KEY>`. Each tick gets
+  `SCUTTLER_SERVICES`, a JSON array of the **complete** instances only: one missing a
+  required value is never delivered, so nothing is fetched for it (invariant 12). Every
+  widget opens its own configure screen from Settings → Widgets (Claude Design
+  `05 Widget services`, layout 5b, Mitch's pick): services stacked and collapsible, Add
+  service in the Services header as a dropdown of type names, then the widget's plain
+  settings. The Widgets page becomes an inventory. `jobs.ts` (`activity` icon) replaces
+  `github-actions.ts` and `vercel.ts`; arr's four apps become services. Card: every row
+  in every section, failing first.
+- **IPC.** No new command. `widget_secret_set` and `widget_secret_keys` take an optional
+  `service`, checked against the configured instance and its type's declared secrets.
+- **Migration.** One-time, on config load, only once the new widget file is installed
+  and only while that widget has no services: the github-actions and vercel bar slots
+  become one `widget:jobs` slot and two jobs services (GitHub keeps `GITHUB_REPOS`); arr's
+  URLs become services named after each app, and a service whose id is its type reads
+  its key from the old `widget/<widget>/<KEY>` Keychain item when its own is missing,
+  copying it forward. Old keys and items stay.
+- **Lost.** `github-actions.ts` carried the only example of the dormant OAuth device
+  flow (`auth`); it is in git history (before 9daa1d1) and the contract is unchanged.
+- **Alternatives.** A jobs-only settings page: solves one widget and leaves arr and the
+  rest on the list that was already running out (Mitch: roll it out to the others).
+
+### 2026-11-25 · The wifi card says "Connected", and a signal meter replaces its subtitle
+
+- **Context.** On macOS 27.2.1 every unprivileged source of the network name is
+  redacted without Location Services: `ipconfig getsummary`, `networksetup
+-getairportnetwork`, and now `system_profiler SPAirPortDataType` too (current and
+  nearby networks, 3 of 3 runs from a shell). The card titled that "SSID hidden",
+  which is a different thing and was wrong more often than not.
+- **Decision.** The title is "Connected to {name}" when the name is known and
+  "Connected" when it is not (`wifiTitle`). The "connected · −56 dBm · excellent ·
+  en0" line is gone; a 16-bar ramp lit by RSSI takes its place (`wifiMeterLit`: −90
+  dBm lights one bar, −50 all, each quarter is one `wifiBars` band). Unlit bars are
+  ghosted like the glyph's arcs, a poor link is `warn` as the cell is, offline is
+  dark. The reading stays in the meter's `aria-label`. No Rust or IPC change.
+- **Not chosen.** Keeping the dBm figure on screen: the interface is still in the
+  grid, and the meter is the point. Guessing the name from known networks (the
+  standing rule in `bar_modules.rs`).
+- **Consequences.** The name itself is still missing on this macOS; how to get it
+  back (Location opt-in, or another route) is open. The slow `system_profiler`
+  resolve still runs up to three times per join and cannot succeed here.
+
+### 2026-11-25 · Broken Homebrew links: scuttler reports them and removes them only when asked
+
+- **Context.** A `brew upgrade` can leave `opt/<formula>` and
+  `var/homebrew/linked/<formula>` pointing at a keg that was never installed; every
+  later upgrade then aborts on the first one (JOURNAL 2026-11-25). The panel showed
+  brew's raw error once per package: 36 failed rows for one cause.
+- **Decision.** The brew check scans those two directories under `brew --prefix`
+  (`brewlinks.rs`) and reports each formula as repairable (an older keg remains) or
+  stale (none does). The panel and the bar card show them above the packages, each kind
+  with its own labelled fix; Enter sends `{ repairLinks: <class> }` through the existing
+  plugin message path (invariant 3: still 84 commands). Rust rescans and removes only
+  the dangling symlinks of that class, never a keg, and logs each path. While anything
+  repairable is broken, Homebrew is left out of an upgrade batch; a brew job that still
+  dies on a dangling link drops the rest of the brew queue.
+- **Why ask.** The prefix is Homebrew's, not scuttler's (invariant 11). Removing a link
+  there is the user's decision each time, even though it is the same two `rm`s Mitch ran
+  by hand; `c` on the row copies that command. Mitch chose asking over silent repair.
+- **Consequences.** Homebrew's prefix is the one place outside its own config where
+  scuttler deletes something it did not write, and only on Enter. Every upgrade run's
+  whole output is now kept in `~/Library/Logs/scuttler-upgrades/` (the last twenty), and
+  a run that exits 0 but leaves its package outdated reads "not upgraded" rather than
+  vanishing.
+
+### 2026-11-25 · A `refresh` action: every widget card gets a refresh button
+
+- **Context.** A widget ticks on its interval; the only way to ask sooner was
+  `touch ~/.config/scuttler/triggers/widget.<id>`. Mitch wanted a button in the card.
+- **Decision.** The scripts action vocabulary gains `{"type": "refresh", "value":
+"<widget id>"}`, run by the existing `script_action` through `widgets::poke`, the same
+  call the trigger file makes. `BarWidgetCard` shows a small refresh button in its
+  header wherever actions can run; it spins until a newer tick lands. No new command
+  (invariant 3: still 84), no per-widget opt-in, nothing for a widget to implement.
+- **Consequences.** A widget row or cell click may also carry `refresh`. Plugin cards are
+  not widget cards: one that wants the button renders the shared `BarRefreshButton` and
+  sends its own service message, as the updates card does with `{ refresh: true }`.
+
+### 2026-11-25 · The Vercel widget asks the CLI to renew its own login
+
+- **Context.** The CLI's token lasts eight hours (JOURNAL 2026-11-25), so the widget
+  that piggybacks it (2026-08-20) went to `setup` daily and told the user to run
+  `vercel whoami` by hand.
+- **Decision.** When the CLI token has expired or is rejected, `vercel.ts` runs
+  `vercel whoami` through the login shell, once per tick at most, then reads the store
+  again. The CLI refreshes and writes its own credentials; the widget still never reads
+  the refresh token or writes the store, so invariant 2 holds as written. A pasted
+  `VERCEL_TOKEN` never runs the CLI.
+- **Consequences.** A widget may run its provider's CLI to keep a piggybacked login
+  alive; `setup` is for what only the user can do (`vercel login`). A login the CLI
+  can't renew costs one shell start per tick until it is fixed.
+
+### 2026-11-24 · A `settings` action: a row can open scuttler's Settings at a page
+
+- **Context.** A widget whose fix lives in scuttler (a missing API key) could only name the
+  place in text ("Settings → Widgets"); Mitch wanted a "Configure" row that goes there.
+- **Decision.** The scripts action vocabulary (`ScriptAction`, shared by script rows and
+  widget rows and clicks) gains `{"type": "settings", "value": "<page id>"}`, run by the
+  existing `script_action` through `settings_window::open_tab` — the same path and the same
+  lowercase-id guard as `open_settings { tab }`. No new command (invariant 3: still 84).
+- **Consequences.** Page ids are now a public contract for scripts and widgets; renaming
+  one needs a `LEGACY` entry in `settings/pages.ts`, as the pre-redesign tab ids have. The
+  action lands on the page, not on one widget's block.
+
+### 2026-11-23 · 0.9: one theme or Match System; wallpaper by theme and by Focus; Focus behind an FDA opt-in
+
+- **Context.** Mitch's 0.9: a light theme and a dark theme that swap with macOS (the pair
+  engine existed but hid behind two dropdowns and one light theme), and a wallpaper per
+  Focus like the iPad. Research (JOURNAL 2026-11-23): the Focus database needs Full Disk
+  Access, scheduled Focus is in no file, Focus Filters don't fire reliably on macOS,
+  `INFocusStatusCenter` only says "focused or not", wallpapers reach the current Space
+  only. Designs: Claude Design files 03 and 04 (round 2 is what Mitch approved).
+- **Decision.**
+  - **Theme**: three modes, Match System, Light, Dark; a fresh profile is a single mode
+    (the current theme's own). The `schedule` mode and per-Focus themes are retired; old
+    configs normalise (`schedule` → `system`, `focus` dropped on the next write). Seven
+    built-in themes added: catppuccin-latte, rose-pine-dawn, tokyo-night-day,
+    gruvbox-light, flexoki-light, everforest-light (light) and everforest (dark).
+  - **Wallpaper** (`config.wallpaper`, off): a light and a dark image swapped with the
+    theme in use; a half with none leaves it to the theme's backgrounds.
+  - **Focus mode wallpaper** (`config.focusWallpaper`, off): one image per Focus, no
+    light/dark, overriding the default while that Focus is on. Turning it on asks
+    "Would you like scuttler to manage your wallpaper based on your Focus mode?" and opens
+    System Settings to grant **Full Disk Access** — a new named opt-in in invariant 1
+    (Mitch's call: option A). Off reads and watches nothing (invariant 12). Rust reports
+    raw facts (access, asserted Focus, last "turn off", schedules); TypeScript decides the
+    active Focus, evaluating schedules itself.
+  - Wallpapers are set with `NSWorkspace` on every display (`wallpaper.rs`), replacing
+    the System Events script and its Automation prompt.
+  - Two commands (84 registered): `wallpaper_set` (a path, or none to restore the theme's
+    background) and `wallpaper_pick` (the image file dialog, invariant 13's picker
+    exception). The Full Disk Access pane is a new `open_path` target; thumbnails reuse
+    `screenshot_thumb`.
+- **Not chosen.** Shortcuts automations opening a `scuttler://` URL (no permission, but a
+  URL scheme and per-Focus setup in another app). Focus Filters (App Intents): Swift in the
+  bundle and unreliable on macOS. Light/dark images per Focus (Mitch: the default carries
+  light/dark, a Focus is one image). HEIC appearance wallpapers: whether one set by an app
+  keeps following appearance is untested; two images are certain.
+- **Consequences.** Users who mapped a Focus to a theme lose that mapping silently on
+  upgrade; the 0.9 release notes say so. Smart Activation can't be seen. The weekday bit
+  order and `enabledSetting` meaning are inferred from one Mac. Plan
+  `plans/active/2026-11-23-0.9-light-dark-and-wallpaper.md`.
+
+### 2026-11-23 · Settings navigation moves to a grouped sidebar with search; settings stays a window
+
+- **Context.** Seven tabs shared the 760px titlebar with the traffic lights (the CSS
+  already clipped and shrank them), five tabs had split into sub-tabs because the strip
+  was full, the Theme rung lived inside General, and Mitch is about to add more pages.
+  Designs: Claude Design "scuttler settings redesign" (today's record and directions
+  1a–1e). Mitch asked whether React is still right: yes — the window is created on
+  demand and destroyed on close, so it is outside the receipt, and the webview, not
+  React, is its cost.
+- **Decision.** A 1080×720 window: a sidebar grouped by the product model (core:
+  Launcher, Bar, Quicklinks, Color picker; Rungs: Theme, Desktop, Machine, each showing
+  on/off; Extend: Agents, Plugins, Widgets; scuttler: Updates, About), one page at a
+  time, no sub-tabs. One grammar for every page (`settings/ui.tsx`: Page → Section →
+  Row or Block, booleans as toggles). A registry (`settings/pages.ts`) holds the pages,
+  their groups, rung state, the pre-redesign tab ids (`general` → launcher, `menubar` →
+  bar, so `open_settings { tab }` callers keep working) and the search index. Search is
+  the prompt (`❯`, ⌘F, ↑/↓/↵/Esc) over `@scuttler/core` `fuzzyMatch` on labels plus
+  substring hits on terms and hints (invariant 5). A rung that is off shows what
+  turning it on does and one labelled Enter row (invariants 12, 13). No new IPC command
+  and no new config key.
+- **Not chosen.** Settings as a launcher panel (ROADMAP's re-decide): it would reuse the
+  warm webview, but a two-pane settings surface does not fit the 8-row panel; the window
+  stays. A search index derived from rendered rows: rows only exist on the mounted page;
+  the index is declared beside the pages and a test pins every page into it.
+- **Consequences.** Adding a page is one registry entry, one view and its index rows.
+  A renamed row label must be renamed in the index too (it is the row's anchor). Plan
+  `plans/active/2026-11-23-settings-redesign.md`.
+
 ### 2026-11-13 · The bar hides on a display the frontmost app covers whole
 
 - **Context.** A borderless-fullscreen game (World of Warcraft, "Windowed

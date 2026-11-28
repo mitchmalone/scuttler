@@ -17,7 +17,8 @@ describe('appearanceOf', () => {
   it('seeds the pair from the current theme until a policy exists', () => {
     const a = appearanceOf(cfg({ appearance: undefined }))
     expect(a.pair).toEqual({ light: 'dracula', dark: 'dracula' })
-    expect(a.mode).toBe('system')
+    // A single mode, the current theme's own: dracula is dark.
+    expect(a.mode).toBe('dark')
     expect(policyConfigured(cfg({ appearance: undefined }))).toBe(false)
   })
   it('uses the stored pair once configured, filling gaps from defaults', () => {
@@ -26,19 +27,15 @@ describe('appearanceOf', () => {
         appearance: { everywhere: true, macos: true, mode: 'dark' } as never,
       }),
     )
-    expect(a.pair).toEqual({ light: 'solarized-light', dark: 'scuttler' })
-    expect(a.schedule).toEqual({ light: '07:00', dark: '19:00' })
+    expect(a.pair).toEqual({ light: 'rose-pine-dawn', dark: 'scuttler' })
+    expect(a.mode).toBe('dark')
     expect(a.everywhere).toBe(true)
   })
 })
 
 describe('a config with no appearance key', () => {
   // Light mode, no Focus, midday: the case that restyled a fresh machine on 2026-09-11.
-  const light = {
-    focusMode: null,
-    systemDark: false,
-    now: { hour: 12, minute: 0 },
-  }
+  const light = { systemDark: false }
   const switches = (c: Config) => {
     const res = policyResolution(c, light)
     return res !== null && res.theme !== c.theme
@@ -73,7 +70,7 @@ describe('a config with no appearance key', () => {
     })
   })
 
-  it('counts any policy key as a policy, not the rung flags', () => {
+  it('counts mode or pair as a policy, not the rung flags', () => {
     const flags = {
       everywhere: true,
       macos: true,
@@ -84,8 +81,6 @@ describe('a config with no appearance key', () => {
     for (const key of [
       { mode: 'system' },
       { pair: { light: 'a', dark: 'b' } },
-      { schedule: { light: '07:00', dark: '19:00' } },
-      { focus: {} },
     ]) {
       expect(
         policyConfigured(cfg({ appearance: { ...flags, ...key } as never })),

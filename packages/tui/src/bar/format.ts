@@ -312,6 +312,60 @@ export function wifiSignalLabel(rssi: number | null): string {
   return `${rssi} dBm · ${word}`
 }
 
+/**
+ * The wifi card's title. A withheld name is not a hidden network (macOS
+ * redacts it without Location Services), so unknown is just "Connected".
+ */
+export function wifiTitle(online: boolean, ssid: string | null): string {
+  if (!online) return 'Wi-Fi offline'
+  return ssid ? `Connected to ${ssid}` : 'Connected'
+}
+
+/** The link kinds the network cell draws (bar_modules.rs `link_kind`). */
+export type NetworkKind = 'wifi' | 'ethernet' | 'tethered' | 'other' | 'offline'
+
+/** What carries traffic. An older payload without `kind` meant Wi-Fi. */
+export function networkKind(online: boolean, kind?: string): NetworkKind {
+  if (!online) return 'offline'
+  if (kind === 'ethernet' || kind === 'tethered' || kind === 'other')
+    return kind
+  return 'wifi'
+}
+
+/** The network card's title: Wi-Fi keeps its SSID line; the rest name the
+ * kind of link, with the adapter as the subtitle. */
+export function networkTitle(kind: NetworkKind, ssid: string | null): string {
+  switch (kind) {
+    case 'offline':
+      return 'Offline'
+    case 'wifi':
+      return wifiTitle(true, ssid)
+    case 'ethernet':
+      return 'Ethernet'
+    case 'tethered':
+      return 'Tethered'
+    case 'other':
+      return 'Connected'
+  }
+}
+
+/** Cell tone for any link: only offline alarms; a poor Wi-Fi link warns. */
+export function networkTone(kind: NetworkKind, rssi: number | null): CellTone {
+  if (kind === 'offline') return 'danger'
+  return kind === 'wifi' ? wifiTone(true, rssi) : 'normal'
+}
+
+/**
+ * How many of the card meter's `count` bars are lit: −90 dBm lights one,
+ * −50 lights them all, and each quarter of the meter is one `wifiBars` band.
+ * Unknown strength lights none.
+ */
+export function wifiMeterLit(rssi: number | null, count: number): number {
+  if (rssi == null) return 0
+  const quality = Math.max(0, Math.min(1, (rssi + 90) / 40))
+  return Math.min(count, Math.floor(quality * count) + 1)
+}
+
 /* ---- widgets ---------------------------------------------------------- */
 
 /** The tones a widget may name (docs/WIDGETS.md); anything else is plain. */
@@ -368,3 +422,79 @@ export function foldUsageBarState(report: {
 /** How long a hover card stays after the cursor leaves the cell or the card
  * (ms). The app's `useBarHover` and the site's web implementation share it. */
 export const BAR_HOVER_CLOSE_MS = 200
+
+/* ---- the per-session card (DECISIONS 2026-11-27) --------------------- */
+
+/** Tiles a session card shows before the last becomes "+N more" (4 × 4). */
+export const SESSION_TILE_CAP = 16
+export const SESSION_TILE_COLUMNS = 4
+
+/** The hover key for a group box: `agents:<group>`, the loose box `agents:`. */
+export const sessionHoverKey = (group: string | null) => `agents:${group ?? ''}`
+
+/** "1 needs you · 2 working · 1 done · 3 idle": what needs you leads. */
+export function sessionCounts(list: AgentSession[]): string[] {
+  const order: [string[], string][] = [
+    [['attention'], 'needs you'],
+    [['working'], 'working'],
+    [['done'], 'done'],
+    [['read', 'idle'], 'idle'],
+  ]
+  const known = new Set(order.flatMap(([s]) => s))
+  const parts = order.flatMap(([states, label]) => {
+    const n = list.filter((a) => states.includes(a.state)).length
+    return n ? [`${n} ${label}`] : []
+  })
+  const other = list.filter((a) => !known.has(a.state)).length
+  return other ? [...parts, `${other} other`] : parts
+}
+
+/** A tile's title: the session's own name (Claude's), else its tmux window
+ * or herdr tab label, else the agent. Never the prompt-derived `title`, which
+ * reads as a truncated sentence (Mitch, 2026-11-27). */
+export function tileName(a: AgentSession): string {
+  return a.name?.trim() || a.muxLabel?.trim() || a.agent
+}
+
+/** A tile's one status line: what it's doing, or what it's waiting on. */
+export function tileStatus(a: AgentSession): string {
+  switch (a.state) {
+    case 'working': {
+      const d = agentDoing(a.state, a.detail)
+      return d ? [d.verb, d.object].filter(Boolean).join(' ') : 'working'
+    }
+    case 'attention':
+      return a.detail.trim() || 'needs you'
+    case 'done':
+      return 'done, unread'
+    case 'read':
+      return 'done'
+    default:
+      return a.state
+  }
+}
+
+/** A tile's age chip: how long the current state has held. */
+export const tileAge = (a: AgentSession, now: Date) =>
+  agentAge(a.stateSince || a.updatedAt, now)
+
+/** The context bar's tone: amber from 60 %, red from 80 %. */
+export function contextTone(pct: number): '' | 'warm' | 'hot' {
+  return pct >= 80 ? 'hot' : pct >= 60 ? 'warm' : ''
+}
+
+/** The tiles to draw and how many the last tile stands for. */
+export function sessionTiles(
+  list: AgentSession[],
+  cap = SESSION_TILE_CAP,
+): { tiles: AgentSession[]; more: number } {
+  if (list.length <= cap) return { tiles: list, more: 0 }
+  return { tiles: list.slice(0, cap - 1), more: list.length - (cap - 1) }
+}
+
+/** The card's height guess for `data-hover-height`; `cardRef` corrects it. */
+export function sessionCardHeight(count: number): number {
+  const tiles = Math.min(count, SESSION_TILE_CAP)
+  const rows = Math.max(1, Math.ceil(tiles / SESSION_TILE_COLUMNS))
+  return 24 + 22 + rows * 78 + (rows - 1) * 6 + 34
+}

@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { BarWidgetCard, BarWidgetCell } from './components'
+import { BarRefreshButton, BarWidgetCard, BarWidgetCell } from './components'
 import type { BarHoverApi, BarWidget } from './types'
 
 /** Structural checks on the SSR markup for a user widget (docs/WIDGETS.md). */
@@ -105,6 +105,65 @@ describe('BarWidgetCard', () => {
     expect(html.match(/class="bar-widget-row[ "]/g)?.length).toBe(2)
   })
 
+  it('offers a refresh button in the header only where actions can run', () => {
+    const live = renderToStaticMarkup(
+      <BarWidgetCard widget={uptime} now={now} onAction={() => {}} />,
+    )
+    expect(live).toContain('class="bar-refresh"')
+    expect(live).toContain('aria-label="Refresh Uptime"')
+    expect(live).not.toContain('bar-refreshing')
+    const still = renderToStaticMarkup(
+      <BarWidgetCard widget={uptime} now={now} />,
+    )
+    expect(still).not.toContain('bar-refresh')
+  })
+
+  it('renders sections, a progress bar, a toned badge and a split footer', () => {
+    const media: BarWidget = {
+      ...uptime,
+      view: {
+        card: {
+          title: 'Media stack',
+          rows: [{ dot: 'warn', text: 'Monarch S01E04 aired, not grabbed' }],
+          sections: [
+            {
+              title: 'In flight',
+              rows: [
+                { dot: 'accent', text: 'Monarch', hint: '62%', progress: 62 },
+              ],
+            },
+            {
+              title: 'Recently added',
+              rows: [
+                {
+                  dot: 'ok',
+                  text: 'Eternals (2021)',
+                  hint: '3h',
+                  badge: { text: '4K DV', tone: 'accent' },
+                },
+              ],
+            },
+            { title: 'Coming up', rows: [] },
+          ],
+          footer: { left: '5 movies · 2 shows', right: '3.5 TB free' },
+        },
+      },
+    }
+    const html = renderToStaticMarkup(
+      <BarWidgetCard widget={media} now={now} />,
+    )
+    expect(html).toContain('In flight')
+    expect(html).toContain('Recently added')
+    // An empty section draws nothing, not a bare heading.
+    expect(html).not.toContain('Coming up')
+    expect(html).toContain('bar-widget-row-progress')
+    expect(html).toContain('width:62%')
+    expect(html).toContain('bar-widget-badge bar-tone-accent')
+    expect(html).toContain('3h · ')
+    expect(html).toContain('bar-widget-foot')
+    expect(html).toContain('3.5 TB free')
+  })
+
   it('shows a waiting hint before the first tick', () => {
     const fresh = { ...uptime, view: null, lastOk: null, updatedAt: null }
     const html = renderToStaticMarkup(
@@ -112,5 +171,28 @@ describe('BarWidgetCard', () => {
     )
     expect(html).toContain('waiting for the first tick')
     expect(html).toContain('Uptime')
+  })
+})
+
+describe('BarRefreshButton', () => {
+  it('spins and goes inert while its refresh is in flight', () => {
+    const idle = renderToStaticMarkup(
+      <BarRefreshButton
+        label="Refresh updates"
+        spinning={false}
+        onRefresh={() => {}}
+      />,
+    )
+    expect(idle).toContain('aria-label="Refresh updates"')
+    expect(idle).not.toContain('disabled')
+    const busy = renderToStaticMarkup(
+      <BarRefreshButton
+        label="Refresh updates"
+        spinning
+        onRefresh={() => {}}
+      />,
+    )
+    expect(busy).toContain('bar-refresh bar-refreshing')
+    expect(busy).toContain('disabled')
   })
 })
